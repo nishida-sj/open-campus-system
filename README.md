@@ -380,4 +380,5 @@ Mikio
 **ステータス**: 本番デプロイ準備完了 ✅
 t r i g g e r   r e d e p l o y  
  t r i g g e r   v e r c e l   b u i l d  
+ t r i g g e r   v e r c e l   b u i l d  
  
