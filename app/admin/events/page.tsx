@@ -693,6 +693,16 @@ export default function AdminEventsPage() {
                           作成日: {new Date(event.created_at).toLocaleDateString('ja-JP')}
                         </span>
                       </div>
+
+                      {/* 編集ボタン */}
+                      <div className="mt-4">
+                        <button
+                          onClick={() => router.push(`/admin/events/${event.id}/edit`)}
+                          className="text-sm bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition duration-200"
+                        >
+                          編集
+                        </button>
+                      </div>
                     </div>
                     <div>
                       {event.is_active ? (
