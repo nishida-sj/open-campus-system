@@ -112,7 +112,7 @@ export async function PUT(
   try {
     const { id: eventId } = await params;
     const body = await request.json();
-    const { name, description, overview, confirmation_message, display_end_date, is_active, dates, courses } = body;
+    const { name, description, overview, confirmation_message, display_end_date, is_active, allow_multiple_dates, max_date_selections, dates, courses } = body;
 
     // バリデーション
     if (!name || !name.trim()) {
@@ -157,18 +157,43 @@ export async function PUT(
       }
     }
 
+    // 申込者数を確認
+    const { data: existingDatesForCount } = await supabaseAdmin
+      .from('open_campus_dates')
+      .select('id')
+      .eq('event_id', eventId);
+
+    const dateIdsForCount = (existingDatesForCount || []).map(d => d.id);
+    const { count: totalApplicants } = await supabaseAdmin
+      .from('applicant_visit_dates')
+      .select('applicant_id', { count: 'exact', head: true })
+      .in('visit_date_id', dateIdsForCount);
+
+    // 申込者が0件の場合はallow_multiple_datesとmax_date_selectionsも更新可能
+    const updateData: any = {
+      name,
+      description: description || null,
+      overview: overview || null,
+      confirmation_message: confirmation_message || null,
+      display_end_date: display_end_date || null,
+      is_active: is_active !== undefined ? is_active : true,
+      updated_at: new Date().toISOString(),
+    };
+
+    // 申込者が0件の場合のみ、複数日設定を更新
+    if ((totalApplicants || 0) === 0) {
+      if (allow_multiple_dates !== undefined) {
+        updateData.allow_multiple_dates = allow_multiple_dates;
+      }
+      if (max_date_selections !== undefined) {
+        updateData.max_date_selections = max_date_selections;
+      }
+    }
+
     // イベント基本情報を更新
     const { data: updatedEvent, error: updateError } = await supabaseAdmin
       .from('open_campus_events')
-      .update({
-        name,
-        description: description || null,
-        overview: overview || null,
-        confirmation_message: confirmation_message || null,
-        display_end_date: display_end_date || null,
-        is_active: is_active !== undefined ? is_active : true,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', eventId)
       .select()
       .single();

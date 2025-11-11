@@ -63,6 +63,8 @@ export default function EventEditPage() {
     confirmation_message: '',
     display_end_date: '',
     is_active: true,
+    allow_multiple_dates: false,
+    max_date_selections: 1,
   });
 
   // 認証チェック
@@ -113,6 +115,8 @@ export default function EventEditPage() {
           confirmation_message: eventData.event.confirmation_message || '',
           display_end_date: eventData.event.display_end_date || '',
           is_active: eventData.event.is_active,
+          allow_multiple_dates: eventData.event.allow_multiple_dates,
+          max_date_selections: eventData.event.max_date_selections,
         });
       } catch (error) {
         console.error('データ取得エラー:', error);
@@ -389,34 +393,80 @@ export default function EventEditPage() {
           </form>
         </div>
 
-        {/* イベント設定情報（読み取り専用） */}
+        {/* イベント設定情報 */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">イベント設定（変更不可）</h2>
-          <div className="space-y-3 text-sm">
-            <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-gray-600">複数日参加:</span>
-              <span className="font-medium">
-                {event.allow_multiple_dates ? '許可する' : '許可しない'}
-              </span>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            イベント設定{totalApplicants > 0 && '（変更不可）'}
+          </h2>
+
+          {totalApplicants === 0 ? (
+            // 申込者0件の場合は編集可能
+            <div className="space-y-4">
+              {/* 複数日参加許可 */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="allow_multiple_dates"
+                  checked={formData.allow_multiple_dates}
+                  onChange={(e) => setFormData({ ...formData, allow_multiple_dates: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="allow_multiple_dates" className="ml-2 text-sm font-medium text-gray-700">
+                  複数日参加を許可する
+                </label>
+              </div>
+
+              {/* 最大選択可能日程数 */}
+              <div>
+                <label htmlFor="max_date_selections" className="block text-sm font-medium text-gray-700 mb-2">
+                  最大選択可能日程数
+                </label>
+                <input
+                  type="number"
+                  id="max_date_selections"
+                  min="1"
+                  value={formData.max_date_selections}
+                  onChange={(e) => setFormData({ ...formData, max_date_selections: parseInt(e.target.value) || 1 })}
+                  disabled={!formData.allow_multiple_dates}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  複数日参加を許可する場合に適用されます
+                </p>
+              </div>
+
+              <p className="text-xs text-blue-600 mt-4">
+                ✓ 申込者が0件のため、これらの設定を変更できます
+              </p>
             </div>
-            <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-gray-600">最大選択可能日程数:</span>
-              <span className="font-medium">
-                {event.max_date_selections === 999
-                  ? '制限なし'
-                  : `${event.max_date_selections}日程`}
-              </span>
+          ) : (
+            // 申込者がいる場合は読み取り専用
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-gray-600">複数日参加:</span>
+                <span className="font-medium">
+                  {event.allow_multiple_dates ? '許可する' : '許可しない'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-gray-600">最大選択可能日程数:</span>
+                <span className="font-medium">
+                  {event.max_date_selections === 999
+                    ? '制限なし'
+                    : `${event.max_date_selections}日程`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-gray-600">作成日:</span>
+                <span className="font-medium">
+                  {new Date(event.created_at).toLocaleDateString('ja-JP')}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-4">
+                ※ 申込者がいるため、これらの設定は変更できません
+              </p>
             </div>
-            <div className="flex items-center justify-between py-2">
-              <span className="text-gray-600">作成日:</span>
-              <span className="font-medium">
-                {new Date(event.created_at).toLocaleDateString('ja-JP')}
-              </span>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 mt-4">
-            ※ これらの設定は申込に影響するため、イベント作成後は変更できません
-          </p>
+          )}
         </div>
 
         {/* コース情報（読み取り専用） */}
