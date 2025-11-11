@@ -1,91 +1,194 @@
-import { supabase } from '@/lib/supabase'
+'use client';
 
-   export default async function Home() {
-     const { data: courses, error: coursesError } = await supabase
-       .from('courses')
-       .select('*')
-       .order('display_order')
-     
-     const { data: dates, error: datesError } = await supabase
-       .from('open_campus_dates')
-       .select('*')
-       .order('date')
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-     return (
-       <div className="min-h-screen bg-gray-50 p-8">
-         <div className="max-w-4xl mx-auto">
-           <h1 className="text-3xl font-bold mb-8">環境構築確認ページ</h1>
-           
-           <div className="space-y-6">
-             {/* 接続確認 */}
-             <div className="bg-white rounded-lg shadow p-6">
-               <h2 className="text-xl font-bold mb-4">✅ システム状態</h2>
-               <div className="space-y-2">
-                 <p className="text-green-600">✓ Next.js 起動成功</p>
-                 <p className="text-green-600">✓ Supabase 接続成功</p>
-                 <p className="text-green-600">✓ 環境変数 読み込み成功</p>
-               </div>
-             </div>
+interface Event {
+  id: string;
+  name: string;
+  description: string | null;
+  overview: string | null;
+  is_active: boolean;
+  allow_multiple_dates: boolean;
+  max_date_selections: number;
+  created_at: string;
+  date_count?: number;
+}
 
-             {/* コース一覧 */}
-             <div className="bg-white rounded-lg shadow p-6">
-               <h2 className="text-xl font-bold mb-4">📚 登録されているコース</h2>
-               {coursesError ? (
-                 <p className="text-red-600">エラー: {coursesError.message}</p>
-               ) : (
-                 <div className="space-y-2">
-                   <p className="text-sm text-gray-600">コース数: {courses?.length || 0}件</p>
-                   <ul className="list-disc ml-6 space-y-1">
-                     {courses?.map((course: any) => (
-                       <li key={course.id}>
-                         <span className="font-medium">{course.name}</span>
-                         {course.category && (
-                           <span className="text-gray-600 text-sm"> ({course.category})</span>
-                         )}
-                       </li>
-                     ))}
-                   </ul>
-                 </div>
-               )}
-             </div>
+export default function EventListPage() {
+  const router = useRouter();
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
 
-             {/* 開催日程 */}
-             <div className="bg-white rounded-lg shadow p-6">
-               <h2 className="text-xl font-bold mb-4">📅 開催日程</h2>
-               {datesError ? (
-                 <p className="text-red-600">エラー: {datesError.message}</p>
-               ) : (
-                 <div className="space-y-2">
-                   <p className="text-sm text-gray-600">日程数: {dates?.length || 0}件</p>
-                   <ul className="list-disc ml-6 space-y-1">
-                     {dates?.map((date: any) => (
-                       <li key={date.id}>
-                         {new Date(date.date).toLocaleDateString('ja-JP', {
-                           year: 'numeric',
-                           month: 'long',
-                           day: 'numeric',
-                           weekday: 'short'
-                         })}
-                         <span className="text-gray-600 text-sm">
-                           {' '}(定員: {date.capacity}名, 現在: {date.current_count}名)
-                         </span>
-                       </li>
-                     ))}
-                   </ul>
-                 </div>
-               )}
-             </div>
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch('/api/events/public');
+        if (response.ok) {
+          const data = await response.json();
+          setEvents(data);
+        }
+      } catch (error) {
+        console.error('イベント取得エラー:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-             {/* 次のステップ */}
-             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-               <h2 className="text-xl font-bold mb-4 text-blue-900">🎯 次のステップ</h2>
-               <p className="text-blue-800">
-                 環境構築が完了しました！<br />
-                 これから実際の機能を実装していきます。
-               </p>
-             </div>
-           </div>
-         </div>
-       </div>
-     )
-   }
+    fetchEvents();
+  }, []);
+
+  const handleEventClick = (eventId: string) => {
+    router.push(`/apply?event=${eventId}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-gray-600">読み込み中...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto">
+        {/* ヘッダー */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            オープンキャンパス イベント一覧
+          </h1>
+          <p className="text-lg text-gray-600">
+            参加したいイベントを選択してお申し込みください
+          </p>
+        </div>
+
+        {/* イベント一覧 */}
+        {events.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+            <div className="text-gray-400 text-6xl mb-4">📅</div>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              現在募集中のイベントはありません
+            </h2>
+            <p className="text-gray-600">
+              新しいイベントが公開されるまでお待ちください
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {events.map((event) => (
+              <div
+                key={event.id}
+                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 overflow-hidden cursor-pointer"
+                onClick={() => handleEventClick(event.id)}
+              >
+                {/* イベントカード */}
+                <div className="p-6">
+                  {/* イベント名 */}
+                  <h2 className="text-xl font-bold text-gray-900 mb-3">
+                    {event.name}
+                  </h2>
+
+                  {/* 説明 */}
+                  {event.description && (
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                      {event.description}
+                    </p>
+                  )}
+
+                  {/* 概要 */}
+                  {event.overview && (
+                    <div className="bg-blue-50 rounded-lg p-3 mb-4">
+                      <p className="text-sm text-gray-700 line-clamp-3">
+                        {event.overview}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* イベント情報 */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <span>開催日程: {event.date_count || 0}日程</span>
+                    </div>
+
+                    {event.allow_multiple_dates && (
+                      <div className="flex items-center text-sm text-green-600">
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <span>複数日参加可能</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center text-sm text-gray-600">
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span>
+                        選択可能日程:{' '}
+                        {event.max_date_selections === 999
+                          ? '制限なし'
+                          : `${event.max_date_selections}日程まで`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 申込ボタン */}
+                  <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center">
+                    <span>このイベントに申し込む</span>
+                    <svg
+                      className="w-5 h-5 ml-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
