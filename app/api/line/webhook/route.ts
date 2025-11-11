@@ -3,8 +3,10 @@ import { Client, validateSignature, WebhookEvent, TextMessage } from '@line/bot-
 import { supabaseAdmin } from '@/lib/supabase';
 import crypto from 'crypto';
 
-// Node.js Runtimeを使用（console.logとcryptoモジュールのため）
-export const runtime = 'nodejs';
+// Next.js Route Handler設定
+export const runtime = 'nodejs'; // Node.js Runtimeを使用
+export const dynamic = 'force-dynamic'; // キャッシュを無効化
+export const revalidate = 0; // 常に最新のレスポンスを返す
 
 // LINE Client設定
 const client = new Client({
