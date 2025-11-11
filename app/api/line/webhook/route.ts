@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   console.log('Timestamp:', new Date().toISOString());
 
   // デバッグモード（一時的に署名検証をスキップ）
-  const DEBUG_MODE = true; // テスト後は false に戻す
+  const DEBUG_MODE = false; // 本番環境では false にする
 
   try {
     // リクエストボディを取得（生のテキストとして）
