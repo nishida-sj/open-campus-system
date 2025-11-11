@@ -42,6 +42,7 @@ export default function EventEditPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [dates, setDates] = useState<DateInfo[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [totalApplicants, setTotalApplicants] = useState(0);
 
   // フォーム状態
   const [formData, setFormData] = useState({
@@ -73,6 +74,7 @@ export default function EventEditPage() {
         setEvent(eventData.event);
         setDates(eventData.dates || []);
         setCourses(eventData.courses || []);
+        setTotalApplicants(eventData.total_applicants || 0);
 
         // フォームに初期値をセット
         setFormData({
@@ -369,10 +371,10 @@ export default function EventEditPage() {
               </div>
             ))}
           </div>
-          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className={`mt-4 p-4 border rounded-lg ${totalApplicants === 0 ? 'bg-blue-50 border-blue-200' : 'bg-yellow-50 border-yellow-200'}`}>
             <div className="flex">
               <svg
-                className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0"
+                className={`w-5 h-5 mr-2 flex-shrink-0 ${totalApplicants === 0 ? 'text-blue-600' : 'text-yellow-600'}`}
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -382,13 +384,25 @@ export default function EventEditPage() {
                   clipRule="evenodd"
                 />
               </svg>
-              <div className="text-sm text-yellow-800">
-                <p className="font-medium mb-1">日程の変更について</p>
-                <p>
-                  申込者がいる日程（オレンジ色）は変更・削除できません。
-                  <br />
-                  日程の追加・変更が必要な場合は、新しいイベントを作成することをお勧めします。
-                </p>
+              <div className={`text-sm ${totalApplicants === 0 ? 'text-blue-800' : 'text-yellow-800'}`}>
+                <p className="font-medium mb-1">日程・コースの変更について</p>
+                {totalApplicants === 0 ? (
+                  <p>
+                    このイベントにはまだ申込者がいません。
+                    <br />
+                    イベント管理ページから日程とコースの追加・編集・削除が可能です。
+                    <br />
+                    申込者が1件でも発生すると、日程とコースの変更はできなくなります。
+                  </p>
+                ) : (
+                  <p>
+                    このイベントには{totalApplicants}件の申込があります。
+                    <br />
+                    申込に影響するため、日程とコースの変更はできません。
+                    <br />
+                    日程の追加・変更が必要な場合は、新しいイベントを作成することをお勧めします。
+                  </p>
+                )}
               </div>
             </div>
           </div>

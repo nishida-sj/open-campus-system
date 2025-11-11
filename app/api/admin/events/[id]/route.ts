@@ -85,10 +85,18 @@ export async function GET(
       })
     );
 
+    // イベント全体の申込者数をカウント
+    const dateIds = (dates || []).map(d => d.id);
+    const { count: totalApplicants } = await supabaseAdmin
+      .from('applicant_visit_dates')
+      .select('applicant_id', { count: 'exact', head: true })
+      .in('visit_date_id', dateIds);
+
     return NextResponse.json({
       event,
       dates: datesWithApplicants,
       courses: coursesWithDates,
+      total_applicants: totalApplicants || 0,
     });
   } catch (error) {
     console.error('サーバーエラー:', error);

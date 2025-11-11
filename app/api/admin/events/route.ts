@@ -14,7 +14,31 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(events || []);
+    // 各イベントの申込者数をカウント
+    const eventsWithApplicants = await Promise.all(
+      (events || []).map(async (event) => {
+        // イベントの日程IDを取得
+        const { data: dates } = await supabaseAdmin
+          .from('open_campus_dates')
+          .select('id')
+          .eq('event_id', event.id);
+
+        const dateIds = (dates || []).map(d => d.id);
+
+        // 申込者数をカウント
+        const { count } = await supabaseAdmin
+          .from('applicant_visit_dates')
+          .select('applicant_id', { count: 'exact', head: true })
+          .in('visit_date_id', dateIds);
+
+        return {
+          ...event,
+          total_applicants: count || 0,
+        };
+      })
+    );
+
+    return NextResponse.json(eventsWithApplicants);
   } catch (error) {
     console.error('サーバーエラー:', error);
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });

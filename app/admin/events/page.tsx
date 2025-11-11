@@ -714,13 +714,18 @@ export default function AdminEventsPage() {
                       </div>
 
                       {/* 編集ボタン */}
-                      <div className="mt-4">
+                      <div className="mt-4 flex items-center gap-3">
                         <button
                           onClick={() => router.push(`/admin/events/${event.id}/edit`)}
                           className="text-sm bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition duration-200"
                         >
-                          編集
+                          {event.total_applicants === 0 ? '編集・日程管理' : '編集'}
                         </button>
+                        {event.total_applicants === 0 && (
+                          <span className="text-xs text-blue-600 font-medium">
+                            申込なし - 日程・コース変更可
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div>
