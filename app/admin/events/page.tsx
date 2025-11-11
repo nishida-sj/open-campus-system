@@ -12,6 +12,7 @@ interface Event {
   is_active: boolean;
   allow_multiple_dates: boolean;
   created_at: string;
+  total_applicants: number;
 }
 
 interface DateOption {
