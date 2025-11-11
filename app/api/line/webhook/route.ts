@@ -14,14 +14,34 @@ export async function POST(request: Request) {
     const body = await request.text();
     const signature = request.headers.get('x-line-signature');
 
+    // 環境変数のログ出力（デバッグ用）
+    console.log('LINE_CHANNEL_SECRET exists:', !!process.env.LINE_CHANNEL_SECRET);
+    console.log('Signature exists:', !!signature);
+
     // LINE署名検証
-    if (!signature || !validateSignature(body, process.env.LINE_CHANNEL_SECRET!, signature)) {
+    if (!signature) {
+      console.error('No signature header');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!process.env.LINE_CHANNEL_SECRET) {
+      console.error('LINE_CHANNEL_SECRET not set');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    if (!validateSignature(body, process.env.LINE_CHANNEL_SECRET, signature)) {
       console.error('Invalid signature');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // イベントを解析
     const events: WebhookEvent[] = JSON.parse(body).events;
+
+    // イベントが空の場合（Webhook検証時など）も200を返す
+    if (!events || events.length === 0) {
+      console.log('Empty events array - webhook verification');
+      return NextResponse.json({ success: true });
+    }
 
     // 各イベントを処理
     await Promise.all(events.map(handleEvent));
