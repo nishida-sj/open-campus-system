@@ -7,7 +7,7 @@ export async function GET() {
     // date順（昇順）でソート
     const { data: dates, error } = await supabaseAdmin
       .from('open_campus_dates')
-      .select('id, date, capacity, current_count, is_active')
+      .select('id, date, capacity, current_count, is_active, event_id')
       .order('date', { ascending: true });
 
     if (error) {

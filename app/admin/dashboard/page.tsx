@@ -75,9 +75,16 @@ export default function AdminDashboard() {
         setDates(datesData);
         setEvents(eventsData);
 
+        console.log('Dashboard Data:', {
+          applicants: applicantsData.length,
+          dates: datesData.length,
+          events: eventsData.length,
+        });
+
         // デフォルトで最初のイベントを選択
         if (eventsData.length > 0) {
           setSelectedEventId(eventsData[0].id);
+          console.log('Selected Event ID:', eventsData[0].id);
         }
       } catch (error) {
         console.error('データ取得エラー:', error);
@@ -192,6 +199,15 @@ export default function AdminDashboard() {
   // 選択されたイベントの日程IDリスト
   const selectedEventDates = dates.filter((d) => d.event_id === selectedEventId);
   const selectedEventDateIds = selectedEventDates.map((d) => d.id);
+
+  // デバッグ用
+  console.log('Filter Debug:', {
+    selectedEventId,
+    totalDates: dates.length,
+    selectedEventDates: selectedEventDates.length,
+    selectedEventDateIds,
+    totalApplicants: applicants.length,
+  });
 
   // 選択されたイベントの申込者のみフィルタリング
   const filteredApplicants = selectedEventId
