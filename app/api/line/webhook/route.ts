@@ -3,6 +3,9 @@ import { Client, validateSignature, WebhookEvent, TextMessage } from '@line/bot-
 import { supabaseAdmin } from '@/lib/supabase';
 import crypto from 'crypto';
 
+// Node.js Runtimeを使用（console.logとcryptoモジュールのため）
+export const runtime = 'nodejs';
+
 // LINE Client設定
 const client = new Client({
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN!,
