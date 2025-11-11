@@ -112,7 +112,7 @@ export async function PUT(
   try {
     const { id: eventId } = await params;
     const body = await request.json();
-    const { name, description, overview, display_end_date, is_active, dates, courses } = body;
+    const { name, description, overview, confirmation_message, display_end_date, is_active, dates, courses } = body;
 
     // バリデーション
     if (!name || !name.trim()) {
@@ -164,6 +164,7 @@ export async function PUT(
         name,
         description: description || null,
         overview: overview || null,
+        confirmation_message: confirmation_message || null,
         display_end_date: display_end_date || null,
         is_active: is_active !== undefined ? is_active : true,
         updated_at: new Date().toISOString(),

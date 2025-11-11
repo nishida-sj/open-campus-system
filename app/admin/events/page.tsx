@@ -8,6 +8,7 @@ interface Event {
   name: string;
   description: string | null;
   overview: string | null;
+  confirmation_message: string | null;
   max_date_selections: number;
   is_active: boolean;
   allow_multiple_dates: boolean;
@@ -39,6 +40,7 @@ export default function AdminEventsPage() {
     name: '',
     description: '',
     overview: '',
+    confirmation_message: '',
     display_end_date: '',
     max_date_selections: 1,
     is_active: true,
@@ -113,6 +115,7 @@ export default function AdminEventsPage() {
           name: '',
           description: '',
           overview: '',
+          confirmation_message: '',
           display_end_date: '',
           max_date_selections: 1,
           is_active: true,
@@ -319,6 +322,24 @@ export default function AdminEventsPage() {
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   この内容は申込者向けのイベント一覧ページと申込ページに表示されます
+                </p>
+              </div>
+
+              {/* 確定者案内メッセージ */}
+              <div>
+                <label htmlFor="confirmation_message" className="block text-sm font-medium text-gray-700 mb-2">
+                  確定者案内メッセージ（LINE・メール通知用）
+                </label>
+                <textarea
+                  id="confirmation_message"
+                  rows={5}
+                  value={formData.confirmation_message}
+                  onChange={(e) => setFormData({ ...formData, confirmation_message: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="参加確定者に送信する追加メッセージを入力してください（持ち物、集合場所、注意事項など）"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  この内容は確定者管理画面からLINE・メール通知を送信する際に、基本メッセージに追加されます
                 </p>
               </div>
 

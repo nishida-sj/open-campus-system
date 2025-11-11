@@ -49,7 +49,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, description, overview, display_end_date, max_date_selections, is_active, allow_multiple_dates, dates, courses } = body;
+    const { name, description, overview, confirmation_message, display_end_date, max_date_selections, is_active, allow_multiple_dates, dates, courses } = body;
 
     // バリデーション
     if (!name || !dates || dates.length === 0) {
@@ -94,6 +94,7 @@ export async function POST(request: Request) {
         name,
         description: description || null,
         overview: overview || null,
+        confirmation_message: confirmation_message || null,
         display_end_date: display_end_date || null,
         max_date_selections: max_date_selections || 1,
         is_active: is_active !== undefined ? is_active : true,

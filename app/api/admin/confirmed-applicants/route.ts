@@ -175,7 +175,7 @@ export async function POST(request: Request) {
       // イベント情報を取得
       const { data: eventInfo } = await supabaseAdmin
         .from('open_campus_events')
-        .select('name')
+        .select('name, confirmation_message')
         .eq('id', dateInfo?.event_id)
         .single();
 
@@ -191,9 +191,7 @@ export async function POST(request: Request) {
       }
 
       // LINEメッセージを作成
-      const message = {
-        type: 'text',
-        text: `【参加確定のお知らせ】
+      let messageText = `【参加確定のお知らせ】
 
 ${applicant.name} 様
 
@@ -211,11 +209,25 @@ ${dateInfo ? new Date(dateInfo.date).toLocaleDateString('ja-JP', {
 }) : '不明'}
 
 ■ 参加コース
-${courseName}
+${courseName}`;
+
+      // 確定者案内メッセージを追加
+      if (eventInfo?.confirmation_message) {
+        messageText += `
+
+■ 当日のご案内
+${eventInfo.confirmation_message}`;
+      }
+
+      messageText += `
 
 当日お会いできることを楽しみにしております。
 
-※このメッセージは自動送信されています。`,
+※このメッセージは自動送信されています。`;
+
+      const message = {
+        type: 'text',
+        text: messageText,
       };
 
       // LINE APIにメッセージを送信
@@ -348,7 +360,7 @@ export async function PATCH(request: Request) {
       // イベント情報を取得
       const { data: eventInfo } = await supabaseAdmin
         .from('open_campus_events')
-        .select('name')
+        .select('name, confirmation_message')
         .eq('id', dateInfo?.event_id)
         .single();
 
@@ -373,7 +385,7 @@ export async function PATCH(request: Request) {
         : '不明';
 
       // メール本文を作成
-      const htmlContent = `
+      let htmlContent = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">
             【参加確定のお知らせ】
@@ -391,7 +403,16 @@ export async function PATCH(request: Request) {
             <p style="font-size: 16px; margin: 5px 0;">${dateFormatted}</p>
 
             <h3 style="color: #1f2937;">■ 参加コース</h3>
-            <p style="font-size: 16px; margin: 5px 0;">${courseName}</p>
+            <p style="font-size: 16px; margin: 5px 0;">${courseName}</p>`;
+
+      // 確定者案内メッセージを追加
+      if (eventInfo?.confirmation_message) {
+        htmlContent += `
+            <h3 style="color: #1f2937;">■ 当日のご案内</h3>
+            <p style="font-size: 16px; margin: 5px 0; white-space: pre-wrap;">${eventInfo.confirmation_message}</p>`;
+      }
+
+      htmlContent += `
           </div>
 
           <p>当日お会いできることを楽しみにしております。</p>
@@ -405,7 +426,7 @@ export async function PATCH(request: Request) {
         </div>
       `;
 
-      const textContent = `【参加確定のお知らせ】
+      let textContent = `【参加確定のお知らせ】
 
 ${applicant.name} 様
 
@@ -418,7 +439,17 @@ ${eventInfo?.name || '不明'}
 ${dateFormatted}
 
 ■ 参加コース
-${courseName}
+${courseName}`;
+
+      // 確定者案内メッセージを追加
+      if (eventInfo?.confirmation_message) {
+        textContent += `
+
+■ 当日のご案内
+${eventInfo.confirmation_message}`;
+      }
+
+      textContent += `
 
 当日お会いできることを楽しみにしております。
 
