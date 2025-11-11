@@ -25,6 +25,40 @@ export default function ApplyPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [guardianAttendance, setGuardianAttendance] = useState(false);
+  const [schoolType, setSchoolType] = useState<string>('');
+
+  // 学校種別に応じた学年選択肢を取得
+  const getGradeOptions = () => {
+    switch (schoolType) {
+      case '中学校':
+        return [
+          { value: '中学1年生', label: '中学1年生' },
+          { value: '中学2年生', label: '中学2年生' },
+          { value: '中学3年生', label: '中学3年生' },
+        ];
+      case '高校':
+        return [
+          { value: '高校1年生', label: '高校1年生' },
+          { value: '高校2年生', label: '高校2年生' },
+          { value: '高校3年生', label: '高校3年生' },
+        ];
+      case '既卒':
+        return [
+          { value: '既卒', label: '既卒' },
+        ];
+      default:
+        // 学校種別が未選択、またはその他の場合はすべて表示
+        return [
+          { value: '中学1年生', label: '中学1年生' },
+          { value: '中学2年生', label: '中学2年生' },
+          { value: '中学3年生', label: '中学3年生' },
+          { value: '高校1年生', label: '高校1年生' },
+          { value: '高校2年生', label: '高校2年生' },
+          { value: '高校3年生', label: '高校3年生' },
+          { value: '既卒', label: '既卒' },
+        ];
+    }
+  };
 
   // コースと開催日程を取得
   useEffect(() => {
@@ -209,6 +243,8 @@ export default function ApplyPage() {
               <select
                 id="school_type"
                 name="school_type"
+                value={schoolType}
+                onChange={(e) => setSchoolType(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">選択してください</option>
@@ -232,13 +268,11 @@ export default function ApplyPage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">選択してください</option>
-                <option value="中学1年生">中学1年生</option>
-                <option value="中学2年生">中学2年生</option>
-                <option value="中学3年生">中学3年生</option>
-                <option value="高校1年生">高校1年生</option>
-                <option value="高校2年生">高校2年生</option>
-                <option value="高校3年生">高校3年生</option>
-                <option value="既卒">既卒</option>
+                {getGradeOptions().map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
               {errors.grade && <p className="mt-1 text-sm text-red-600">{errors.grade}</p>}
             </div>
