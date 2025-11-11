@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     const applicantMap = new Map();
 
     for (const visit of applicantVisits) {
-      const applicant = visit.applicants;
+      const applicant: any = visit.applicants;
       if (!applicant) continue;
 
       if (!applicantMap.has(applicant.id)) {
@@ -79,10 +79,11 @@ export async function GET(request: Request) {
         });
       }
 
-      const date = visit.open_campus_dates;
-      const course = visit.event_courses;
+      const date: any = visit.open_campus_dates;
+      const course: any = visit.event_courses;
 
-      applicantMap.get(applicant.id).selected_dates.push({
+      const applicantData: any = applicantMap.get(applicant.id);
+      applicantData.selected_dates.push({
         date_id: visit.visit_date_id,
         date: date?.date,
         course_id: visit.selected_course_id,
