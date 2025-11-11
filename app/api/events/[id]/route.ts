@@ -4,10 +4,10 @@ import { supabaseAdmin } from '@/lib/supabase';
 // イベント詳細取得（日程とコース情報を含む）
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const eventId = params.id;
+    const { id: eventId } = await params;
 
     // イベント情報を取得
     const { data: event, error: eventError } = await supabaseAdmin

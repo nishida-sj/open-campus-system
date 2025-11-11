@@ -35,7 +35,7 @@ interface Course {
 export default function EventEditPage() {
   const router = useRouter();
   const params = useParams();
-  const eventId = params.id as string;
+  const eventId = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '';
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
