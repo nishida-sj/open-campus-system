@@ -268,6 +268,12 @@ export default function AdminDashboard() {
             >
               確定者管理
             </button>
+            <button
+              onClick={() => router.push('/admin/email-settings')}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
+            >
+              メール設定
+            </button>
           </div>
 
           {/* イベント選択 */}

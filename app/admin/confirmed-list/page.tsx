@@ -18,6 +18,8 @@ interface ConfirmedApplicant {
   line_user_id: string | null;
   confirmed_date: string;
   confirmed_course_name: string | null;
+  line_sent_at: string | null;
+  email_sent_at: string | null;
 }
 
 interface Event {
@@ -32,7 +34,8 @@ export default function ConfirmedListPage() {
   const [applicants, setApplicants] = useState<ConfirmedApplicant[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedApplicants, setSelectedApplicants] = useState<string[]>([]);
-  const [sending, setSending] = useState(false);
+  const [sendingLine, setSendingLine] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [dateFilter, setDateFilter] = useState<string>('all');
 
   // 認証チェック
@@ -112,7 +115,7 @@ export default function ConfirmedListPage() {
   };
 
   // LINE通知送信
-  const handleSendNotifications = async () => {
+  const handleSendLineNotifications = async () => {
     if (selectedApplicants.length === 0) {
       alert('送信対象を選択してください');
       return;
@@ -123,11 +126,11 @@ export default function ConfirmedListPage() {
       .map((a) => a.name)
       .join('、');
 
-    if (!confirm(`以下の${selectedApplicants.length}名に確定通知を送信しますか？\n\n${selectedNames}`)) {
+    if (!confirm(`以下の${selectedApplicants.length}名にLINE確定通知を送信しますか？\n\n${selectedNames}`)) {
       return;
     }
 
-    setSending(true);
+    setSendingLine(true);
 
     try {
       const response = await fetch('/api/admin/confirmed-applicants', {
@@ -151,7 +154,60 @@ export default function ConfirmedListPage() {
       console.error('送信エラー:', error);
       alert('エラーが発生しました');
     } finally {
-      setSending(false);
+      setSendingLine(false);
+    }
+  };
+
+  // メール通知送信
+  const handleSendEmailNotifications = async () => {
+    if (selectedApplicants.length === 0) {
+      alert('送信対象を選択してください');
+      return;
+    }
+
+    const selectedNames = applicants
+      .filter((a) => selectedApplicants.includes(a.id))
+      .map((a) => a.name)
+      .join('、');
+
+    if (!confirm(`以下の${selectedApplicants.length}名にメール確定通知を送信しますか？\n\n${selectedNames}`)) {
+      return;
+    }
+
+    setSendingEmail(true);
+
+    try {
+      const response = await fetch('/api/admin/confirmed-applicants', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicant_ids: selectedApplicants }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const successCount = data.results.filter((r: any) => r.success).length;
+        const failCount = data.results.filter((r: any) => !r.success).length;
+
+        alert(`メール送信完了\n成功: ${successCount}件\n失敗: ${failCount}件`);
+        setSelectedApplicants([]);
+
+        // データを再取得
+        if (selectedEventId) {
+          const res = await fetch(`/api/admin/confirmed-applicants?event_id=${selectedEventId}`);
+          if (res.ok) {
+            const refreshedData = await res.json();
+            setApplicants(refreshedData);
+          }
+        }
+      } else {
+        const error = await response.json();
+        alert(`エラー: ${error.error || 'メール送信に失敗しました'}`);
+      }
+    } catch (error) {
+      console.error('送信エラー:', error);
+      alert('エラーが発生しました');
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -322,14 +378,24 @@ export default function ConfirmedListPage() {
                 CSV出力
               </button>
               <button
-                onClick={handleSendNotifications}
-                disabled={selectedApplicants.length === 0 || sending}
+                onClick={handleSendLineNotifications}
+                disabled={selectedApplicants.length === 0 || sendingLine}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-lg font-semibold transition duration-200 flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                {sendingLine ? 'LINE送信中...' : 'LINE通知'}
+              </button>
+              <button
+                onClick={handleSendEmailNotifications}
+                disabled={selectedApplicants.length === 0 || sendingEmail}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-lg font-semibold transition duration-200 flex items-center gap-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                {sending ? '送信中...' : 'LINE通知送信'}
+                {sendingEmail ? 'メール送信中...' : 'メール通知'}
               </button>
             </div>
           </div>
@@ -365,14 +431,17 @@ export default function ConfirmedListPage() {
                     コース
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    LINE
+                    LINE送信日
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    メール送信日
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredApplicants.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
                       該当する確定者はいません
                     </td>
                   </tr>
@@ -412,15 +481,30 @@ export default function ConfirmedListPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {applicant.confirmed_course_name || '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {applicant.line_user_id ? (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                            連携済み
-                          </span>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {applicant.line_sent_at ? (
+                          <div className="text-green-600">
+                            {new Date(applicant.line_sent_at).toLocaleDateString('ja-JP', {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </div>
+                        ) : applicant.line_user_id ? (
+                          <span className="text-gray-400">未送信</span>
                         ) : (
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                            未連携
-                          </span>
+                          <span className="text-gray-400">連携なし</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {applicant.email_sent_at ? (
+                          <div className="text-blue-600">
+                            {new Date(applicant.email_sent_at).toLocaleDateString('ja-JP', {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">未送信</span>
                         )}
                       </td>
                     </tr>
