@@ -226,13 +226,21 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* ナビゲーションメニュー */}
-        <div className="mb-8 flex justify-between items-center">
-          <button
-            onClick={() => router.push('/admin/events')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
-          >
-            イベント管理
-          </button>
+        <div className="mb-8 flex flex-wrap justify-between items-center gap-4">
+          <div className="flex gap-4">
+            <button
+              onClick={() => router.push('/admin/events')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
+            >
+              イベント管理
+            </button>
+            <button
+              onClick={() => router.push('/admin/confirmations')}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
+            >
+              申込確定管理
+            </button>
+          </div>
 
           {/* イベント選択 */}
           {events.length > 0 && (
