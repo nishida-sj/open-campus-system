@@ -7,14 +7,24 @@ interface Event {
   id: string;
   name: string;
   description: string | null;
+  overview: string | null;
   max_date_selections: number;
   is_active: boolean;
+  allow_multiple_dates: boolean;
   created_at: string;
 }
 
 interface DateOption {
   date: string;
   capacity: number;
+}
+
+interface Course {
+  name: string;
+  description: string;
+  capacity: number | null;
+  display_order: number;
+  applicable_date_indices: number[]; // どの日程に適用するか（インデックス）
 }
 
 export default function AdminEventsPage() {
@@ -27,9 +37,12 @@ export default function AdminEventsPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    overview: '',
     max_date_selections: 1,
     is_active: true,
+    allow_multiple_dates: false,
     dates: [] as DateOption[],
+    courses: [] as Course[],
   });
 
   // 認証チェック
@@ -68,6 +81,20 @@ export default function AdminEventsPage() {
       return;
     }
 
+    // コースの検証（コースがある場合）
+    if (formData.courses.length > 0) {
+      for (const course of formData.courses) {
+        if (!course.name.trim()) {
+          alert('コース名を入力してください');
+          return;
+        }
+        if (course.applicable_date_indices.length === 0) {
+          alert(`コース「${course.name}」に適用する日程を選択してください`);
+          return;
+        }
+      }
+    }
+
     try {
       const response = await fetch('/api/admin/events', {
         method: 'POST',
@@ -83,9 +110,12 @@ export default function AdminEventsPage() {
         setFormData({
           name: '',
           description: '',
+          overview: '',
           max_date_selections: 1,
           is_active: true,
+          allow_multiple_dates: false,
           dates: [],
+          courses: [],
         });
         fetchData();
       } else {
@@ -127,6 +157,70 @@ export default function AdminEventsPage() {
     setFormData((prev) => ({
       ...prev,
       dates: prev.dates.map((d, i) => (i === index ? { ...d, capacity: value } : d)),
+    }));
+  };
+
+  // コースを追加
+  const addCourse = () => {
+    setFormData((prev) => ({
+      ...prev,
+      courses: [
+        ...prev.courses,
+        {
+          name: '',
+          description: '',
+          capacity: null,
+          display_order: prev.courses.length,
+          applicable_date_indices: [],
+        },
+      ],
+    }));
+  };
+
+  // コースを削除
+  const removeCourse = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      courses: prev.courses.filter((_, i) => i !== index),
+    }));
+  };
+
+  // コース名を変更
+  const updateCourseName = (index: number, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      courses: prev.courses.map((c, i) => (i === index ? { ...c, name: value } : c)),
+    }));
+  };
+
+  // コース説明を変更
+  const updateCourseDescription = (index: number, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      courses: prev.courses.map((c, i) => (i === index ? { ...c, description: value } : c)),
+    }));
+  };
+
+  // コース定員を変更
+  const updateCourseCapacity = (index: number, value: string) => {
+    const capacity = value === '' ? null : parseInt(value);
+    setFormData((prev) => ({
+      ...prev,
+      courses: prev.courses.map((c, i) => (i === index ? { ...c, capacity } : c)),
+    }));
+  };
+
+  // コースの適用日程を変更
+  const toggleCourseDateApplicability = (courseIndex: number, dateIndex: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      courses: prev.courses.map((c, i) => {
+        if (i !== courseIndex) return c;
+        const indices = c.applicable_date_indices.includes(dateIndex)
+          ? c.applicable_date_indices.filter((idx) => idx !== dateIndex)
+          : [...c.applicable_date_indices, dateIndex];
+        return { ...c, applicable_date_indices: indices };
+      }),
     }));
   };
 
@@ -195,7 +289,7 @@ export default function AdminEventsPage() {
               {/* 説明 */}
               <div>
                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                  説明
+                  説明（管理用）
                 </label>
                 <textarea
                   id="description"
@@ -203,30 +297,236 @@ export default function AdminEventsPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="イベントの説明を入力してください"
+                  placeholder="管理用のメモを入力してください"
                 />
               </div>
 
-              {/* 最大選択可能日程数 */}
+              {/* 概要 */}
               <div>
-                <label htmlFor="max_selections" className="block text-sm font-medium text-gray-700 mb-2">
-                  参加者が選択できる日程数 *
+                <label htmlFor="overview" className="block text-sm font-medium text-gray-700 mb-2">
+                  イベント概要（申込者向け）
                 </label>
-                <select
-                  id="max_selections"
-                  value={formData.max_date_selections}
-                  onChange={(e) =>
-                    setFormData({ ...formData, max_date_selections: parseInt(e.target.value) })
-                  }
+                <textarea
+                  id="overview"
+                  rows={5}
+                  value={formData.overview}
+                  onChange={(e) => setFormData({ ...formData, overview: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value={1}>1つまで（単一選択）</option>
-                  <option value={2}>2つまで</option>
-                  <option value={3}>3つまで</option>
-                  <option value={4}>4つまで</option>
-                  <option value={5}>5つまで</option>
-                  <option value={999}>制限なし</option>
-                </select>
+                  placeholder="申込者に表示されるイベントの詳細説明を入力してください"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  この内容は申込者向けのイベント一覧ページと申込ページに表示されます
+                </p>
+              </div>
+
+              {/* 複数日参加設定 */}
+              <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
+                <div className="flex items-center mb-3">
+                  <input
+                    type="checkbox"
+                    id="allow_multiple_dates"
+                    checked={formData.allow_multiple_dates}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        allow_multiple_dates: e.target.checked,
+                        max_date_selections: e.target.checked ? formData.max_date_selections : 1,
+                      })
+                    }
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label
+                    htmlFor="allow_multiple_dates"
+                    className="ml-2 text-sm font-medium text-gray-900"
+                  >
+                    複数日参加を許可する
+                  </label>
+                </div>
+
+                {formData.allow_multiple_dates && (
+                  <div>
+                    <label
+                      htmlFor="max_selections"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      参加者が選択できる日程数 *
+                    </label>
+                    <select
+                      id="max_selections"
+                      value={formData.max_date_selections}
+                      onChange={(e) =>
+                        setFormData({ ...formData, max_date_selections: parseInt(e.target.value) })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value={2}>2つまで</option>
+                      <option value={3}>3つまで</option>
+                      <option value={4}>4つまで</option>
+                      <option value={5}>5つまで</option>
+                      <option value={999}>制限なし</option>
+                    </select>
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-600 mt-2">
+                  {formData.allow_multiple_dates
+                    ? '参加者は複数の日程を選択できます'
+                    : '参加者は1つの日程のみ選択できます'}
+                </p>
+              </div>
+
+              {/* コース管理 */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    コース設定（オプション）
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addCourse}
+                    className="text-sm bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded transition duration-200"
+                  >
+                    + コースを追加
+                  </button>
+                </div>
+
+                {formData.courses.length === 0 ? (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                    <p className="text-gray-500 mb-2 text-sm">
+                      コースは登録されていません
+                    </p>
+                    <p className="text-xs text-gray-400 mb-3">
+                      コースを追加すると、申込者が日程ごとにコースを選択できるようになります
+                    </p>
+                    <button
+                      type="button"
+                      onClick={addCourse}
+                      className="text-purple-600 hover:text-purple-700 font-medium text-sm"
+                    >
+                      最初のコースを追加
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4 border border-gray-200 rounded-lg p-4">
+                    {formData.courses.map((course, courseIndex) => (
+                      <div
+                        key={courseIndex}
+                        className="border border-purple-200 bg-purple-50 rounded-lg p-4"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="text-sm font-semibold text-gray-900">
+                            コース {courseIndex + 1}
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => removeCourse(courseIndex)}
+                            className="text-red-600 hover:text-red-700 text-sm"
+                          >
+                            削除
+                          </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {/* コース名 */}
+                          <div>
+                            <label className="block text-xs text-gray-700 mb-1">
+                              コース名 *
+                            </label>
+                            <input
+                              type="text"
+                              required={formData.courses.length > 0}
+                              value={course.name}
+                              onChange={(e) => updateCourseName(courseIndex, e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              placeholder="例: Aコース（体験授業中心）"
+                            />
+                          </div>
+
+                          {/* コース説明 */}
+                          <div>
+                            <label className="block text-xs text-gray-700 mb-1">
+                              コース説明
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={course.description}
+                              onChange={(e) =>
+                                updateCourseDescription(courseIndex, e.target.value)
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              placeholder="コースの内容を説明してください"
+                            />
+                          </div>
+
+                          {/* コース定員 */}
+                          <div>
+                            <label className="block text-xs text-gray-700 mb-1">
+                              コース定員（空欄で無制限）
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={course.capacity === null ? '' : course.capacity}
+                              onChange={(e) => updateCourseCapacity(courseIndex, e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              placeholder="無制限"
+                            />
+                          </div>
+
+                          {/* 適用日程選択 */}
+                          {formData.dates.length > 0 && (
+                            <div>
+                              <label className="block text-xs text-gray-700 mb-2">
+                                このコースを適用する日程 *
+                              </label>
+                              <div className="space-y-2 bg-white rounded p-3 max-h-40 overflow-y-auto">
+                                {formData.dates.map((date, dateIndex) => (
+                                  <label
+                                    key={dateIndex}
+                                    className="flex items-center space-x-2 cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={course.applicable_date_indices.includes(dateIndex)}
+                                      onChange={() =>
+                                        toggleCourseDateApplicability(courseIndex, dateIndex)
+                                      }
+                                      className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                    />
+                                    <span className="text-sm text-gray-700">
+                                      {date.date
+                                        ? new Date(date.date).toLocaleDateString('ja-JP', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric',
+                                            weekday: 'short',
+                                          })
+                                        : `日程 ${dateIndex + 1}（未設定）`}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                              {course.applicable_date_indices.length === 0 && (
+                                <p className="text-xs text-red-600 mt-1">
+                                  少なくとも1つの日程を選択してください
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          {formData.dates.length === 0 && (
+                            <p className="text-xs text-orange-600">
+                              ⚠️ 先に開催日程を追加してから、適用日程を選択してください
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-sm text-gray-500 mt-2">
+                  登録コース数: {formData.courses.length}件
+                </p>
               </div>
 
               {/* 開催日程 */}
@@ -370,11 +670,25 @@ export default function AdminEventsPage() {
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-gray-900">{event.name}</h3>
                       {event.description && (
-                        <p className="text-gray-600 mt-1">{event.description}</p>
+                        <p className="text-gray-600 text-sm mt-1">管理メモ: {event.description}</p>
                       )}
-                      <div className="mt-3 flex items-center space-x-4 text-sm text-gray-500">
-                        <span>最大選択可能: {event.max_date_selections === 999 ? '制限なし' : `${event.max_date_selections}日程`}</span>
+                      {event.overview && (
+                        <p className="text-gray-700 mt-2 text-sm bg-blue-50 p-2 rounded">
+                          概要: {event.overview.substring(0, 100)}
+                          {event.overview.length > 100 ? '...' : ''}
+                        </p>
+                      )}
+                      <div className="mt-3 flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500">
+                        <span>
+                          最大選択: {event.max_date_selections === 999 ? '制限なし' : `${event.max_date_selections}日程`}
+                        </span>
                         <span>•</span>
+                        {event.allow_multiple_dates && (
+                          <>
+                            <span className="text-green-600 font-medium">複数日参加可</span>
+                            <span>•</span>
+                          </>
+                        )}
                         <span>
                           作成日: {new Date(event.created_at).toLocaleDateString('ja-JP')}
                         </span>
