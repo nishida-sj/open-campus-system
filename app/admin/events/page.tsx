@@ -112,6 +112,7 @@ export default function AdminEventsPage() {
           name: '',
           description: '',
           overview: '',
+          display_end_date: '',
           max_date_selections: 1,
           is_active: true,
           allow_multiple_dates: false,
