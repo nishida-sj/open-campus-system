@@ -12,12 +12,14 @@ interface ConfirmedApplicant {
   school_name: string;
   school_type: string | null;
   grade: string;
-  confirmed_date_id: string;
-  confirmed_course_id: string | null;
-  confirmed_at: string;
   line_user_id: string | null;
-  confirmed_date: string;
-  confirmed_course_name: string | null;
+  confirmed_dates: {
+    date_id: string;
+    date: string;
+    course_id: string | null;
+    course_name: string | null;
+    confirmed_at: string;
+  }[];
   line_sent_at: string | null;
   email_sent_at: string | null;
 }
@@ -91,10 +93,12 @@ export default function ConfirmedListPage() {
   // 日程でフィルター
   const filteredApplicants = dateFilter === 'all'
     ? applicants
-    : applicants.filter((a) => a.confirmed_date === dateFilter);
+    : applicants.filter((a) => a.confirmed_dates.some((cd) => cd.date === dateFilter));
 
   // ユニークな日程リストを取得
-  const uniqueDates = Array.from(new Set(applicants.map((a) => a.confirmed_date))).sort();
+  const uniqueDates = Array.from(
+    new Set(applicants.flatMap((a) => a.confirmed_dates.map((cd) => cd.date)))
+  ).sort();
 
   // チェックボックスのトグル
   const toggleSelection = (applicantId: string) => {
@@ -232,24 +236,29 @@ export default function ConfirmedListPage() {
       '確定日時',
     ];
 
-    // CSV データ
-    const rows = filteredApplicants.map((a) => [
-      a.name,
-      a.kana_name || '',
-      a.school_name,
-      a.school_type || '',
-      a.grade,
-      new Date(a.confirmed_date).toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        weekday: 'long',
-      }),
-      a.confirmed_course_name || 'なし',
-      a.email,
-      a.phone,
-      new Date(a.confirmed_at).toLocaleString('ja-JP'),
-    ]);
+    // CSV データ（複数日対応：各日程を別行で出力）
+    const rows: string[][] = [];
+    filteredApplicants.forEach((a) => {
+      a.confirmed_dates.forEach((cd, index) => {
+        rows.push([
+          a.name,
+          a.kana_name || '',
+          a.school_name,
+          a.school_type || '',
+          a.grade,
+          new Date(cd.date).toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            weekday: 'long',
+          }),
+          cd.course_name || 'なし',
+          a.email,
+          a.phone,
+          new Date(cd.confirmed_at).toLocaleString('ja-JP'),
+        ]);
+      });
+    });
 
     // CSV 文字列を作成
     const csvContent = [
@@ -477,15 +486,23 @@ export default function ConfirmedListPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {applicant.grade}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(applicant.confirmed_date).toLocaleDateString('ja-JP', {
-                          month: 'short',
-                          day: 'numeric',
-                          weekday: 'short',
-                        })}
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {applicant.confirmed_dates.map((cd, index) => (
+                          <div key={cd.date_id} className={index > 0 ? 'mt-1' : ''}>
+                            {new Date(cd.date).toLocaleDateString('ja-JP', {
+                              month: 'short',
+                              day: 'numeric',
+                              weekday: 'short',
+                            })}
+                          </div>
+                        ))}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {applicant.confirmed_course_name || '-'}
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {applicant.confirmed_dates.map((cd, index) => (
+                          <div key={cd.date_id} className={index > 0 ? 'mt-1' : ''}>
+                            {cd.course_name || '-'}
+                          </div>
+                        ))}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {applicant.line_sent_at ? (

@@ -27,82 +27,111 @@ export async function GET(request: Request) {
 
     const dateIds = dates.map((d) => d.id);
 
-    // 確定済み申込者のみ取得
-    const { data: confirmedApplicants } = await supabaseAdmin
-      .from('applicants')
+    // 確定参加情報を取得
+    const { data: confirmations } = await supabaseAdmin
+      .from('confirmed_participations')
       .select(`
         id,
-        name,
-        kana_name,
-        email,
-        phone,
-        school_name,
-        school_type,
-        grade,
+        applicant_id,
         confirmed_date_id,
         confirmed_course_id,
         confirmed_at,
-        line_user_id,
-        created_at
+        applicants (
+          id,
+          name,
+          kana_name,
+          email,
+          phone,
+          school_name,
+          school_type,
+          grade,
+          line_user_id,
+          created_at
+        )
       `)
       .in('confirmed_date_id', dateIds)
-      .eq('status', 'confirmed')
       .order('confirmed_at', { ascending: false });
 
-    if (!confirmedApplicants || confirmedApplicants.length === 0) {
+    if (!confirmations || confirmations.length === 0) {
       return NextResponse.json([]);
     }
 
-    // 各申込者の確定日程とコース情報、通知履歴を取得
-    const applicantsWithDetails = await Promise.all(
-      confirmedApplicants.map(async (applicant) => {
-        // 日程情報
-        const confirmedDate = dates.find((d) => d.id === applicant.confirmed_date_id);
+    // 申込者ごとにグループ化し、確定日程情報を集約
+    const applicantMap = new Map();
 
-        // コース情報
-        let courseName = null;
-        if (applicant.confirmed_course_id) {
-          const { data: course } = await supabaseAdmin
-            .from('event_courses')
-            .select('name')
-            .eq('id', applicant.confirmed_course_id)
-            .single();
+    for (const confirmation of confirmations) {
+      const applicant: any = confirmation.applicants;
+      if (!applicant) continue;
 
-          courseName = course?.name || null;
-        }
-
-        // 通知履歴を取得（最新のみ）
-        const { data: lineNotification } = await supabaseAdmin
-          .from('notification_logs')
-          .select('sent_at')
-          .eq('applicant_id', applicant.id)
-          .eq('notification_type', 'line')
-          .eq('status', 'success')
-          .order('sent_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        const { data: emailNotification } = await supabaseAdmin
-          .from('notification_logs')
-          .select('sent_at')
-          .eq('applicant_id', applicant.id)
-          .eq('notification_type', 'email')
-          .eq('status', 'success')
-          .order('sent_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        return {
+      if (!applicantMap.has(applicant.id)) {
+        applicantMap.set(applicant.id, {
           ...applicant,
-          confirmed_date: confirmedDate?.date || null,
-          confirmed_course_name: courseName,
-          line_sent_at: lineNotification?.sent_at || null,
-          email_sent_at: emailNotification?.sent_at || null,
-        };
-      })
-    );
+          confirmed_dates: [],
+          line_sent_at: null,
+          email_sent_at: null,
+        });
+      }
 
-    return NextResponse.json(applicantsWithDetails);
+      const applicantData: any = applicantMap.get(applicant.id);
+
+      // 日程情報を追加
+      const dateInfo = dates.find((d) => d.id === confirmation.confirmed_date_id);
+
+      // コース情報を取得
+      let courseName = null;
+      if (confirmation.confirmed_course_id) {
+        const { data: course } = await supabaseAdmin
+          .from('event_courses')
+          .select('name')
+          .eq('id', confirmation.confirmed_course_id)
+          .single();
+        courseName = course?.name || null;
+      }
+
+      applicantData.confirmed_dates.push({
+        date_id: confirmation.confirmed_date_id,
+        date: dateInfo?.date || null,
+        course_id: confirmation.confirmed_course_id,
+        course_name: courseName,
+        confirmed_at: confirmation.confirmed_at,
+      });
+    }
+
+    // 通知履歴を取得
+    const applicantIds = Array.from(applicantMap.keys());
+    for (const applicantId of applicantIds) {
+      const applicantData: any = applicantMap.get(applicantId);
+
+      // LINE通知履歴（最新のみ）
+      const { data: lineNotification } = await supabaseAdmin
+        .from('notification_logs')
+        .select('sent_at')
+        .eq('applicant_id', applicantId)
+        .eq('notification_type', 'line')
+        .eq('status', 'success')
+        .order('sent_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      // メール通知履歴（最新のみ）
+      const { data: emailNotification } = await supabaseAdmin
+        .from('notification_logs')
+        .select('sent_at')
+        .eq('applicant_id', applicantId)
+        .eq('notification_type', 'email')
+        .eq('status', 'success')
+        .order('sent_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      applicantData.line_sent_at = lineNotification?.sent_at || null;
+      applicantData.email_sent_at = emailNotification?.sent_at || null;
+    }
+
+    // 配列に変換して返す
+    const result = Array.from(applicantMap.values());
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error('サーバーエラー:', error);
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
@@ -135,13 +164,7 @@ export async function POST(request: Request) {
     // 申込者情報を取得
     const { data: applicants } = await supabaseAdmin
       .from('applicants')
-      .select(`
-        id,
-        name,
-        line_user_id,
-        confirmed_date_id,
-        confirmed_course_id
-      `)
+      .select('id, name, line_user_id')
       .in('id', applicant_ids);
 
     if (!applicants || applicants.length === 0) {
@@ -165,69 +188,100 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // 日程情報を取得
-      const { data: dateInfo } = await supabaseAdmin
-        .from('open_campus_dates')
-        .select('date, event_id')
-        .eq('id', applicant.confirmed_date_id)
-        .single();
+      // 確定参加情報を取得
+      const { data: confirmations } = await supabaseAdmin
+        .from('confirmed_participations')
+        .select('confirmed_date_id, confirmed_course_id')
+        .eq('applicant_id', applicant.id);
 
-      // イベント情報を取得
-      const { data: eventInfo } = await supabaseAdmin
-        .from('open_campus_events')
-        .select('name, confirmation_message')
-        .eq('id', dateInfo?.event_id)
-        .single();
-
-      console.log('=== LINE Notification Debug ===');
-      console.log('Applicant:', applicant.name);
-      console.log('Event Info:', eventInfo);
-      console.log('Confirmation Message:', eventInfo?.confirmation_message);
-      console.log('Has Confirmation Message:', !!eventInfo?.confirmation_message);
-
-      // コース情報を取得
-      let courseName = 'なし';
-      if (applicant.confirmed_course_id) {
-        const { data: courseInfo } = await supabaseAdmin
-          .from('event_courses')
-          .select('name')
-          .eq('id', applicant.confirmed_course_id)
-          .single();
-        courseName = courseInfo?.name || 'なし';
+      if (!confirmations || confirmations.length === 0) {
+        results.push({
+          applicant_id: applicant.id,
+          name: applicant.name,
+          success: false,
+          error: '確定情報なし',
+        });
+        continue;
       }
 
-      // LINEメッセージを作成
+      // 各確定日程の情報を取得
       let messageText = `【参加確定のお知らせ】
 
 ${applicant.name} 様
 
 オープンキャンパスへのお申し込みが確定しました。
 
-■ イベント名
+`;
+
+      // イベント情報を取得（最初の日程から）
+      const firstConfirmation = confirmations[0];
+      const { data: dateInfo } = await supabaseAdmin
+        .from('open_campus_dates')
+        .select('date, event_id')
+        .eq('id', firstConfirmation.confirmed_date_id)
+        .single();
+
+      const { data: eventInfo } = await supabaseAdmin
+        .from('open_campus_events')
+        .select('name, confirmation_message')
+        .eq('id', dateInfo?.event_id)
+        .single();
+
+      messageText += `■ イベント名
 ${eventInfo?.name || '不明'}
 
-■ 参加日時
-${dateInfo ? new Date(dateInfo.date).toLocaleDateString('ja-JP', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  weekday: 'long',
-}) : '不明'}
+`;
+
+      // 各確定日程を追加
+      for (let i = 0; i < confirmations.length; i++) {
+        const confirmation = confirmations[i];
+
+        const { data: date } = await supabaseAdmin
+          .from('open_campus_dates')
+          .select('date')
+          .eq('id', confirmation.confirmed_date_id)
+          .single();
+
+        let courseName = 'なし';
+        if (confirmation.confirmed_course_id) {
+          const { data: course } = await supabaseAdmin
+            .from('event_courses')
+            .select('name')
+            .eq('id', confirmation.confirmed_course_id)
+            .single();
+          courseName = course?.name || 'なし';
+        }
+
+        if (confirmations.length > 1) {
+          messageText += `■ 参加日時${i + 1}
+`;
+        } else {
+          messageText += `■ 参加日時
+`;
+        }
+
+        messageText += `${date ? new Date(date.date).toLocaleDateString('ja-JP', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          weekday: 'long',
+        }) : '不明'}
 
 ■ 参加コース
-${courseName}`;
+${courseName}
+
+`;
+      }
 
       // 確定者案内メッセージを追加
       if (eventInfo?.confirmation_message) {
-        messageText += `
+        messageText += `■ 当日のご案内
+${eventInfo.confirmation_message}
 
-■ 当日のご案内
-${eventInfo.confirmation_message}`;
+`;
       }
 
-      messageText += `
-
-当日お会いできることを楽しみにしております。
+      messageText += `当日お会いできることを楽しみにしております。
 
 ※このメッセージは自動送信されています。`;
 
@@ -235,10 +289,6 @@ ${eventInfo.confirmation_message}`;
         type: 'text',
         text: messageText,
       };
-
-      console.log('=== LINE Message Content ===');
-      console.log('Message Text:', messageText);
-      console.log('Message Length:', messageText.length);
 
       // LINE APIにメッセージを送信
       try {
@@ -325,13 +375,7 @@ export async function PATCH(request: Request) {
     // 申込者情報を取得
     const { data: applicants } = await supabaseAdmin
       .from('applicants')
-      .select(`
-        id,
-        name,
-        email,
-        confirmed_date_id,
-        confirmed_course_id
-      `)
+      .select('id, name, email')
       .in('id', applicant_ids);
 
     if (!applicants || applicants.length === 0) {
@@ -360,39 +404,36 @@ export async function PATCH(request: Request) {
     const results = [];
 
     for (const applicant of applicants) {
-      // 日程情報を取得
+      // 確定参加情報を取得
+      const { data: confirmations } = await supabaseAdmin
+        .from('confirmed_participations')
+        .select('confirmed_date_id, confirmed_course_id')
+        .eq('applicant_id', applicant.id);
+
+      if (!confirmations || confirmations.length === 0) {
+        results.push({
+          applicant_id: applicant.id,
+          name: applicant.name,
+          email: applicant.email,
+          success: false,
+          error: '確定情報なし',
+        });
+        continue;
+      }
+
+      // イベント情報を取得
+      const firstConfirmation = confirmations[0];
       const { data: dateInfo } = await supabaseAdmin
         .from('open_campus_dates')
         .select('date, event_id')
-        .eq('id', applicant.confirmed_date_id)
+        .eq('id', firstConfirmation.confirmed_date_id)
         .single();
 
-      // イベント情報を取得
       const { data: eventInfo } = await supabaseAdmin
         .from('open_campus_events')
         .select('name, confirmation_message')
         .eq('id', dateInfo?.event_id)
         .single();
-
-      // コース情報を取得
-      let courseName = 'なし';
-      if (applicant.confirmed_course_id) {
-        const { data: courseInfo } = await supabaseAdmin
-          .from('event_courses')
-          .select('name')
-          .eq('id', applicant.confirmed_course_id)
-          .single();
-        courseName = courseInfo?.name || 'なし';
-      }
-
-      const dateFormatted = dateInfo
-        ? new Date(dateInfo.date).toLocaleDateString('ja-JP', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            weekday: 'long',
-          })
-        : '不明';
 
       // メール本文を作成
       let htmlContent = `
@@ -408,12 +449,45 @@ export async function PATCH(request: Request) {
           <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #1f2937;">■ イベント名</h3>
             <p style="font-size: 16px; margin: 5px 0;">${eventInfo?.name || '不明'}</p>
+`;
 
-            <h3 style="color: #1f2937;">■ 参加日時</h3>
+      // 各確定日程を追加
+      for (let i = 0; i < confirmations.length; i++) {
+        const confirmation = confirmations[i];
+
+        const { data: date } = await supabaseAdmin
+          .from('open_campus_dates')
+          .select('date')
+          .eq('id', confirmation.confirmed_date_id)
+          .single();
+
+        let courseName = 'なし';
+        if (confirmation.confirmed_course_id) {
+          const { data: course } = await supabaseAdmin
+            .from('event_courses')
+            .select('name')
+            .eq('id', confirmation.confirmed_course_id)
+            .single();
+          courseName = course?.name || 'なし';
+        }
+
+        const dateFormatted = date
+          ? new Date(date.date).toLocaleDateString('ja-JP', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              weekday: 'long',
+            })
+          : '不明';
+
+        htmlContent += `
+            <h3 style="color: #1f2937;">■ 参加日時${confirmations.length > 1 ? i + 1 : ''}</h3>
             <p style="font-size: 16px; margin: 5px 0;">${dateFormatted}</p>
 
             <h3 style="color: #1f2937;">■ 参加コース</h3>
-            <p style="font-size: 16px; margin: 5px 0;">${courseName}</p>`;
+            <p style="font-size: 16px; margin: 5px 0;">${courseName}</p>
+`;
+      }
 
       // 確定者案内メッセージを追加
       if (eventInfo?.confirmation_message) {
@@ -436,6 +510,7 @@ export async function PATCH(request: Request) {
         </div>
       `;
 
+      // テキスト版メール本文
       let textContent = `【参加確定のお知らせ】
 
 ${applicant.name} 様
@@ -445,23 +520,53 @@ ${applicant.name} 様
 ■ イベント名
 ${eventInfo?.name || '不明'}
 
-■ 参加日時
+`;
+
+      for (let i = 0; i < confirmations.length; i++) {
+        const confirmation = confirmations[i];
+
+        const { data: date } = await supabaseAdmin
+          .from('open_campus_dates')
+          .select('date')
+          .eq('id', confirmation.confirmed_date_id)
+          .single();
+
+        let courseName = 'なし';
+        if (confirmation.confirmed_course_id) {
+          const { data: course } = await supabaseAdmin
+            .from('event_courses')
+            .select('name')
+            .eq('id', confirmation.confirmed_course_id)
+            .single();
+          courseName = course?.name || 'なし';
+        }
+
+        const dateFormatted = date
+          ? new Date(date.date).toLocaleDateString('ja-JP', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              weekday: 'long',
+            })
+          : '不明';
+
+        textContent += `■ 参加日時${confirmations.length > 1 ? i + 1 : ''}
 ${dateFormatted}
 
 ■ 参加コース
-${courseName}`;
+${courseName}
 
-      // 確定者案内メッセージを追加
-      if (eventInfo?.confirmation_message) {
-        textContent += `
-
-■ 当日のご案内
-${eventInfo.confirmation_message}`;
+`;
       }
 
-      textContent += `
+      if (eventInfo?.confirmation_message) {
+        textContent += `■ 当日のご案内
+${eventInfo.confirmation_message}
 
-当日お会いできることを楽しみにしております。
+`;
+      }
+
+      textContent += `当日お会いできることを楽しみにしております。
 
 ※このメールは自動送信されています。`;
 

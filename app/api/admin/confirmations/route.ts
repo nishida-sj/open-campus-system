@@ -53,9 +53,6 @@ export async function GET(request: Request) {
           school_type,
           grade,
           status,
-          confirmed_date_id,
-          confirmed_course_id,
-          confirmed_at,
           created_at
         )
       `)
@@ -64,6 +61,14 @@ export async function GET(request: Request) {
     if (!applicantVisits) {
       return NextResponse.json({ pending: [], confirmed: [] });
     }
+
+    // 全申込者の確定情報を取得
+    const applicantIds = [...new Set(applicantVisits.map((v: any) => v.applicant_id))];
+    const { data: confirmations } = await supabaseAdmin
+      .from('confirmed_participations')
+      .select('*')
+      .in('applicant_id', applicantIds)
+      .in('confirmed_date_id', dateIds);
 
     // 申込者ごとにグループ化
     const applicantMap = new Map();
@@ -76,6 +81,7 @@ export async function GET(request: Request) {
         applicantMap.set(applicant.id, {
           ...applicant,
           selected_dates: [],
+          confirmed_dates: [],
         });
       }
 
@@ -92,6 +98,20 @@ export async function GET(request: Request) {
       });
     }
 
+    // 確定情報を追加
+    if (confirmations) {
+      for (const confirmation of confirmations) {
+        const applicantData: any = applicantMap.get(confirmation.applicant_id);
+        if (applicantData) {
+          applicantData.confirmed_dates.push({
+            date_id: confirmation.confirmed_date_id,
+            course_id: confirmation.confirmed_course_id,
+            confirmed_at: confirmation.confirmed_at,
+          });
+        }
+      }
+    }
+
     // 配列に変換してソート
     const allApplicants = Array.from(applicantMap.values()).map((applicant) => ({
       ...applicant,
@@ -100,9 +120,9 @@ export async function GET(request: Request) {
       ),
     }));
 
-    // 確定/未確定で分類
-    const pending = allApplicants.filter((a) => !a.confirmed_date_id);
-    const confirmed = allApplicants.filter((a) => a.confirmed_date_id);
+    // 確定/未確定で分類（確定日程が1つでもあれば確定とみなす）
+    const pending = allApplicants.filter((a: any) => a.confirmed_dates.length === 0);
+    const confirmed = allApplicants.filter((a: any) => a.confirmed_dates.length > 0);
 
     return NextResponse.json({ pending, confirmed });
   } catch (error) {
@@ -125,10 +145,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // 申込者が存在するか確認し、現在の確定状態を取得
+    // 申込者が存在するか確認
     const { data: applicant, error: applicantError } = await supabaseAdmin
       .from('applicants')
-      .select('id, email, confirmed_date_id, status')
+      .select('id, email')
       .eq('id', applicant_id)
       .single();
 
@@ -154,62 +174,109 @@ export async function POST(request: Request) {
       );
     }
 
-    // 既に確定済みの場合、前の日程のカウントを減らす
-    const previousDateId = applicant.confirmed_date_id;
-    if (previousDateId && previousDateId !== confirmed_date_id) {
-      const { error: decrementError } = await supabaseAdmin.rpc('decrement_visit_count', {
-        date_id: previousDateId,
-      });
+    // イベント設定を取得（複数日参加が許可されているか確認）
+    const { data: dateInfo } = await supabaseAdmin
+      .from('open_campus_dates')
+      .select('event_id, open_campus_events(allow_multiple_dates)')
+      .eq('id', confirmed_date_id)
+      .single();
 
-      if (decrementError) {
-        console.error('カウント減少エラー:', decrementError);
+    const allowMultipleDates = (dateInfo as any)?.open_campus_events?.allow_multiple_dates || false;
+
+    // 既存の確定をチェック
+    const { data: existingConfirmations } = await supabaseAdmin
+      .from('confirmed_participations')
+      .select('id, confirmed_date_id')
+      .eq('applicant_id', applicant_id);
+
+    // 複数日参加が許可されていない場合、既に別の日程が確定していたらエラー
+    if (!allowMultipleDates && existingConfirmations && existingConfirmations.length > 0) {
+      const existingDate = existingConfirmations[0];
+      if (existingDate.confirmed_date_id !== confirmed_date_id) {
+        return NextResponse.json(
+          { error: 'このイベントは複数日参加が許可されていません。既に他の日程が確定されています。' },
+          { status: 400 }
+        );
       }
     }
 
-    // 確定情報を更新
-    const { error: updateError } = await supabaseAdmin
-      .from('applicants')
-      .update({
+    // 同じ日程が既に確定されているかチェック
+    const alreadyConfirmed = existingConfirmations?.find(
+      (c: any) => c.confirmed_date_id === confirmed_date_id
+    );
+
+    if (alreadyConfirmed) {
+      // 既に確定済みの場合はコース情報のみ更新
+      const { error: updateError } = await supabaseAdmin
+        .from('confirmed_participations')
+        .update({
+          confirmed_course_id: confirmed_course_id || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', alreadyConfirmed.id);
+
+      if (updateError) {
+        console.error('コース更新エラー:', updateError);
+        return NextResponse.json(
+          { error: 'コース情報の更新に失敗しました' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({ success: true, updated: true });
+    }
+
+    // 新規確定を作成
+    const { error: insertError } = await supabaseAdmin
+      .from('confirmed_participations')
+      .insert({
+        applicant_id,
         confirmed_date_id,
         confirmed_course_id: confirmed_course_id || null,
-        confirmed_at: new Date().toISOString(),
-        confirmed_by: 'admin', // 実際の管理者情報があれば使用
-        status: 'confirmed',
-      })
-      .eq('id', applicant_id);
+        confirmed_by: 'admin',
+      });
 
-    if (updateError) {
-      console.error('確定エラー:', updateError);
+    if (insertError) {
+      console.error('確定エラー:', insertError);
       return NextResponse.json(
         { error: '確定に失敗しました' },
         { status: 500 }
       );
     }
 
-    // 新しい日程のカウントを増加（未確定から確定、または別の日程に変更の場合のみ）
-    if (!previousDateId || previousDateId !== confirmed_date_id) {
-      const { error: countError } = await supabaseAdmin.rpc('increment_visit_count', {
-        date_id: confirmed_date_id,
-      });
+    // 申込者のステータスを確定に更新
+    const { error: statusUpdateError } = await supabaseAdmin
+      .from('applicants')
+      .update({
+        status: 'confirmed',
+      })
+      .eq('id', applicant_id);
 
-      if (countError) {
-        console.error('カウント更新エラー:', countError);
-        // カウント失敗時はログのみ（確定は成功とする）
-      }
+    if (statusUpdateError) {
+      console.error('ステータス更新エラー:', statusUpdateError);
     }
 
-    return NextResponse.json({ success: true });
+    // 日程のカウントを増加
+    const { error: countError } = await supabaseAdmin.rpc('increment_visit_count', {
+      date_id: confirmed_date_id,
+    });
+
+    if (countError) {
+      console.error('カウント更新エラー:', countError);
+    }
+
+    return NextResponse.json({ success: true, created: true });
   } catch (error) {
     console.error('サーバーエラー:', error);
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }
 
-// 確定解除
+// 確定解除（特定の日程の確定を解除）
 export async function DELETE(request: Request) {
   try {
     const body = await request.json();
-    const { applicant_id } = body;
+    const { applicant_id, confirmed_date_id } = body;
 
     if (!applicant_id) {
       return NextResponse.json(
@@ -218,51 +285,90 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // 現在の確定情報を取得
-    const { data: applicant, error: fetchError } = await supabaseAdmin
-      .from('applicants')
-      .select('confirmed_date_id')
-      .eq('id', applicant_id)
-      .single();
+    // confirmed_date_idが指定されている場合は特定の日程のみ解除
+    // 指定されていない場合は全ての確定を解除
+    let query = supabaseAdmin
+      .from('confirmed_participations')
+      .select('id, confirmed_date_id')
+      .eq('applicant_id', applicant_id);
 
-    if (fetchError || !applicant) {
+    if (confirmed_date_id) {
+      query = query.eq('confirmed_date_id', confirmed_date_id);
+    }
+
+    const { data: confirmations, error: fetchError } = await query;
+
+    if (fetchError) {
+      console.error('確定情報取得エラー:', fetchError);
       return NextResponse.json(
-        { error: '申込者が見つかりません' },
+        { error: '確定情報の取得に失敗しました' },
+        { status: 500 }
+      );
+    }
+
+    if (!confirmations || confirmations.length === 0) {
+      return NextResponse.json(
+        { error: '確定情報が見つかりません' },
         { status: 404 }
       );
     }
 
-    const previousDateId = applicant.confirmed_date_id;
+    // 確定を削除
+    const confirmationIds = confirmations.map((c) => c.id);
+    const { error: deleteError } = await supabaseAdmin
+      .from('confirmed_participations')
+      .delete()
+      .in('id', confirmationIds);
 
-    // 確定情報をクリア
-    const { error: updateError } = await supabaseAdmin
-      .from('applicants')
-      .update({
-        confirmed_date_id: null,
-        confirmed_course_id: null,
-        confirmed_at: null,
-        confirmed_by: null,
-        status: 'pending',
-      })
-      .eq('id', applicant_id);
-
-    if (updateError) {
-      console.error('解除エラー:', updateError);
+    if (deleteError) {
+      console.error('解除エラー:', deleteError);
       return NextResponse.json(
         { error: '解除に失敗しました' },
         { status: 500 }
       );
     }
 
-    // 定員カウントを減少（以前確定していた日程）
-    if (previousDateId) {
+    // 各日程のカウントを減少
+    for (const confirmation of confirmations) {
       const { error: countError } = await supabaseAdmin.rpc('decrement_visit_count', {
-        date_id: previousDateId,
+        date_id: confirmation.confirmed_date_id,
       });
 
       if (countError) {
         console.error('カウント減少エラー:', countError);
-        // カウント失敗時はログのみ
+      }
+    }
+
+    // 全ての確定が解除された場合、申込者のステータスを未確定に戻す
+    if (!confirmed_date_id) {
+      const { error: statusUpdateError } = await supabaseAdmin
+        .from('applicants')
+        .update({
+          status: 'pending',
+        })
+        .eq('id', applicant_id);
+
+      if (statusUpdateError) {
+        console.error('ステータス更新エラー:', statusUpdateError);
+      }
+    } else {
+      // 特定の日程のみ解除した場合、他に確定がなければステータスを未確定に戻す
+      const { data: remainingConfirmations } = await supabaseAdmin
+        .from('confirmed_participations')
+        .select('id')
+        .eq('applicant_id', applicant_id);
+
+      if (!remainingConfirmations || remainingConfirmations.length === 0) {
+        const { error: statusUpdateError } = await supabaseAdmin
+          .from('applicants')
+          .update({
+            status: 'pending',
+          })
+          .eq('id', applicant_id);
+
+        if (statusUpdateError) {
+          console.error('ステータス更新エラー:', statusUpdateError);
+        }
       }
     }
 
