@@ -179,6 +179,12 @@ export async function POST(request: Request) {
         .eq('id', dateInfo?.event_id)
         .single();
 
+      console.log('=== LINE Notification Debug ===');
+      console.log('Applicant:', applicant.name);
+      console.log('Event Info:', eventInfo);
+      console.log('Confirmation Message:', eventInfo?.confirmation_message);
+      console.log('Has Confirmation Message:', !!eventInfo?.confirmation_message);
+
       // コース情報を取得
       let courseName = 'なし';
       if (applicant.confirmed_course_id) {
@@ -229,6 +235,10 @@ ${eventInfo.confirmation_message}`;
         type: 'text',
         text: messageText,
       };
+
+      console.log('=== LINE Message Content ===');
+      console.log('Message Text:', messageText);
+      console.log('Message Length:', messageText.length);
 
       // LINE APIにメッセージを送信
       try {
