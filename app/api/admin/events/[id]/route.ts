@@ -219,7 +219,7 @@ export async function PUT(
           .eq('event_id', eventId);
 
         // 新しい日程を作成
-        const createdDates = [];
+        const createdDates: Array<{ id: string; date: string; capacity: number }> = [];
         for (const date of dates) {
           const { data: newDate, error: dateError } = await supabaseAdmin
             .from('open_campus_dates')
