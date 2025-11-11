@@ -29,12 +29,24 @@ interface DateInfo {
   capacity: number;
   current_count: number;
   is_active: boolean;
+  event_id: string | null;
+}
+
+interface Event {
+  id: string;
+  name: string;
+  description: string | null;
+  max_date_selections: number;
+  is_active: boolean;
+  created_at: string;
 }
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [dates, setDates] = useState<DateInfo[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   // 認証チェック
@@ -49,16 +61,24 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [applicantsRes, datesRes] = await Promise.all([
+        const [applicantsRes, datesRes, eventsRes] = await Promise.all([
           fetch('/api/admin/applicants'),
           fetch('/api/admin/dates'),
+          fetch('/api/admin/events'),
         ]);
 
         const applicantsData = await applicantsRes.json();
         const datesData = await datesRes.json();
+        const eventsData = await eventsRes.json();
 
         setApplicants(applicantsData);
         setDates(datesData);
+        setEvents(eventsData);
+
+        // デフォルトで最初のイベントを選択
+        if (eventsData.length > 0) {
+          setSelectedEventId(eventsData[0].id);
+        }
       } catch (error) {
         console.error('データ取得エラー:', error);
       } finally {
@@ -74,6 +94,7 @@ export default function AdminDashboard() {
     // BOM付きUTF-8（Excelで文字化けしない）
     const bom = '\uFEFF';
     const headers = [
+      'イベント名',
       '氏名',
       'ふりがな',
       'メールアドレス',
@@ -90,7 +111,7 @@ export default function AdminDashboard() {
       '申込日時',
     ];
 
-    const rows = applicants.map((applicant) => {
+    const rows = filteredApplicants.map((applicant) => {
       const dateInfo = dates.find((d) => d.id === applicant.visit_date_id);
       const visitDate = dateInfo
         ? new Date(dateInfo.date).toLocaleDateString('ja-JP')
@@ -99,6 +120,7 @@ export default function AdminDashboard() {
       const guardianAttendance = applicant.guardian_attendance ? 'あり' : 'なし';
 
       return [
+        selectedEvent?.name || '',
         applicant.name,
         applicant.kana_name || '',
         applicant.email,
@@ -131,9 +153,10 @@ export default function AdminDashboard() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     const today = new Date().toISOString().split('T')[0];
+    const eventName = selectedEvent?.name.replace(/[\\/:*?"<>|]/g, '_') || 'all_events';
 
     link.setAttribute('href', url);
-    link.setAttribute('download', `applicants_${today}.csv`);
+    link.setAttribute('download', `applicants_${eventName}_${today}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -166,11 +189,23 @@ export default function AdminDashboard() {
     );
   }
 
-  // 統計情報
-  const totalApplicants = applicants.length;
-  const completedApplicants = applicants.filter((a) => a.status === 'completed').length;
-  const pendingApplicants = applicants.filter((a) => a.status === 'pending').length;
-  const lineRegistered = applicants.filter((a) => a.line_user_id).length;
+  // 選択されたイベントの日程IDリスト
+  const selectedEventDates = dates.filter((d) => d.event_id === selectedEventId);
+  const selectedEventDateIds = selectedEventDates.map((d) => d.id);
+
+  // 選択されたイベントの申込者のみフィルタリング
+  const filteredApplicants = selectedEventId
+    ? applicants.filter((a) => selectedEventDateIds.includes(a.visit_date_id))
+    : applicants;
+
+  // 統計情報（選択されたイベントのみ）
+  const totalApplicants = filteredApplicants.length;
+  const completedApplicants = filteredApplicants.filter((a) => a.status === 'completed').length;
+  const pendingApplicants = filteredApplicants.filter((a) => a.status === 'pending').length;
+  const lineRegistered = filteredApplicants.filter((a) => a.line_user_id).length;
+
+  // 選択されたイベント情報
+  const selectedEvent = events.find((e) => e.id === selectedEventId);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -191,14 +226,58 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* ナビゲーションメニュー */}
-        <div className="mb-8">
+        <div className="mb-8 flex justify-between items-center">
           <button
             onClick={() => router.push('/admin/events')}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
           >
             イベント管理
           </button>
+
+          {/* イベント選択 */}
+          {events.length > 0 && (
+            <div className="flex items-center space-x-4">
+              <label htmlFor="event-select" className="text-sm font-medium text-gray-700">
+                表示するイベント:
+              </label>
+              <select
+                id="event-select"
+                value={selectedEventId || ''}
+                onChange={(e) => setSelectedEventId(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {events.map((event) => (
+                  <option key={event.id} value={event.id}>
+                    {event.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
+
+        {/* イベント情報 */}
+        {selectedEvent && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">{selectedEvent.name}</h2>
+            {selectedEvent.description && (
+              <p className="text-gray-600 mb-4">{selectedEvent.description}</p>
+            )}
+            <div className="flex items-center space-x-4 text-sm text-gray-500">
+              <span>最大選択可能: {selectedEvent.max_date_selections === 999 ? '制限なし' : `${selectedEvent.max_date_selections}日程`}</span>
+              <span>•</span>
+              <span>開催日程数: {selectedEventDates.length}件</span>
+              <span>•</span>
+              <span>
+                {selectedEvent.is_active ? (
+                  <span className="text-green-600 font-semibold">公開中</span>
+                ) : (
+                  <span className="text-gray-600">非公開</span>
+                )}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* 統計カード */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -224,7 +303,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-lg shadow mb-8 p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">開催日程</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {dates.map((date) => (
+            {selectedEventDates.map((date) => (
               <div
                 key={date.id}
                 className={`p-4 rounded-lg border-2 ${
@@ -272,8 +351,10 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          {applicants.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">申込者がいません</div>
+          {filteredApplicants.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              {selectedEvent ? `${selectedEvent.name}への申込者がいません` : '申込者がいません'}
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -300,7 +381,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {applicants.map((applicant) => (
+                  {filteredApplicants.map((applicant) => (
                     <tr key={applicant.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{applicant.name}</div>

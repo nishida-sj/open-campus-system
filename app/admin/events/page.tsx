@@ -13,17 +13,13 @@ interface Event {
 }
 
 interface DateOption {
-  id: string;
   date: string;
   capacity: number;
-  current_count: number;
-  is_active: boolean;
 }
 
 export default function AdminEventsPage() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
-  const [dates, setDates] = useState<DateOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -33,7 +29,7 @@ export default function AdminEventsPage() {
     description: '',
     max_date_selections: 1,
     is_active: true,
-    selectedDates: [] as string[],
+    dates: [] as DateOption[],
   });
 
   // 認証チェック
@@ -51,19 +47,10 @@ export default function AdminEventsPage() {
 
   const fetchData = async () => {
     try {
-      const [eventsRes, datesRes] = await Promise.all([
-        fetch('/api/admin/events'),
-        fetch('/api/admin/dates'),
-      ]);
-
-      if (eventsRes.ok) {
-        const eventsData = await eventsRes.json();
+      const response = await fetch('/api/admin/events');
+      if (response.ok) {
+        const eventsData = await response.json();
         setEvents(eventsData);
-      }
-
-      if (datesRes.ok) {
-        const datesData = await datesRes.json();
-        setDates(datesData);
       }
     } catch (error) {
       console.error('データ取得エラー:', error);
@@ -76,8 +63,8 @@ export default function AdminEventsPage() {
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (formData.selectedDates.length === 0) {
-      alert('少なくとも1つの日程を選択してください');
+    if (formData.dates.length === 0) {
+      alert('少なくとも1つの開催日を追加してください');
       return;
     }
 
@@ -98,7 +85,7 @@ export default function AdminEventsPage() {
           description: '',
           max_date_selections: 1,
           is_active: true,
-          selectedDates: [],
+          dates: [],
         });
         fetchData();
       } else {
@@ -111,13 +98,35 @@ export default function AdminEventsPage() {
     }
   };
 
-  // 日程選択トグル
-  const toggleDateSelection = (dateId: string) => {
+  // 開催日を追加
+  const addDate = () => {
     setFormData((prev) => ({
       ...prev,
-      selectedDates: prev.selectedDates.includes(dateId)
-        ? prev.selectedDates.filter((id) => id !== dateId)
-        : [...prev.selectedDates, dateId],
+      dates: [...prev.dates, { date: '', capacity: 30 }],
+    }));
+  };
+
+  // 開催日を削除
+  const removeDate = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      dates: prev.dates.filter((_, i) => i !== index),
+    }));
+  };
+
+  // 開催日の日付を変更
+  const updateDateValue = (index: number, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      dates: prev.dates.map((d, i) => (i === index ? { ...d, date: value } : d)),
+    }));
+  };
+
+  // 開催日の定員を変更
+  const updateDateCapacity = (index: number, value: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      dates: prev.dates.map((d, i) => (i === index ? { ...d, capacity: value } : d)),
     }));
   };
 
@@ -220,61 +229,94 @@ export default function AdminEventsPage() {
                 </select>
               </div>
 
-              {/* 日程選択 */}
+              {/* 開催日程 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  開催日程を選択 *
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-4">
-                  {dates.length === 0 ? (
-                    <p className="text-gray-500 col-span-full">利用可能な日程がありません</p>
-                  ) : (
-                    dates.map((date) => (
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    開催日程 *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addDate}
+                    className="text-sm bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded transition duration-200"
+                  >
+                    + 日程を追加
+                  </button>
+                </div>
+
+                {formData.dates.length === 0 ? (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <p className="text-gray-500 mb-2">開催日程が登録されていません</p>
+                    <button
+                      type="button"
+                      onClick={addDate}
+                      className="text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      最初の日程を追加
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 border border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    {formData.dates.map((dateItem, index) => (
                       <div
-                        key={date.id}
-                        className={`p-4 rounded-lg border-2 cursor-pointer transition ${
-                          formData.selectedDates.includes(date.id)
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-blue-300'
-                        }`}
-                        onClick={() => toggleDateSelection(date.id)}
+                        key={index}
+                        className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
-                            <div className="font-semibold text-gray-900">
-                              {new Date(date.date).toLocaleDateString('ja-JP', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                weekday: 'short',
-                              })}
-                            </div>
-                            <div className="text-sm text-gray-600 mt-1">
-                              定員: {date.capacity}名
-                            </div>
+                            <label className="block text-xs text-gray-600 mb-1">
+                              開催日 *
+                            </label>
+                            <input
+                              type="date"
+                              required
+                              value={dateItem.date}
+                              onChange={(e) => updateDateValue(index, e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
                           </div>
                           <div>
-                            {formData.selectedDates.includes(date.id) && (
-                              <svg
-                                className="w-6 h-6 text-blue-600"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                            )}
+                            <label className="block text-xs text-gray-600 mb-1">
+                              定員 *
+                            </label>
+                            <input
+                              type="number"
+                              required
+                              min="1"
+                              value={dateItem.capacity}
+                              onChange={(e) =>
+                                updateDateCapacity(index, parseInt(e.target.value) || 0)
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
                           </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => removeDate(index)}
+                          className="text-red-600 hover:text-red-700 p-2"
+                          title="削除"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
                       </div>
-                    ))
-                  )}
-                </div>
+                    ))}
+                  </div>
+                )}
                 <p className="text-sm text-gray-500 mt-2">
-                  選択中: {formData.selectedDates.length}件
+                  登録日程数: {formData.dates.length}件
                 </p>
               </div>
 

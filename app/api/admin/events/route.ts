@@ -25,14 +25,24 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, description, max_date_selections, is_active, selectedDates } = body;
+    const { name, description, max_date_selections, is_active, dates } = body;
 
     // バリデーション
-    if (!name || !selectedDates || selectedDates.length === 0) {
+    if (!name || !dates || dates.length === 0) {
       return NextResponse.json(
-        { error: 'イベント名と日程を選択してください' },
+        { error: 'イベント名と開催日程を入力してください' },
         { status: 400 }
       );
+    }
+
+    // 日程データのバリデーション
+    for (const date of dates) {
+      if (!date.date || !date.capacity || date.capacity < 1) {
+        return NextResponse.json(
+          { error: '開催日と定員を正しく入力してください' },
+          { status: 400 }
+        );
+      }
     }
 
     // イベント作成
@@ -52,17 +62,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: eventError.message }, { status: 500 });
     }
 
-    // 選択された日程にevent_idを設定
-    const { error: updateError } = await supabaseAdmin
-      .from('open_campus_dates')
-      .update({ event_id: event.id })
-      .in('id', selectedDates);
+    // 開催日程を作成
+    const datesToInsert = dates.map((d: { date: string; capacity: number }) => ({
+      event_id: event.id,
+      date: d.date,
+      capacity: d.capacity,
+      current_count: 0,
+      is_active: true,
+    }));
 
-    if (updateError) {
-      console.error('日程更新エラー:', updateError);
-      // イベントは作成されたが日程紐付けに失敗した場合、イベントを削除
+    const { error: datesError } = await supabaseAdmin
+      .from('open_campus_dates')
+      .insert(datesToInsert);
+
+    if (datesError) {
+      console.error('日程作成エラー:', datesError);
+      // イベントは作成されたが日程作成に失敗した場合、イベントを削除
       await supabaseAdmin.from('open_campus_events').delete().eq('id', event.id);
-      return NextResponse.json({ error: '日程の紐付けに失敗しました' }, { status: 500 });
+      return NextResponse.json({ error: '開催日程の作成に失敗しました' }, { status: 500 });
     }
 
     return NextResponse.json(event, { status: 201 });
