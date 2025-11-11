@@ -104,7 +104,7 @@ export async function GET(
   }
 }
 
-// イベント情報更新（概要情報のみ）
+// イベント情報更新
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -112,7 +112,7 @@ export async function PUT(
   try {
     const { id: eventId } = await params;
     const body = await request.json();
-    const { name, description, overview, display_end_date, is_active } = body;
+    const { name, description, overview, display_end_date, is_active, dates, courses } = body;
 
     // バリデーション
     if (!name || !name.trim()) {
@@ -136,7 +136,28 @@ export async function PUT(
       );
     }
 
-    // 概要情報のみ更新（日程、コース設定は変更不可）
+    // 申込者がいる場合は日程・コース変更不可チェック
+    if (dates || courses) {
+      const { data: existingDates } = await supabaseAdmin
+        .from('open_campus_dates')
+        .select('id')
+        .eq('event_id', eventId);
+
+      const dateIds = (existingDates || []).map(d => d.id);
+      const { count: applicantCount } = await supabaseAdmin
+        .from('applicant_visit_dates')
+        .select('applicant_id', { count: 'exact', head: true })
+        .in('visit_date_id', dateIds);
+
+      if ((applicantCount || 0) > 0) {
+        return NextResponse.json(
+          { error: '申込者がいるイベントの日程・コースは変更できません' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // イベント基本情報を更新
     const { data: updatedEvent, error: updateError } = await supabaseAdmin
       .from('open_campus_events')
       .update({
@@ -157,6 +178,112 @@ export async function PUT(
         { error: '更新に失敗しました' },
         { status: 500 }
       );
+    }
+
+    // 日程とコースが含まれている場合は更新
+    if (dates && courses) {
+      try {
+        // 既存の日程・コース・関連データを削除
+        const { data: existingDates } = await supabaseAdmin
+          .from('open_campus_dates')
+          .select('id')
+          .eq('event_id', eventId);
+
+        const existingDateIds = (existingDates || []).map(d => d.id);
+
+        // コースと日程の関連を削除
+        const { data: existingCourses } = await supabaseAdmin
+          .from('event_courses')
+          .select('id')
+          .eq('event_id', eventId);
+
+        const existingCourseIds = (existingCourses || []).map(c => c.id);
+
+        if (existingCourseIds.length > 0) {
+          await supabaseAdmin
+            .from('course_date_associations')
+            .delete()
+            .in('course_id', existingCourseIds);
+        }
+
+        // 既存のコースを削除
+        await supabaseAdmin
+          .from('event_courses')
+          .delete()
+          .eq('event_id', eventId);
+
+        // 既存の日程を削除
+        await supabaseAdmin
+          .from('open_campus_dates')
+          .delete()
+          .eq('event_id', eventId);
+
+        // 新しい日程を作成
+        const createdDates = [];
+        for (const date of dates) {
+          const { data: newDate, error: dateError } = await supabaseAdmin
+            .from('open_campus_dates')
+            .insert({
+              event_id: eventId,
+              date: date.date,
+              capacity: date.capacity,
+              current_count: 0,
+              is_active: true,
+            })
+            .select()
+            .single();
+
+          if (dateError) {
+            console.error('日程作成エラー:', dateError);
+            throw new Error('日程の作成に失敗しました');
+          }
+
+          createdDates.push(newDate);
+        }
+
+        // 新しいコースを作成
+        for (const course of courses) {
+          const { data: newCourse, error: courseError } = await supabaseAdmin
+            .from('event_courses')
+            .insert({
+              event_id: eventId,
+              name: course.name,
+              description: course.description || null,
+              capacity: course.capacity,
+              display_order: course.display_order,
+            })
+            .select()
+            .single();
+
+          if (courseError) {
+            console.error('コース作成エラー:', courseError);
+            throw new Error('コースの作成に失敗しました');
+          }
+
+          // コースと日程の関連を作成
+          if (course.applicable_date_indices && course.applicable_date_indices.length > 0) {
+            const associations = course.applicable_date_indices.map((dateIndex: number) => ({
+              course_id: newCourse.id,
+              date_id: createdDates[dateIndex].id,
+            }));
+
+            const { error: assocError } = await supabaseAdmin
+              .from('course_date_associations')
+              .insert(associations);
+
+            if (assocError) {
+              console.error('関連作成エラー:', assocError);
+              throw new Error('コースと日程の関連付けに失敗しました');
+            }
+          }
+        }
+      } catch (datesCourseError) {
+        console.error('日程・コース更新エラー:', datesCourseError);
+        return NextResponse.json(
+          { error: '日程・コースの更新に失敗しました' },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json(updatedEvent);

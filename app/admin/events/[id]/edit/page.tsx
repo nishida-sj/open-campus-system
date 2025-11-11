@@ -44,6 +44,16 @@ export default function EventEditPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [totalApplicants, setTotalApplicants] = useState(0);
 
+  // 編集用の日程とコース（申込者0件の場合のみ使用）
+  const [editableDates, setEditableDates] = useState<Array<{date: string; capacity: number}>>([]);
+  const [editableCourses, setEditableCourses] = useState<Array<{
+    name: string;
+    description: string;
+    capacity: number | null;
+    display_order: number;
+    applicable_date_indices: number[];
+  }>>([]);
+
   // フォーム状態
   const [formData, setFormData] = useState({
     name: '',
@@ -76,6 +86,23 @@ export default function EventEditPage() {
         setCourses(eventData.courses || []);
         setTotalApplicants(eventData.total_applicants || 0);
 
+        // 編集用の日程とコースを初期化（申込者0件の場合）
+        if ((eventData.total_applicants || 0) === 0) {
+          setEditableDates((eventData.dates || []).map((d: DateInfo) => ({
+            date: d.date,
+            capacity: d.capacity,
+          })));
+          setEditableCourses((eventData.courses || []).map((c: Course) => ({
+            name: c.name,
+            description: c.description || '',
+            capacity: c.capacity,
+            display_order: c.display_order,
+            applicable_date_indices: c.applicable_date_ids.map((dateId: string) =>
+              (eventData.dates || []).findIndex((d: DateInfo) => d.id === dateId)
+            ),
+          })));
+        }
+
         // フォームに初期値をセット
         setFormData({
           name: eventData.event.name,
@@ -96,18 +123,89 @@ export default function EventEditPage() {
     fetchEventData();
   }, [eventId, router]);
 
+  // 日程管理関数（申込者0件の場合のみ）
+  const addDate = () => {
+    setEditableDates([...editableDates, { date: '', capacity: 30 }]);
+  };
+
+  const removeDate = (index: number) => {
+    setEditableDates(editableDates.filter((_, i) => i !== index));
+    // コースの適用日程インデックスも更新
+    setEditableCourses(
+      editableCourses.map((c) => ({
+        ...c,
+        applicable_date_indices: c.applicable_date_indices
+          .filter((idx) => idx !== index)
+          .map((idx) => (idx > index ? idx - 1 : idx)),
+      }))
+    );
+  };
+
+  const updateDate = (index: number, field: 'date' | 'capacity', value: string | number) => {
+    setEditableDates(
+      editableDates.map((d, i) =>
+        i === index ? { ...d, [field]: field === 'capacity' ? Number(value) : value } : d
+      )
+    );
+  };
+
+  // コース管理関数（申込者0件の場合のみ）
+  const addCourse = () => {
+    setEditableCourses([
+      ...editableCourses,
+      {
+        name: '',
+        description: '',
+        capacity: null,
+        display_order: editableCourses.length,
+        applicable_date_indices: [],
+      },
+    ]);
+  };
+
+  const removeCourse = (index: number) => {
+    setEditableCourses(editableCourses.filter((_, i) => i !== index));
+  };
+
+  const updateCourse = (index: number, field: string, value: any) => {
+    setEditableCourses(
+      editableCourses.map((c, i) => (i === index ? { ...c, [field]: value } : c))
+    );
+  };
+
+  const toggleCourseDateApplicability = (courseIndex: number, dateIndex: number) => {
+    setEditableCourses(
+      editableCourses.map((c, i) => {
+        if (i !== courseIndex) return c;
+        const indices = c.applicable_date_indices.includes(dateIndex)
+          ? c.applicable_date_indices.filter((idx) => idx !== dateIndex)
+          : [...c.applicable_date_indices, dateIndex];
+        return { ...c, applicable_date_indices: indices };
+      })
+    );
+  };
+
   // 保存処理
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
     try {
+      // 申込者が0件の場合は、日程とコースも含めて保存
+      const dataToSave = totalApplicants === 0
+        ? {
+            ...formData,
+            dates: editableDates,
+            courses: editableCourses,
+          }
+        : formData;
+
       const response = await fetch(`/api/admin/events/${eventId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dataToSave),
       });
 
       if (response.ok) {
@@ -326,6 +424,204 @@ export default function EventEditPage() {
               ※ コース情報は申込に影響するため、イベント作成後は変更できません
             </p>
           </div>
+        )}
+
+        {/* 日程・コース編集セクション（申込者がいない場合のみ表示） */}
+        {totalApplicants === 0 && (
+          <>
+            {/* 開催日程編集 */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">開催日程の編集</h2>
+              <div className="space-y-4">
+                {editableDates.map((date, index) => (
+                  <div key={index} className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+                    <div className="flex gap-4 items-start">
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          開催日
+                        </label>
+                        <input
+                          type="date"
+                          value={date.date}
+                          onChange={(e) => updateDate(index, 'date', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          required
+                        />
+                      </div>
+                      <div className="w-32">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          定員
+                        </label>
+                        <input
+                          type="number"
+                          value={date.capacity}
+                          onChange={(e) => updateDate(index, 'capacity', parseInt(e.target.value))}
+                          min="1"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          required
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={() => removeDate(index)}
+                          className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-200"
+                        >
+                          削除
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addDate}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200 flex items-center"
+              >
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                日程を追加
+              </button>
+            </div>
+
+            {/* コース編集 */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">コースの編集</h2>
+              <div className="space-y-4">
+                {editableCourses.map((course, courseIndex) => (
+                  <div key={courseIndex} className="border-2 border-green-200 rounded-lg p-4 bg-green-50">
+                    <div className="space-y-3">
+                      <div className="flex gap-4 items-start">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            コース名
+                          </label>
+                          <input
+                            type="text"
+                            value={course.name}
+                            onChange={(e) => updateCourse(courseIndex, 'name', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                            required
+                          />
+                        </div>
+                        <div className="w-32">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            定員
+                          </label>
+                          <input
+                            type="number"
+                            value={course.capacity || ''}
+                            onChange={(e) =>
+                              updateCourse(
+                                courseIndex,
+                                'capacity',
+                                e.target.value ? parseInt(e.target.value) : null
+                              )
+                            }
+                            min="1"
+                            placeholder="無制限"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          <button
+                            type="button"
+                            onClick={() => removeCourse(courseIndex)}
+                            className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition duration-200"
+                          >
+                            削除
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          コース説明
+                        </label>
+                        <textarea
+                          value={course.description}
+                          onChange={(e) => updateCourse(courseIndex, 'description', e.target.value)}
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          適用日程
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {editableDates.map((date, dateIndex) => (
+                            <label
+                              key={dateIndex}
+                              className="inline-flex items-center px-3 py-2 border-2 rounded-md cursor-pointer transition-colors duration-200"
+                              style={{
+                                borderColor: course.applicable_date_indices.includes(dateIndex)
+                                  ? '#10b981'
+                                  : '#d1d5db',
+                                backgroundColor: course.applicable_date_indices.includes(dateIndex)
+                                  ? '#d1fae5'
+                                  : '#ffffff',
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={course.applicable_date_indices.includes(dateIndex)}
+                                onChange={() =>
+                                  toggleCourseDateApplicability(courseIndex, dateIndex)
+                                }
+                                className="mr-2"
+                              />
+                              <span className="text-sm">
+                                {date.date
+                                  ? new Date(date.date).toLocaleDateString('ja-JP', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                    })
+                                  : '日程未設定'}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addCourse}
+                className="mt-4 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-200 flex items-center"
+              >
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                コースを追加
+              </button>
+            </div>
+          </>
         )}
 
         {/* 開催日程情報 */}
