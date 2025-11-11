@@ -12,6 +12,16 @@ const client = new Client({
   channelSecret: process.env.LINE_CHANNEL_SECRET!,
 });
 
+// GETリクエスト対応（エンドポイント確認用）
+export async function GET() {
+  console.log('=== GET request to LINE webhook endpoint ===');
+  return NextResponse.json({
+    status: 'ok',
+    message: 'LINE Webhook endpoint is working',
+    timestamp: new Date().toISOString()
+  });
+}
+
 // 手動で署名検証を行う関数
 function verifySignature(body: string, signature: string, secret: string): boolean {
   const hash = crypto
@@ -22,26 +32,32 @@ function verifySignature(body: string, signature: string, secret: string): boole
 }
 
 export async function POST(request: Request) {
+  // 最初に必ずログ出力
+  console.log('=== POST request received at LINE webhook endpoint ===');
+  console.log('Timestamp:', new Date().toISOString());
+
   try {
     // リクエストボディを取得（生のテキストとして）
     const body = await request.text();
     const signature = request.headers.get('x-line-signature');
 
-    // デバッグログ
-    console.log('=== LINE Webhook Request ===');
+    // デバッグログ - 詳細情報
+    console.log('=== LINE Webhook Request Details ===');
+    console.log('Body:', body);
     console.log('Body length:', body.length);
-    console.log('Signature exists:', !!signature);
+    console.log('Signature:', signature);
     console.log('CHANNEL_SECRET exists:', !!process.env.LINE_CHANNEL_SECRET);
+    console.log('CHANNEL_SECRET first 10 chars:', process.env.LINE_CHANNEL_SECRET?.substring(0, 10));
 
     // 署名ヘッダーチェック
     if (!signature) {
-      console.error('No x-line-signature header');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.error('ERROR: No x-line-signature header');
+      return NextResponse.json({ error: 'Unauthorized: No signature' }, { status: 401 });
     }
 
     // 環境変数チェック
     if (!process.env.LINE_CHANNEL_SECRET) {
-      console.error('LINE_CHANNEL_SECRET not configured');
+      console.error('ERROR: LINE_CHANNEL_SECRET not configured');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
@@ -53,10 +69,13 @@ export async function POST(request: Request) {
     console.log('Signature validation (Manual):', isValidManual);
 
     if (!isValidSDK && !isValidManual) {
-      console.error('Signature validation failed');
-      console.error('Expected signature:', signature.substring(0, 20) + '...');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.error('ERROR: Signature validation failed');
+      console.error('Received signature:', signature.substring(0, 30) + '...');
+      console.error('Body sample:', body.substring(0, 100));
+      return NextResponse.json({ error: 'Unauthorized: Invalid signature' }, { status: 401 });
     }
+
+    console.log('✅ Signature validation passed!');
 
     // イベントを解析
     const events: WebhookEvent[] = JSON.parse(body).events;
