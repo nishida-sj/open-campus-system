@@ -37,23 +37,24 @@ export async function GET() {
       return event.display_end_date >= today; // 終了日が今日以降の場合は表示
     });
 
-    // 各イベントの日程数を取得
-    const eventsWithCounts = await Promise.all(
+    // 各イベントの開催日程を取得
+    const eventsWithDates = await Promise.all(
       activeEvents.map(async (event) => {
-        const { count } = await supabaseAdmin
+        const { data: dates } = await supabaseAdmin
           .from('open_campus_dates')
-          .select('*', { count: 'exact', head: true })
+          .select('id, date')
           .eq('event_id', event.id)
-          .eq('is_active', true);
+          .eq('is_active', true)
+          .order('date', { ascending: true });
 
         return {
           ...event,
-          date_count: count || 0,
+          dates: dates || [],
         };
       })
     );
 
-    return NextResponse.json(eventsWithCounts);
+    return NextResponse.json(eventsWithDates);
   } catch (error) {
     console.error('サーバーエラー:', error);
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
