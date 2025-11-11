@@ -419,6 +419,9 @@ export default function ConfirmedListPage() {
                     氏名
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    メールアドレス
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     学校名
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -441,7 +444,7 @@ export default function ConfirmedListPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredApplicants.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
                       該当する確定者はいません
                     </td>
                   </tr>
@@ -461,6 +464,9 @@ export default function ConfirmedListPage() {
                         {applicant.kana_name && (
                           <div className="text-xs text-gray-500">{applicant.kana_name}</div>
                         )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {applicant.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{applicant.school_name}</div>
