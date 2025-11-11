@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Client, validateSignature, WebhookEvent, TextMessage } from '@line/bot-sdk';
 import { supabaseAdmin } from '@/lib/supabase';
+import crypto from 'crypto';
 
 // LINE Client設定
 const client = new Client({
@@ -8,47 +9,71 @@ const client = new Client({
   channelSecret: process.env.LINE_CHANNEL_SECRET!,
 });
 
+// 手動で署名検証を行う関数
+function verifySignature(body: string, signature: string, secret: string): boolean {
+  const hash = crypto
+    .createHmac('sha256', secret)
+    .update(body)
+    .digest('base64');
+  return hash === signature;
+}
+
 export async function POST(request: Request) {
   try {
-    // リクエストボディを取得
+    // リクエストボディを取得（生のテキストとして）
     const body = await request.text();
     const signature = request.headers.get('x-line-signature');
 
-    // 環境変数のログ出力（デバッグ用）
-    console.log('LINE_CHANNEL_SECRET exists:', !!process.env.LINE_CHANNEL_SECRET);
+    // デバッグログ
+    console.log('=== LINE Webhook Request ===');
+    console.log('Body length:', body.length);
     console.log('Signature exists:', !!signature);
+    console.log('CHANNEL_SECRET exists:', !!process.env.LINE_CHANNEL_SECRET);
 
-    // LINE署名検証
+    // 署名ヘッダーチェック
     if (!signature) {
-      console.error('No signature header');
+      console.error('No x-line-signature header');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // 環境変数チェック
     if (!process.env.LINE_CHANNEL_SECRET) {
-      console.error('LINE_CHANNEL_SECRET not set');
+      console.error('LINE_CHANNEL_SECRET not configured');
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    if (!validateSignature(body, process.env.LINE_CHANNEL_SECRET, signature)) {
-      console.error('Invalid signature');
+    // 署名検証（2つの方法で試す）
+    const isValidSDK = validateSignature(body, process.env.LINE_CHANNEL_SECRET, signature);
+    const isValidManual = verifySignature(body, signature, process.env.LINE_CHANNEL_SECRET);
+
+    console.log('Signature validation (SDK):', isValidSDK);
+    console.log('Signature validation (Manual):', isValidManual);
+
+    if (!isValidSDK && !isValidManual) {
+      console.error('Signature validation failed');
+      console.error('Expected signature:', signature.substring(0, 20) + '...');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // イベントを解析
     const events: WebhookEvent[] = JSON.parse(body).events;
 
+    console.log('Events count:', events?.length || 0);
+
     // イベントが空の場合（Webhook検証時など）も200を返す
     if (!events || events.length === 0) {
-      console.log('Empty events array - webhook verification');
+      console.log('Empty events array - returning 200 OK');
       return NextResponse.json({ success: true });
     }
 
     // 各イベントを処理
     await Promise.all(events.map(handleEvent));
 
+    console.log('All events processed successfully');
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Webhook error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
