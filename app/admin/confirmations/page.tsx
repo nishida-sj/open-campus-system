@@ -34,6 +34,9 @@ interface Event {
 interface DateInfo {
   id: string;
   date: string;
+  capacity: number;
+  current_count: number;
+  event_id: string;
 }
 
 export default function ConfirmationsPage() {
@@ -120,6 +123,9 @@ export default function ConfirmationsPage() {
 
   const pendingApplicants = filterByDate(allPendingApplicants);
   const confirmedApplicants = filterByDate(allConfirmedApplicants);
+
+  // 選択された日程の情報を取得
+  const selectedDate = availableDates.find((d) => d.id === selectedDateId);
 
   // チェックボックスのトグル
   const toggleSelection = (applicantId: string) => {
@@ -352,7 +358,7 @@ export default function ConfirmationsPage() {
                       month: 'long',
                       day: 'numeric',
                       weekday: 'long',
-                    })}
+                    })} - 定員{date.capacity}名 (現在{date.current_count}名)
                   </option>
                 ))}
               </select>
@@ -369,7 +375,7 @@ export default function ConfirmationsPage() {
         </div>
 
         {/* 統計情報 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-sm text-gray-600">未確定（フィルター適用）</p>
             <p className="text-3xl font-bold text-orange-600">{pendingApplicants.length}</p>
@@ -382,6 +388,17 @@ export default function ConfirmationsPage() {
             <p className="text-sm text-gray-600">選択中</p>
             <p className="text-3xl font-bold text-blue-600">{selectedApplicants.length}</p>
           </div>
+          {selectedDate && (
+            <div className="bg-white rounded-lg shadow p-4">
+              <p className="text-sm text-gray-600">選択日程の定員</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {selectedDate.current_count}/{selectedDate.capacity}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                残り {selectedDate.capacity - selectedDate.current_count}名
+              </p>
+            </div>
+          )}
         </div>
 
         {/* 申込者リスト */}

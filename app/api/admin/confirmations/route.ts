@@ -125,10 +125,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // 申込者が存在するか確認
+    // 申込者が存在するか確認し、現在の確定状態を取得
     const { data: applicant, error: applicantError } = await supabaseAdmin
       .from('applicants')
-      .select('id, email')
+      .select('id, email, confirmed_date_id, status')
       .eq('id', applicant_id)
       .single();
 
@@ -154,6 +154,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // 既に確定済みの場合、前の日程のカウントを減らす
+    const previousDateId = applicant.confirmed_date_id;
+    if (previousDateId && previousDateId !== confirmed_date_id) {
+      const { error: decrementError } = await supabaseAdmin.rpc('decrement_visit_count', {
+        date_id: previousDateId,
+      });
+
+      if (decrementError) {
+        console.error('カウント減少エラー:', decrementError);
+      }
+    }
+
     // 確定情報を更新
     const { error: updateError } = await supabaseAdmin
       .from('applicants')
@@ -174,14 +186,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // 定員カウントを増加（確定した日程のみ）
-    const { error: countError } = await supabaseAdmin.rpc('increment_visit_count', {
-      date_id: confirmed_date_id,
-    });
+    // 新しい日程のカウントを増加（未確定から確定、または別の日程に変更の場合のみ）
+    if (!previousDateId || previousDateId !== confirmed_date_id) {
+      const { error: countError } = await supabaseAdmin.rpc('increment_visit_count', {
+        date_id: confirmed_date_id,
+      });
 
-    if (countError) {
-      console.error('カウント更新エラー:', countError);
-      // カウント失敗時はログのみ（確定は成功とする）
+      if (countError) {
+        console.error('カウント更新エラー:', countError);
+        // カウント失敗時はログのみ（確定は成功とする）
+      }
     }
 
     return NextResponse.json({ success: true });
