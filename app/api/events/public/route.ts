@@ -4,6 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase';
 // 公開イベント一覧取得
 export async function GET() {
   try {
+    // 現在の日付を取得（日本時間）
+    const today = new Date().toISOString().split('T')[0];
+
     // 公開中のイベントを取得
     const { data: events, error } = await supabaseAdmin
       .from('open_campus_events')
@@ -12,6 +15,7 @@ export async function GET() {
         name,
         description,
         overview,
+        display_end_date,
         is_active,
         allow_multiple_dates,
         max_date_selections,
@@ -25,9 +29,17 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // display_end_dateでフィルタリング（終了日が設定されていないか、まだ過ぎていないイベントのみ）
+    const activeEvents = (events || []).filter(event => {
+      if (!event.display_end_date) {
+        return true; // 終了日が設定されていない場合は表示
+      }
+      return event.display_end_date >= today; // 終了日が今日以降の場合は表示
+    });
+
     // 各イベントの日程数を取得
     const eventsWithCounts = await Promise.all(
-      (events || []).map(async (event) => {
+      activeEvents.map(async (event) => {
         const { count } = await supabaseAdmin
           .from('open_campus_dates')
           .select('*', { count: 'exact', head: true })

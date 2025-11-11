@@ -38,6 +38,7 @@ export default function AdminEventsPage() {
     name: '',
     description: '',
     overview: '',
+    display_end_date: '',
     max_date_selections: 1,
     is_active: true,
     allow_multiple_dates: false,
@@ -316,6 +317,23 @@ export default function AdminEventsPage() {
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   この内容は申込者向けのイベント一覧ページと申込ページに表示されます
+                </p>
+              </div>
+
+              {/* 表示終了日 */}
+              <div>
+                <label htmlFor="display_end_date" className="block text-sm font-medium text-gray-700 mb-2">
+                  イベント一覧表示終了日
+                </label>
+                <input
+                  type="date"
+                  id="display_end_date"
+                  value={formData.display_end_date}
+                  onChange={(e) => setFormData({ ...formData, display_end_date: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  この日を過ぎると申込者向けイベント一覧に表示されなくなります（空欄の場合は常に表示）
                 </p>
               </div>
 

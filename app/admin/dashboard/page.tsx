@@ -229,6 +229,12 @@ export default function AdminDashboard() {
         <div className="mb-8 flex flex-wrap justify-between items-center gap-4">
           <div className="flex gap-4">
             <button
+              onClick={() => router.push('/')}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
+            >
+              イベント一覧ページ
+            </button>
+            <button
               onClick={() => router.push('/admin/events')}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
             >
