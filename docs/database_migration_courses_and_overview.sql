@@ -111,8 +111,14 @@ BEGIN
     AND column_name = 'status'
     AND data_type = 'character varying'
   ) THEN
+    -- デフォルト値を一時的に削除
+    ALTER TABLE applicants ALTER COLUMN status DROP DEFAULT;
+
     -- VARCHAR型からENUM型に変換
     ALTER TABLE applicants ALTER COLUMN status TYPE applicant_status USING status::applicant_status;
+
+    -- 新しいデフォルト値を設定
+    ALTER TABLE applicants ALTER COLUMN status SET DEFAULT 'pending'::applicant_status;
   END IF;
 END $$;
 
