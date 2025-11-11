@@ -262,6 +262,12 @@ export default function AdminDashboard() {
             >
               申込確定管理
             </button>
+            <button
+              onClick={() => router.push('/admin/confirmed-list')}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
+            >
+              確定者管理
+            </button>
           </div>
 
           {/* イベント選択 */}
