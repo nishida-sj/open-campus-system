@@ -94,7 +94,20 @@ export default function EmailSettingsPage() {
         setSettings(data);
       } else {
         const error = await response.json();
-        alert(`エラー: ${error.error || '保存に失敗しました'}`);
+        console.error('Email settings save error:', error);
+
+        let errorMessage = error.error || '保存に失敗しました';
+        if (error.code) {
+          errorMessage += `\n\nエラーコード: ${error.code}`;
+        }
+        if (error.details) {
+          errorMessage += `\n詳細: ${error.details}`;
+        }
+        if (error.hint) {
+          errorMessage += `\nヒント: ${error.hint}`;
+        }
+
+        alert(`エラー: ${errorMessage}`);
       }
     } catch (error) {
       console.error('保存エラー:', error);
@@ -171,6 +184,19 @@ export default function EmailSettingsPage() {
             <strong>メール通知機能を使用するには、SMTPサーバの情報を設定してください。</strong>
             <br />
             Gmailの場合: smtp.gmail.com、ポート587、アプリパスワードが必要です。
+          </p>
+        </div>
+
+        {/* データベースエラー時の説明 */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <p className="text-sm text-yellow-800">
+            <strong>⚠️ 初回使用時の注意</strong>
+            <br />
+            もしエラーが発生する場合は、Supabaseで以下のSQLを実行してテーブルを作成してください：
+            <br />
+            <code className="text-xs bg-yellow-100 px-2 py-1 rounded mt-2 inline-block">
+              docs/database_migration_notifications.sql
+            </code>
           </p>
         </div>
 

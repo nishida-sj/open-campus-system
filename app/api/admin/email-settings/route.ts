@@ -28,7 +28,10 @@ export async function GET() {
 // メールサーバ設定作成・更新
 export async function POST(request: Request) {
   try {
+    console.log('=== Email Settings POST Request ===');
     const body = await request.json();
+    console.log('Request body received:', { ...body, smtp_password: '***' });
+
     const {
       smtp_host,
       smtp_port,
@@ -41,6 +44,7 @@ export async function POST(request: Request) {
 
     // バリデーション
     if (!smtp_host || !smtp_port || !smtp_user || !smtp_password || !from_email) {
+      console.error('Validation failed: missing required fields');
       return NextResponse.json(
         { error: '必須項目が不足しています' },
         { status: 400 }
@@ -48,12 +52,18 @@ export async function POST(request: Request) {
     }
 
     // 既存の設定をすべて無効化
-    await supabaseAdmin
+    console.log('Deactivating existing settings...');
+    const { error: deactivateError } = await supabaseAdmin
       .from('email_settings')
       .update({ is_active: false })
       .eq('is_active', true);
 
+    if (deactivateError) {
+      console.error('Deactivate error:', deactivateError);
+    }
+
     // 新しい設定を作成
+    console.log('Inserting new settings...');
     const { data: newSettings, error: insertError } = await supabaseAdmin
       .from('email_settings')
       .insert({
@@ -71,16 +81,33 @@ export async function POST(request: Request) {
 
     if (insertError) {
       console.error('設定保存エラー:', insertError);
+      console.error('Error code:', insertError.code);
+      console.error('Error details:', insertError.details);
+      console.error('Error hint:', insertError.hint);
       return NextResponse.json(
-        { error: '設定の保存に失敗しました' },
+        {
+          error: '設定の保存に失敗しました',
+          details: insertError.message,
+          hint: insertError.hint || 'Supabaseで docs/database_migration_notifications.sql を実行してテーブルを作成してください',
+          code: insertError.code
+        },
         { status: 500 }
       );
     }
 
+    console.log('Settings saved successfully:', newSettings.id);
+
     return NextResponse.json(newSettings);
-  } catch (error) {
-    console.error('サーバーエラー:', error);
-    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
+  } catch (error: any) {
+    console.error('=== Unexpected Server Error ===');
+    console.error('Error:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    return NextResponse.json({
+      error: 'サーバーエラー',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 });
   }
 }
 
