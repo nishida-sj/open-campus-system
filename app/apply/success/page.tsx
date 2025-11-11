@@ -31,8 +31,17 @@ function SuccessContent() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // LINE友達追加URL
-  const lineAddFriendUrl = `https://line.me/R/ti/p/${lineBotId}`;
+  // LINE友達追加URL（@を除いた状態で%40を追加）
+  const botIdWithoutAt = lineBotId.replace('@', '');
+  const lineAddFriendUrl = `https://line.me/R/ti/p/%40${botIdWithoutAt}`;
+
+  // トークンをクリップボードにコピーする関数
+  const copyToken = () => {
+    if (token) {
+      navigator.clipboard.writeText(token);
+      alert('申込番号をコピーしました！LINEのトーク画面で貼り付けてください。');
+    }
+  };
 
   if (!token) {
     return (
@@ -141,6 +150,12 @@ function SuccessContent() {
               <div className="bg-white border-2 border-gray-300 rounded px-4 py-2 font-mono text-sm break-all">
                 {token}
               </div>
+              <button
+                onClick={copyToken}
+                className="mt-3 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+              >
+                📋 申込番号をコピー
+              </button>
               <p className="text-xs text-gray-500 mt-2">
                 ※この番号をLINEのトーク画面で送信してください
               </p>
