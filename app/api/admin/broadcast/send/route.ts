@@ -1,34 +1,47 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 
-// メール送信関数（Resend使用）
+// メール送信関数（SMTP使用）
 async function sendEmail(to: string, subject: string, message: string) {
-  const resendApiKey = process.env.RESEND_API_KEY;
+  // データベースからメール設定を取得
+  const { data: settings, error: settingsError } = await supabaseAdmin
+    .from('email_settings')
+    .select('*')
+    .eq('is_active', true)
+    .single();
 
-  if (!resendApiKey) {
-    throw new Error('RESEND_API_KEY が設定されていません');
+  if (settingsError || !settings) {
+    throw new Error('メール設定が登録されていません。メール設定ページで設定を登録してください。');
   }
 
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${resendApiKey}`,
+  // nodemailer を使用してメール送信
+  const nodemailer = require('nodemailer');
+
+  const transporter = nodemailer.createTransport({
+    host: settings.smtp_host,
+    port: settings.smtp_port,
+    secure: settings.smtp_port === 465,
+    auth: {
+      user: settings.smtp_user,
+      pass: settings.smtp_password,
     },
-    body: JSON.stringify({
-      from: process.env.EMAIL_FROM || 'noreply@example.com',
-      to: [to],
-      subject: subject,
-      text: message,
-    }),
+    tls: {
+      rejectUnauthorized: false,
+    },
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`メール送信エラー: ${JSON.stringify(error)}`);
-  }
+  const mailOptions = {
+    from: settings.from_name
+      ? `"${settings.from_name}" <${settings.from_email}>`
+      : settings.from_email,
+    to: to,
+    subject: subject,
+    text: message,
+    html: message.replace(/\n/g, '<br>'),
+  };
 
-  return response.json();
+  const info = await transporter.sendMail(mailOptions);
+  return info;
 }
 
 // LINE メッセージ送信関数
@@ -82,15 +95,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '件名が必要です' }, { status: 400 });
     }
 
-    // 環境変数チェック
-    if (type === 'email' && !process.env.RESEND_API_KEY) {
-      console.error('RESEND_API_KEY が設定されていません');
-      return NextResponse.json(
-        { error: 'メール送信設定が完了していません。管理者に連絡してください。' },
-        { status: 500 }
-      );
+    // メール設定チェック
+    if (type === 'email') {
+      const { data: emailSettings } = await supabaseAdmin
+        .from('email_settings')
+        .select('id')
+        .eq('is_active', true)
+        .single();
+
+      if (!emailSettings) {
+        console.error('メール設定が登録されていません');
+        return NextResponse.json(
+          { error: 'メール設定が登録されていません。メール設定ページで設定を登録してください。' },
+          { status: 400 }
+        );
+      }
     }
 
+    // LINE設定チェック
     if (type === 'line' && !process.env.LINE_CHANNEL_ACCESS_TOKEN) {
       console.error('LINE_CHANNEL_ACCESS_TOKEN が設定されていません');
       return NextResponse.json(
