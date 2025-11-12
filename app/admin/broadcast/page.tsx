@@ -23,6 +23,8 @@ interface Event {
 }
 
 type MessageType = 'email' | 'line';
+type SortField = 'name' | 'school_name' | 'grade';
+type SortOrder = 'asc' | 'desc';
 
 export default function BroadcastPage() {
   const router = useRouter();
@@ -36,6 +38,8 @@ export default function BroadcastPage() {
   const [emailSubject, setEmailSubject] = useState('');
   const [messageBody, setMessageBody] = useState('');
   const [sending, setSending] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   // 認証チェック
   useEffect(() => {
@@ -157,6 +161,31 @@ export default function BroadcastPage() {
     setShowMessageModal(true);
   };
 
+  // ソート機能
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  // ソート済み申込者リスト
+  const sortedApplicants = [...applicants].sort((a, b) => {
+    let comparison = 0;
+
+    if (sortField === 'name') {
+      comparison = a.name.localeCompare(b.name, 'ja');
+    } else if (sortField === 'school_name') {
+      comparison = a.school_name.localeCompare(b.school_name, 'ja');
+    } else if (sortField === 'grade') {
+      comparison = a.grade.localeCompare(b.grade, 'ja');
+    }
+
+    return sortOrder === 'asc' ? comparison : -comparison;
+  });
+
   // メッセージ送信
   const handleSendMessage = async () => {
     if (!messageBody.trim()) {
@@ -186,17 +215,20 @@ export default function BroadcastPage() {
       const result = await response.json();
 
       if (response.ok) {
-        alert(
-          `${messageType === 'email' ? 'メール' : 'LINEメッセージ'}を${
-            result.success_count
-          }件送信しました`
-        );
+        let message = `${messageType === 'email' ? 'メール' : 'LINEメッセージ'}を${result.success_count}件送信しました`;
+        if (result.failed_count > 0) {
+          message += `\n失敗: ${result.failed_count}件`;
+          if (result.errors && result.errors.length > 0) {
+            message += '\n\nエラー詳細:\n' + result.errors.join('\n');
+          }
+        }
+        alert(message);
         setShowMessageModal(false);
         setEmailSubject('');
         setMessageBody('');
         setSelectedApplicantIds([]);
       } else {
-        alert(`送信エラー: ${result.error}`);
+        alert(`送信エラー: ${result.error}${result.details ? '\n詳細: ' + result.details : ''}`);
       }
     } catch (error) {
       console.error('送信エラー:', error);
@@ -221,12 +253,20 @@ export default function BroadcastPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-gray-900">メッセージ配信</h1>
-            <button
-              onClick={() => router.push('/admin/dashboard')}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm transition duration-200"
-            >
-              ダッシュボードに戻る
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => router.push('/admin/broadcast/history')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition duration-200"
+              >
+                配信履歴
+              </button>
+              <button
+                onClick={() => router.push('/admin/dashboard')}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm transition duration-200"
+              >
+                ダッシュボードに戻る
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -296,14 +336,38 @@ export default function BroadcastPage() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         選択
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        氏名
+                      <th
+                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort('name')}
+                      >
+                        <div className="flex items-center gap-1">
+                          氏名
+                          {sortField === 'name' && (
+                            <span>{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                          )}
+                        </div>
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        学校名
+                      <th
+                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort('school_name')}
+                      >
+                        <div className="flex items-center gap-1">
+                          学校名
+                          {sortField === 'school_name' && (
+                            <span>{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                          )}
+                        </div>
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        学年
+                      <th
+                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleSort('grade')}
+                      >
+                        <div className="flex items-center gap-1">
+                          学年
+                          {sortField === 'grade' && (
+                            <span>{sortOrder === 'asc' ? '▲' : '▼'}</span>
+                          )}
+                        </div>
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         メール
@@ -314,7 +378,7 @@ export default function BroadcastPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {applicants.map((applicant) => (
+                    {sortedApplicants.map((applicant) => (
                       <tr
                         key={applicant.id}
                         className={`hover:bg-gray-50 cursor-pointer ${
