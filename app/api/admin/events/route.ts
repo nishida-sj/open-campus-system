@@ -134,7 +134,10 @@ export async function POST(request: Request) {
 
     if (datesError) {
       console.error('日程作成エラー:', datesError);
-      // イベントは作成されたが日程作成に失敗した場合、イベントを削除
+      // イベントは作成されたが日程作成に失敗した場合、関連データを含めて削除
+      // まず日程を削除（もし部分的に作成されていた場合）
+      await supabaseAdmin.from('open_campus_dates').delete().eq('event_id', event.id);
+      // その後イベントを削除
       await supabaseAdmin.from('open_campus_events').delete().eq('id', event.id);
       return NextResponse.json({
         error: '開催日程の作成に失敗しました',
