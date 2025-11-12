@@ -70,6 +70,10 @@ export default function ConfirmationsPage() {
   const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set());
   const [draggedItem, setDraggedItem] = useState<{ applicant: Applicant; dateId: string } | null>(null);
 
+  // ソート状態
+  const [pendingSortOrder, setPendingSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [confirmedSortOrder, setConfirmedSortOrder] = useState<'asc' | 'desc'>('asc');
+
   // 認証チェック
   useEffect(() => {
     const isAuthenticated = sessionStorage.getItem('admin_authenticated');
@@ -141,8 +145,16 @@ export default function ConfirmationsPage() {
     );
   };
 
-  const pendingApplicants = filterByDate(allPendingApplicants);
-  const confirmedApplicants = filterByDate(allConfirmedApplicants);
+  // ソート適用
+  const sortApplicants = (applicants: Applicant[], order: 'asc' | 'desc') => {
+    return [...applicants].sort((a, b) => {
+      const comparison = a.school_name.localeCompare(b.school_name, 'ja');
+      return order === 'asc' ? comparison : -comparison;
+    });
+  };
+
+  const pendingApplicants = sortApplicants(filterByDate(allPendingApplicants), pendingSortOrder);
+  const confirmedApplicants = sortApplicants(filterByDate(allConfirmedApplicants), confirmedSortOrder);
 
   // 選択された日程の情報を取得
   const selectedDate = availableDates.find((d) => d.id === selectedDateId);
@@ -580,10 +592,10 @@ export default function ConfirmationsPage() {
           )}
         </div>
 
-        {/* 一括操作ボタン */}
+        {/* 一括操作ボタン - 画面下部に固定 */}
         {selectedCourses.size > 0 && (
-          <div className="bg-white rounded-lg shadow p-4 mb-6">
-            <div className="flex items-center justify-between">
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-lg p-4 z-40">
+            <div className="max-w-7xl mx-auto flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-900">
                   {selectedCourses.size}件選択中
@@ -621,14 +633,26 @@ export default function ConfirmationsPage() {
           {/* 未確定リスト */}
           <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 min-h-[500px]">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-orange-900">
-                未確定 ({pendingApplicants.length}件)
-              </h2>
-              <p className="text-sm text-orange-700 mt-1">
-                チェックして一括操作、または個別に確定できます
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-orange-900">
+                    未確定 ({pendingApplicants.length}件)
+                  </h2>
+                  <p className="text-sm text-orange-700 mt-1">
+                    チェックして一括操作、または個別に確定できます
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPendingSortOrder(pendingSortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="px-3 py-1 bg-orange-200 hover:bg-orange-300 text-orange-900 rounded text-sm font-medium transition duration-200"
+                  >
+                    学校名 {pendingSortOrder === 'asc' ? '▲' : '▼'}
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="space-y-3 max-h-[calc(100vh-500px)] overflow-y-auto">
+            <div className="space-y-3">
               {pendingApplicants.length === 0 ? (
                 <div className="bg-white rounded-lg p-8 text-center text-gray-500">
                   該当する未確定の申込はありません
@@ -644,14 +668,26 @@ export default function ConfirmationsPage() {
           {/* 確定済みリスト */}
           <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 min-h-[500px]">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-green-900">
-                確定済み ({confirmedApplicants.length}件)
-              </h2>
-              <p className="text-sm text-green-700 mt-1">
-                チェックして一括操作、または個別に解除できます
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-green-900">
+                    確定済み ({confirmedApplicants.length}件)
+                  </h2>
+                  <p className="text-sm text-green-700 mt-1">
+                    チェックして一括操作、または個別に解除できます
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfirmedSortOrder(confirmedSortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="px-3 py-1 bg-green-200 hover:bg-green-300 text-green-900 rounded text-sm font-medium transition duration-200"
+                  >
+                    学校名 {confirmedSortOrder === 'asc' ? '▲' : '▼'}
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="space-y-3 max-h-[calc(100vh-500px)] overflow-y-auto">
+            <div className="space-y-3">
               {confirmedApplicants.length === 0 ? (
                 <div className="bg-white rounded-lg p-8 text-center text-gray-500">
                   該当する確定済みの申込はありません
