@@ -66,6 +66,10 @@ export default function ConfirmationsPage() {
   const [confirmAction, setConfirmAction] = useState<'confirm' | 'unconfirm' | null>(null);
   const [targetApplicant, setTargetApplicant] = useState<Applicant | null>(null);
 
+  // チェックボックス選択状態（applicant_id + date_id をキーとする）
+  const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set());
+  const [draggedItem, setDraggedItem] = useState<{ applicant: Applicant; dateId: string } | null>(null);
+
   // 認証チェック
   useEffect(() => {
     const isAuthenticated = sessionStorage.getItem('admin_authenticated');
@@ -161,6 +165,126 @@ export default function ConfirmationsPage() {
     setShowConfirmDialog(true);
   };
 
+  // チェックボックスのトグル
+  const toggleCourseSelection = (applicantId: string, dateId: string) => {
+    const key = `${applicantId}_${dateId}`;
+    const newSelected = new Set(selectedCourses);
+
+    if (newSelected.has(key)) {
+      newSelected.delete(key);
+    } else {
+      // 複数候補入力モードの場合、同じ申込者の他の選択を解除
+      if (selectedEvent?.allow_multiple_candidates) {
+        // 同じ申込者IDを含むキーを削除
+        Array.from(newSelected).forEach((k) => {
+          if (k.startsWith(`${applicantId}_`)) {
+            newSelected.delete(k);
+          }
+        });
+      }
+      newSelected.add(key);
+    }
+
+    setSelectedCourses(newSelected);
+  };
+
+  // 選択されたコースを確定
+  const handleBulkConfirm = async () => {
+    if (selectedCourses.size === 0) {
+      alert('確定する日程を選択してください');
+      return;
+    }
+
+    // 複数候補入力モードのバリデーション
+    if (selectedEvent?.allow_multiple_candidates) {
+      const applicantIds = new Set<string>();
+      Array.from(selectedCourses).forEach((key) => {
+        const [applicantId] = key.split('_');
+        if (applicantIds.has(applicantId)) {
+          alert('複数候補入力モードでは、1人につき1つの日程のみ確定できます');
+          return;
+        }
+        applicantIds.add(applicantId);
+      });
+    }
+
+    const confirmationMessage = `選択した${selectedCourses.size}件を確定しますか？`;
+    if (!confirm(confirmationMessage)) return;
+
+    try {
+      for (const key of Array.from(selectedCourses)) {
+        const [applicantId, dateId] = key.split('_');
+
+        // 申込者とコース情報を取得
+        const applicant = allPendingApplicants.find((a) => a.id === applicantId);
+        if (!applicant) continue;
+
+        const selectedDateInfo = applicant.selected_dates.find((d) => d.date_id === dateId);
+        if (!selectedDateInfo) continue;
+
+        const response = await fetch('/api/admin/confirmations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            applicant_id: applicantId,
+            confirmed_date_id: dateId,
+            confirmed_course_id: selectedDateInfo.course_id || null,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          alert(`確定に失敗しました: ${error.error || '不明なエラー'}`);
+          break;
+        }
+      }
+
+      // データ再取得
+      await fetchData();
+      setSelectedCourses(new Set());
+    } catch (error) {
+      console.error('一括確定エラー:', error);
+      alert('エラーが発生しました');
+    }
+  };
+
+  // 選択されたコースを解除
+  const handleBulkUnconfirm = async () => {
+    if (selectedCourses.size === 0) {
+      alert('解除する日程を選択してください');
+      return;
+    }
+
+    const confirmationMessage = `選択した${selectedCourses.size}件の確定を解除しますか？`;
+    if (!confirm(confirmationMessage)) return;
+
+    try {
+      for (const key of Array.from(selectedCourses)) {
+        const [applicantId, dateId] = key.split('_');
+
+        const response = await fetch('/api/admin/confirmations', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            applicant_id: applicantId,
+            confirmed_date_id: dateId,
+          }),
+        });
+
+        if (!response.ok) {
+          console.error('解除失敗');
+        }
+      }
+
+      // データ再取得
+      await fetchData();
+      setSelectedCourses(new Set());
+    } catch (error) {
+      console.error('一括解除エラー:', error);
+      alert('エラーが発生しました');
+    }
+  };
+
   // 確定処理を実行
   const executeConfirm = async () => {
     if (!confirmAction || !targetApplicant || !selectedDateForConfirm) return;
@@ -250,65 +374,52 @@ export default function ConfirmationsPage() {
             .map((sd, index) => {
             const isConfirmed = applicant.confirmed_dates?.some((cd) => cd.date_id === sd.date_id);
             const canConfirm = !allowCandidates || !hasConfirmed || isConfirmed;
+            const checkKey = `${applicant.id}_${sd.date_id}`;
+            const isChecked = selectedCourses.has(checkKey);
 
             return (
               <div
                 key={sd.date_id}
                 className={`p-3 rounded-lg ${
                   isConfirmed ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
-                }`}
+                } ${isChecked ? 'ring-2 ring-blue-500' : ''}`}
               >
                 <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm font-medium text-gray-900">
-                        {allowMultiple ? `日程${index + 1}` : allowCandidates && sd.priority ? `第${sd.priority}候補` : `第${index + 1}希望`}:
-                        {' '}
-                        {new Date(sd.date).toLocaleDateString('ja-JP', {
-                          month: 'long',
-                          day: 'numeric',
-                          weekday: 'short',
-                        })}
+                  <div className="flex items-start gap-2 flex-1">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleCourseSelection(applicant.id, sd.date_id)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-medium text-gray-900">
+                          {allowMultiple ? `日程${index + 1}` : allowCandidates && sd.priority ? `第${sd.priority}候補` : `第${index + 1}希望`}:
+                          {' '}
+                          {new Date(sd.date).toLocaleDateString('ja-JP', {
+                            month: 'long',
+                            day: 'numeric',
+                            weekday: 'short',
+                          })}
+                        </div>
+                        {allowCandidates && sd.priority && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            優先{sd.priority}
+                          </span>
+                        )}
                       </div>
-                      {allowCandidates && sd.priority && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                          優先{sd.priority}
-                        </span>
+                      {sd.course_name && (
+                        <div className="text-sm text-gray-600 mt-1">
+                          コース: {sd.course_name}
+                        </div>
+                      )}
+                      {isConfirmed && (
+                        <div className="text-xs text-green-700 font-semibold mt-1">
+                          ✓ 確定済み
+                        </div>
                       )}
                     </div>
-                    {sd.course_name && (
-                      <div className="text-sm text-gray-600 mt-1">
-                        コース: {sd.course_name}
-                      </div>
-                    )}
-                    {isConfirmed && (
-                      <div className="text-xs text-green-700 font-semibold mt-1">
-                        ✓ 確定済み
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    {isConfirmed ? (
-                      <button
-                        onClick={() => handleUnconfirmClick(applicant, sd.date_id)}
-                        className="px-3 py-1 text-sm bg-orange-600 hover:bg-orange-700 text-white rounded transition duration-200"
-                      >
-                        解除
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleConfirmClick(applicant, sd.date_id)}
-                        disabled={!canConfirm}
-                        className={`px-3 py-1 text-sm rounded transition duration-200 ${
-                          canConfirm
-                            ? 'bg-green-600 hover:bg-green-700 text-white'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                        title={!canConfirm ? '複数候補入力モードでは1つのみ確定できます' : ''}
-                      >
-                        確定
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
@@ -469,6 +580,42 @@ export default function ConfirmationsPage() {
           )}
         </div>
 
+        {/* 一括操作ボタン */}
+        {selectedCourses.size > 0 && (
+          <div className="bg-white rounded-lg shadow p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  {selectedCourses.size}件選択中
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  チェックした日程を一括で確定または解除できます
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleBulkConfirm}
+                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition duration-200"
+                >
+                  選択した日程を確定
+                </button>
+                <button
+                  onClick={handleBulkUnconfirm}
+                  className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition duration-200"
+                >
+                  選択した日程を解除
+                </button>
+                <button
+                  onClick={() => setSelectedCourses(new Set())}
+                  className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition duration-200"
+                >
+                  選択解除
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 申込者リスト */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 未確定リスト */}
@@ -478,7 +625,7 @@ export default function ConfirmationsPage() {
                 未確定 ({pendingApplicants.length}件)
               </h2>
               <p className="text-sm text-orange-700 mt-1">
-                確定ボタンで日程ごとに確定できます
+                チェックして一括操作、または個別に確定できます
               </p>
             </div>
             <div className="space-y-3 max-h-[calc(100vh-500px)] overflow-y-auto">
@@ -501,7 +648,7 @@ export default function ConfirmationsPage() {
                 確定済み ({confirmedApplicants.length}件)
               </h2>
               <p className="text-sm text-green-700 mt-1">
-                解除ボタンで確定を取り消せます
+                チェックして一括操作、または個別に解除できます
               </p>
             </div>
             <div className="space-y-3 max-h-[calc(100vh-500px)] overflow-y-auto">
@@ -521,7 +668,7 @@ export default function ConfirmationsPage() {
 
       {/* 確認ダイアログ */}
       {showConfirmDialog && targetApplicant && selectedDateForConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               {confirmAction === 'confirm' ? '確定' : '確定解除'}の確認
