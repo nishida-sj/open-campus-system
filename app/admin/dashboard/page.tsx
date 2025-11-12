@@ -281,6 +281,12 @@ export default function AdminDashboard() {
             >
               メール設定
             </button>
+            <button
+              onClick={() => router.push('/admin/broadcast')}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
+            >
+              メッセージ配信
+            </button>
           </div>
 
           {/* イベント選択 */}
