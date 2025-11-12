@@ -12,6 +12,7 @@ interface Event {
   max_date_selections: number;
   is_active: boolean;
   allow_multiple_dates: boolean;
+  allow_multiple_candidates: boolean;
   created_at: string;
 }
 
@@ -64,6 +65,7 @@ export default function EventEditPage() {
     display_end_date: '',
     is_active: true,
     allow_multiple_dates: false,
+    allow_multiple_candidates: false,
     max_date_selections: 1,
   });
 
@@ -116,6 +118,7 @@ export default function EventEditPage() {
           display_end_date: eventData.event.display_end_date || '',
           is_active: eventData.event.is_active,
           allow_multiple_dates: eventData.event.allow_multiple_dates,
+          allow_multiple_candidates: eventData.event.allow_multiple_candidates || false,
           max_date_selections: eventData.event.max_date_selections,
         });
       } catch (error) {
@@ -401,37 +404,127 @@ export default function EventEditPage() {
 
           {totalApplicants === 0 ? (
             // 申込者0件の場合は編集可能
-            <div className="space-y-4">
-              {/* 複数日参加許可 */}
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="allow_multiple_dates"
-                  checked={formData.allow_multiple_dates}
-                  onChange={(e) => setFormData({ ...formData, allow_multiple_dates: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="allow_multiple_dates" className="ml-2 text-sm font-medium text-gray-700">
-                  複数日参加を許可する
-                </label>
+            <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 space-y-4">
+              <p className="text-sm font-semibold text-gray-900 mb-3">参加モード設定</p>
+
+              {/* 複数日参加 */}
+              <div>
+                <div className="flex items-center mb-2">
+                  <input
+                    type="checkbox"
+                    id="allow_multiple_dates"
+                    checked={formData.allow_multiple_dates}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        allow_multiple_dates: e.target.checked,
+                        allow_multiple_candidates: e.target.checked ? false : formData.allow_multiple_candidates,
+                        max_date_selections: e.target.checked ? formData.max_date_selections : 1,
+                      })
+                    }
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    disabled={formData.allow_multiple_candidates}
+                  />
+                  <label
+                    htmlFor="allow_multiple_dates"
+                    className="ml-2 text-sm font-medium text-gray-900"
+                  >
+                    複数日参加を許可する
+                  </label>
+                </div>
+
+                {formData.allow_multiple_dates && (
+                  <div className="ml-6">
+                    <label
+                      htmlFor="max_selections"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      参加者が選択できる日程数 *
+                    </label>
+                    <select
+                      id="max_selections"
+                      value={formData.max_date_selections}
+                      onChange={(e) =>
+                        setFormData({ ...formData, max_date_selections: parseInt(e.target.value) })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value={2}>2つまで</option>
+                      <option value={3}>3つまで</option>
+                      <option value={4}>4つまで</option>
+                      <option value={5}>5つまで</option>
+                      <option value={999}>制限なし</option>
+                    </select>
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-600 mt-2 ml-6">
+                  {formData.allow_multiple_dates
+                    ? '参加者は複数の日程すべてに参加できます'
+                    : ''}
+                </p>
               </div>
 
-              {/* 最大選択可能日程数 */}
+              {/* 複数候補入力 */}
               <div>
-                <label htmlFor="max_date_selections" className="block text-sm font-medium text-gray-700 mb-2">
-                  最大選択可能日程数
-                </label>
-                <input
-                  type="number"
-                  id="max_date_selections"
-                  min="1"
-                  value={formData.max_date_selections}
-                  onChange={(e) => setFormData({ ...formData, max_date_selections: parseInt(e.target.value) || 1 })}
-                  disabled={!formData.allow_multiple_dates}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  複数日参加を許可する場合に適用されます
+                <div className="flex items-center mb-2">
+                  <input
+                    type="checkbox"
+                    id="allow_multiple_candidates"
+                    checked={formData.allow_multiple_candidates}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        allow_multiple_candidates: e.target.checked,
+                        allow_multiple_dates: e.target.checked ? false : formData.allow_multiple_dates,
+                        max_date_selections: e.target.checked ? formData.max_date_selections : 1,
+                      })
+                    }
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    disabled={formData.allow_multiple_dates}
+                  />
+                  <label
+                    htmlFor="allow_multiple_candidates"
+                    className="ml-2 text-sm font-medium text-gray-900"
+                  >
+                    複数候補入力を許可する
+                  </label>
+                </div>
+
+                {formData.allow_multiple_candidates && (
+                  <div className="ml-6">
+                    <label
+                      htmlFor="max_candidates"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      参加者が入力できる候補数 *
+                    </label>
+                    <select
+                      id="max_candidates"
+                      value={formData.max_date_selections}
+                      onChange={(e) =>
+                        setFormData({ ...formData, max_date_selections: parseInt(e.target.value) })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value={2}>第2候補まで</option>
+                      <option value={3}>第3候補まで</option>
+                      <option value={4}>第4候補まで</option>
+                      <option value={5}>第5候補まで</option>
+                    </select>
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-600 mt-2 ml-6">
+                  {formData.allow_multiple_candidates
+                    ? '参加者は優先順位を付けて複数候補を入力でき、管理者が1つの日程を確定します'
+                    : ''}
+                </p>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mt-3">
+                <p className="text-xs text-yellow-800">
+                  <strong>注意:</strong> 「複数日参加」と「複数候補入力」は同時に選択できません
                 </p>
               </div>
 
@@ -446,6 +539,12 @@ export default function EventEditPage() {
                 <span className="text-gray-600">複数日参加:</span>
                 <span className="font-medium">
                   {event.allow_multiple_dates ? '許可する' : '許可しない'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-gray-600">複数候補入力:</span>
+                <span className="font-medium">
+                  {event.allow_multiple_candidates ? '許可する' : '許可しない'}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2 border-b">
