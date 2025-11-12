@@ -118,10 +118,11 @@ export async function POST(request: Request) {
     }
 
     // 開催日程を作成
+    // コースがある場合は定員0で作成し、後でコース定員の合計を設定
     const datesToInsert = dates.map((d: { date: string; capacity: number }) => ({
       event_id: event.id,
       date: d.date,
-      capacity: d.capacity,
+      capacity: (courses && courses.length > 0) ? 0 : d.capacity,
       current_count: 0,
       is_active: true,
     }));
@@ -135,7 +136,10 @@ export async function POST(request: Request) {
       console.error('日程作成エラー:', datesError);
       // イベントは作成されたが日程作成に失敗した場合、イベントを削除
       await supabaseAdmin.from('open_campus_events').delete().eq('id', event.id);
-      return NextResponse.json({ error: '開催日程の作成に失敗しました' }, { status: 500 });
+      return NextResponse.json({
+        error: '開催日程の作成に失敗しました',
+        details: datesError.message || JSON.stringify(datesError)
+      }, { status: 500 });
     }
 
     // コースを作成（コースが登録されている場合）
