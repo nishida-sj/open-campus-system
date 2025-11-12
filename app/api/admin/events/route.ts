@@ -178,10 +178,12 @@ export async function POST(request: Request) {
               });
 
               // コース×日程別定員レコードを作成
+              // date_capacitiesから該当日程の定員を取得
+              const dateCapacity = course.date_capacities?.[dateIndex] || course.capacity || 0;
               capacities.push({
                 course_id: courseId,
                 date_id: dateId,
-                capacity: course.capacity || 0,
+                capacity: dateCapacity,
                 current_count: 0,
               });
             }

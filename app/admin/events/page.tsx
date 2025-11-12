@@ -28,6 +28,7 @@ interface Course {
   capacity: number | null;
   display_order: number;
   applicable_date_indices: number[]; // どの日程に適用するか（インデックス）
+  date_capacities?: { [dateIndex: number]: number }; // 日程ごとの定員
 }
 
 export default function AdminEventsPage() {
@@ -103,6 +104,16 @@ export default function AdminEventsPage() {
         if (course.applicable_date_indices.length === 0) {
           alert(`コース「${course.name}」に適用する日程を選択してください`);
           return;
+        }
+        // 各適用日程に定員が設定されているかチェック
+        for (const dateIndex of course.applicable_date_indices) {
+          if (!course.date_capacities?.[dateIndex] || course.date_capacities[dateIndex] < 1) {
+            const dateName = formData.dates[dateIndex]?.date
+              ? new Date(formData.dates[dateIndex].date).toLocaleDateString('ja-JP')
+              : `日程${dateIndex + 1}`;
+            alert(`コース「${course.name}」の${dateName}の定員を入力してください`);
+            return;
+          }
         }
       }
     }
@@ -187,6 +198,7 @@ export default function AdminEventsPage() {
           capacity: null,
           display_order: prev.courses.length,
           applicable_date_indices: [],
+          date_capacities: {},
         },
       ],
     }));
@@ -225,16 +237,41 @@ export default function AdminEventsPage() {
     }));
   };
 
+  // コース×日程の定員を更新
+  const updateCourseDateCapacity = (courseIndex: number, dateIndex: number, capacity: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      courses: prev.courses.map((c, i) => {
+        if (i !== courseIndex) return c;
+        return {
+          ...c,
+          date_capacities: {
+            ...c.date_capacities,
+            [dateIndex]: capacity,
+          },
+        };
+      }),
+    }));
+  };
+
   // コースの適用日程を変更
   const toggleCourseDateApplicability = (courseIndex: number, dateIndex: number) => {
     setFormData((prev) => ({
       ...prev,
       courses: prev.courses.map((c, i) => {
         if (i !== courseIndex) return c;
-        const indices = c.applicable_date_indices.includes(dateIndex)
+        const isCurrentlyChecked = c.applicable_date_indices.includes(dateIndex);
+        const indices = isCurrentlyChecked
           ? c.applicable_date_indices.filter((idx) => idx !== dateIndex)
           : [...c.applicable_date_indices, dateIndex];
-        return { ...c, applicable_date_indices: indices };
+
+        // チェックを外した場合、その日程の定員データも削除
+        const newDateCapacities = { ...c.date_capacities };
+        if (isCurrentlyChecked) {
+          delete newDateCapacities[dateIndex];
+        }
+
+        return { ...c, applicable_date_indices: indices, date_capacities: newDateCapacities };
       }),
     }));
   };
@@ -578,53 +615,52 @@ export default function AdminEventsPage() {
                             />
                           </div>
 
-                          {/* コース定員 */}
-                          <div>
-                            <label className="block text-xs text-gray-700 mb-1">
-                              コース定員（空欄で無制限）
-                            </label>
-                            <input
-                              type="number"
-                              min="1"
-                              value={course.capacity === null ? '' : course.capacity}
-                              onChange={(e) => updateCourseCapacity(courseIndex, e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                              placeholder="無制限"
-                            />
-                          </div>
-
-                          {/* 適用日程選択 */}
+                          {/* 適用日程選択と日程ごとの定員設定 */}
                           {formData.dates.length > 0 && (
                             <div>
                               <label className="block text-xs text-gray-700 mb-2">
-                                このコースを適用する日程 *
+                                このコースを適用する日程と各日程の定員 *
                               </label>
-                              <div className="space-y-2 bg-white rounded p-3 max-h-40 overflow-y-auto">
-                                {formData.dates.map((date, dateIndex) => (
-                                  <label
-                                    key={dateIndex}
-                                    className="flex items-center space-x-2 cursor-pointer"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={course.applicable_date_indices.includes(dateIndex)}
-                                      onChange={() =>
-                                        toggleCourseDateApplicability(courseIndex, dateIndex)
-                                      }
-                                      className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                                    />
-                                    <span className="text-sm text-gray-700">
-                                      {date.date
-                                        ? new Date(date.date).toLocaleDateString('ja-JP', {
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                            weekday: 'short',
-                                          })
-                                        : `日程 ${dateIndex + 1}（未設定）`}
-                                    </span>
-                                  </label>
-                                ))}
+                              <div className="space-y-2 bg-white rounded p-3 max-h-60 overflow-y-auto">
+                                {formData.dates.map((date, dateIndex) => {
+                                  const isChecked = course.applicable_date_indices.includes(dateIndex);
+                                  return (
+                                    <div key={dateIndex} className="flex items-center space-x-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() =>
+                                          toggleCourseDateApplicability(courseIndex, dateIndex)
+                                        }
+                                        className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                      />
+                                      <span className="text-sm text-gray-700 flex-1">
+                                        {date.date
+                                          ? new Date(date.date).toLocaleDateString('ja-JP', {
+                                              month: 'short',
+                                              day: 'numeric',
+                                              weekday: 'short',
+                                            })
+                                          : `日程 ${dateIndex + 1}`}
+                                      </span>
+                                      {isChecked && (
+                                        <div className="flex items-center space-x-1">
+                                          <label className="text-xs text-gray-600">定員:</label>
+                                          <input
+                                            type="number"
+                                            min="1"
+                                            required
+                                            value={course.date_capacities?.[dateIndex] || ''}
+                                            onChange={(e) => updateCourseDateCapacity(courseIndex, dateIndex, parseInt(e.target.value) || 0)}
+                                            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                                            placeholder="必須"
+                                          />
+                                          <span className="text-xs text-gray-500">名</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                               {course.applicable_date_indices.length === 0 && (
                                 <p className="text-xs text-red-600 mt-1">
