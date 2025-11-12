@@ -32,6 +32,7 @@ interface Event {
   id: string;
   name: string;
   allow_multiple_dates: boolean;
+  allow_multiple_candidates: boolean;
   max_date_selections: number;
 }
 
@@ -214,6 +215,8 @@ export default function ConfirmationsPage() {
   // 申込者カードコンポーネント
   const ApplicantCard = ({ applicant, isPending }: { applicant: Applicant; isPending: boolean }) => {
     const allowMultiple = selectedEvent?.allow_multiple_dates || false;
+    const allowCandidates = selectedEvent?.allow_multiple_candidates || false;
+    const hasConfirmed = applicant.confirmed_dates && applicant.confirmed_dates.length > 0;
 
     return (
       <div className="border-2 border-gray-200 bg-white rounded-lg p-4 mb-3">
@@ -229,10 +232,18 @@ export default function ConfirmationsPage() {
 
         <div className="space-y-2">
           <p className="text-sm font-medium text-gray-700">
-            {allowMultiple ? '選択日程（複数日参加可）:' : '希望日程:'}
+            {allowMultiple ? '選択日程（複数日参加可）:' : allowCandidates ? '希望日程（候補）:' : '希望日程:'}
           </p>
-          {applicant.selected_dates.map((sd, index) => {
+          {allowCandidates && (
+            <p className="text-xs text-blue-600 mb-2">
+              ※ 複数候補入力モード：1つの日程のみ確定できます
+            </p>
+          )}
+          {applicant.selected_dates
+            .sort((a, b) => (a.priority || 0) - (b.priority || 0))
+            .map((sd, index) => {
             const isConfirmed = applicant.confirmed_dates?.some((cd) => cd.date_id === sd.date_id);
+            const canConfirm = !allowCandidates || !hasConfirmed || isConfirmed;
 
             return (
               <div
@@ -243,14 +254,21 @@ export default function ConfirmationsPage() {
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900">
-                      {allowMultiple ? `日程${index + 1}` : `第${index + 1}希望`}:
-                      {' '}
-                      {new Date(sd.date).toLocaleDateString('ja-JP', {
-                        month: 'long',
-                        day: 'numeric',
-                        weekday: 'short',
-                      })}
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-medium text-gray-900">
+                        {allowMultiple ? `日程${index + 1}` : allowCandidates && sd.priority ? `第${sd.priority}候補` : `第${index + 1}希望`}:
+                        {' '}
+                        {new Date(sd.date).toLocaleDateString('ja-JP', {
+                          month: 'long',
+                          day: 'numeric',
+                          weekday: 'short',
+                        })}
+                      </div>
+                      {allowCandidates && sd.priority && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          優先{sd.priority}
+                        </span>
+                      )}
                     </div>
                     {sd.course_name && (
                       <div className="text-sm text-gray-600 mt-1">
@@ -274,7 +292,13 @@ export default function ConfirmationsPage() {
                     ) : (
                       <button
                         onClick={() => handleConfirmClick(applicant, sd.date_id)}
-                        className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded transition duration-200"
+                        disabled={!canConfirm}
+                        className={`px-3 py-1 text-sm rounded transition duration-200 ${
+                          canConfirm
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                        title={!canConfirm ? '複数候補入力モードでは1つのみ確定できます' : ''}
                       >
                         確定
                       </button>
