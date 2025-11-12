@@ -10,6 +10,7 @@ interface EventData {
   overview: string | null;
   max_date_selections: number;
   allow_multiple_dates: boolean;
+  allow_multiple_candidates: boolean;
   is_active: boolean;
 }
 
@@ -34,6 +35,7 @@ interface CourseData {
 interface DateSelection {
   date_id: string;
   course_id: string | null;
+  priority?: number; // 複数候補入力時の優先順位（1=第一候補, 2=第二候補...）
 }
 
 function ApplyPageContent() {
@@ -95,7 +97,7 @@ function ApplyPageContent() {
         setCourses(data.courses || []);
 
         // 単一選択の場合、最初の日程を自動選択（残席がある場合）
-        if (!data.event.allow_multiple_dates && data.dates.length > 0) {
+        if (!data.event.allow_multiple_dates && !data.event.allow_multiple_candidates && data.dates.length > 0) {
           const firstAvailableDate = data.dates.find((d: DateData) => d.remaining > 0);
           if (firstAvailableDate) {
             setSelectedDates([{ date_id: firstAvailableDate.id, course_id: null }]);
@@ -116,7 +118,7 @@ function ApplyPageContent() {
   const handleDateSelection = (dateId: string, checked: boolean) => {
     if (!event) return;
 
-    if (!event.allow_multiple_dates) {
+    if (!event.allow_multiple_dates && !event.allow_multiple_candidates) {
       // 単一選択の場合
       if (checked) {
         setSelectedDates([{ date_id: dateId, course_id: null }]);
@@ -124,21 +126,31 @@ function ApplyPageContent() {
         setSelectedDates([]);
       }
     } else {
-      // 複数選択の場合
+      // 複数選択または複数候補入力の場合
       if (checked) {
         // 最大選択数チェック
         if (
           event.max_date_selections !== 999 &&
           selectedDates.length >= event.max_date_selections
         ) {
+          const label = event.allow_multiple_candidates ? '候補' : '日程';
           alert(
-            `最大${event.max_date_selections}日程まで選択できます`
+            `最大${event.max_date_selections}${label}まで選択できます`
           );
           return;
         }
-        setSelectedDates([...selectedDates, { date_id: dateId, course_id: null }]);
+        // 複数候補入力の場合は優先順位を自動設定
+        const priority = event.allow_multiple_candidates ? selectedDates.length + 1 : undefined;
+        setSelectedDates([...selectedDates, { date_id: dateId, course_id: null, priority }]);
       } else {
-        setSelectedDates(selectedDates.filter((s) => s.date_id !== dateId));
+        const removed = selectedDates.filter((s) => s.date_id !== dateId);
+        // 複数候補入力の場合、優先順位を振り直す
+        if (event.allow_multiple_candidates) {
+          const reordered = removed.map((s, index) => ({ ...s, priority: index + 1 }));
+          setSelectedDates(reordered);
+        } else {
+          setSelectedDates(removed);
+        }
       }
     }
   };
@@ -315,9 +327,21 @@ function ApplyPageContent() {
               {event.allow_multiple_dates && (
                 <p className="text-sm text-gray-600 mb-3">
                   {event.max_date_selections === 999
-                    ? '複数の日程を選択できます'
-                    : `最大${event.max_date_selections}日程まで選択できます`}
+                    ? '複数の日程を選択できます（選択した日程すべてに参加できます）'
+                    : `最大${event.max_date_selections}日程まで選択できます（選択した日程すべてに参加できます）`}
                 </p>
+              )}
+              {event.allow_multiple_candidates && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                  <p className="text-sm text-blue-800 font-medium">
+                    複数候補入力モード
+                  </p>
+                  <p className="text-sm text-blue-700 mt-1">
+                    {event.max_date_selections === 999
+                      ? '複数の候補を選択できます。選択順に優先順位が付けられ、後ほど管理者が1つの日程を確定します。'
+                      : `最大${event.max_date_selections}候補まで選択できます。選択順に優先順位が付けられ、後ほど管理者が1つの日程を確定します。`}
+                  </p>
+                </div>
               )}
 
               <div className="space-y-3">
@@ -329,8 +353,9 @@ function ApplyPageContent() {
                   dates.map((date) => {
                     const isSelected = selectedDates.some((s) => s.date_id === date.id);
                     const availableCourses = getCoursesForDate(date.id);
-                    const selectedCourse = selectedDates.find((s) => s.date_id === date.id)
-                      ?.course_id;
+                    const selection = selectedDates.find((s) => s.date_id === date.id);
+                    const selectedCourse = selection?.course_id;
+                    const priority = selection?.priority;
 
                     return (
                       <div
@@ -343,7 +368,7 @@ function ApplyPageContent() {
                       >
                         <label className="flex items-start cursor-pointer">
                           <input
-                            type={event.allow_multiple_dates ? 'checkbox' : 'radio'}
+                            type={event.allow_multiple_dates || event.allow_multiple_candidates ? 'checkbox' : 'radio'}
                             name="date_selection"
                             checked={isSelected}
                             onChange={(e) =>
@@ -353,13 +378,20 @@ function ApplyPageContent() {
                             className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                           />
                           <div className="ml-3 flex-1">
-                            <div className="font-semibold text-gray-900">
-                              {new Date(date.date).toLocaleDateString('ja-JP', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                weekday: 'long',
-                              })}
+                            <div className="flex items-center gap-2">
+                              <div className="font-semibold text-gray-900">
+                                {new Date(date.date).toLocaleDateString('ja-JP', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                  weekday: 'long',
+                                })}
+                              </div>
+                              {event.allow_multiple_candidates && priority && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  第{priority}候補
+                                </span>
+                              )}
                             </div>
                             <div className="text-sm text-gray-600 mt-1">
                               {date.remaining > 0 ? (

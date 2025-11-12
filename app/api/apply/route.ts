@@ -5,6 +5,7 @@ import { randomBytes } from 'crypto';
 interface DateSelection {
   date_id: string;
   course_id: string | null;
+  priority?: number;
 }
 
 export async function POST(request: Request) {
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
     // イベント情報を取得
     const { data: event, error: eventError } = await supabaseAdmin
       .from('open_campus_events')
-      .select('allow_multiple_dates, max_date_selections')
+      .select('allow_multiple_dates, allow_multiple_candidates, max_date_selections')
       .eq('id', event_id)
       .eq('is_active', true)
       .single();
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     }
 
     // 日程選択数のバリデーション
-    if (!event.allow_multiple_dates && selected_dates.length > 1) {
+    if (!event.allow_multiple_dates && !event.allow_multiple_candidates && selected_dates.length > 1) {
       return NextResponse.json(
         { error: 'このイベントは単一日程のみ選択可能です' },
         { status: 400 }
@@ -164,7 +165,7 @@ export async function POST(request: Request) {
       applicant_id: applicant.id,
       visit_date_id: selection.date_id,
       selected_course_id: selection.course_id,
-      priority: index + 1,
+      priority: selection.priority || (index + 1), // フロントエンドから送られたpriorityを使用、なければindex+1
     }));
 
     const { error: visitDatesError } = await supabaseAdmin
