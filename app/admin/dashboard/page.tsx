@@ -31,6 +31,12 @@ interface DateInfo {
   applicant_count: number;
   is_active: boolean;
   event_id: string | null;
+  course_capacities?: {
+    course_id: string;
+    course_name: string;
+    capacity: number;
+    current_count: number;
+  }[];
 }
 
 interface Event {
@@ -367,6 +373,22 @@ export default function AdminDashboard() {
                   <div>確定数: {date.current_count} 名</div>
                   <div>定員: {date.capacity} 名</div>
                 </div>
+                {date.course_capacities && date.course_capacities.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-300">
+                    <div className="text-xs font-semibold text-gray-700 mb-1">コース別:</div>
+                    <div className="space-y-1">
+                      {date.course_capacities.map((course) => (
+                        <div key={course.course_id} className="text-xs text-gray-600">
+                          <div className="font-medium">{course.course_name}</div>
+                          <div className="text-gray-500">
+                            {course.current_count}/{course.capacity}名
+                            (残り{course.capacity - course.current_count})
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="mt-2">
                   <div className="text-xs text-gray-500 mb-1">確定率</div>
                   <div className="w-full bg-gray-200 rounded-full h-2">

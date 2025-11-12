@@ -424,7 +424,7 @@ export default function AdminEventsPage() {
                           ...formData,
                           allow_multiple_dates: e.target.checked,
                           allow_multiple_candidates: e.target.checked ? false : formData.allow_multiple_candidates,
-                          max_date_selections: e.target.checked ? formData.max_date_selections : 1,
+                          max_date_selections: e.target.checked ? 2 : 1,
                         })
                       }
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
@@ -482,7 +482,7 @@ export default function AdminEventsPage() {
                           ...formData,
                           allow_multiple_candidates: e.target.checked,
                           allow_multiple_dates: e.target.checked ? false : formData.allow_multiple_dates,
-                          max_date_selections: e.target.checked ? formData.max_date_selections : 1,
+                          max_date_selections: e.target.checked ? 2 : 1,
                         })
                       }
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"

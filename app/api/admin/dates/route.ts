@@ -18,7 +18,7 @@ export async function GET() {
       );
     }
 
-    // 各日程の申込数を追加
+    // 各日程の申込数とコース情報を追加
     const datesWithApplicantCount = await Promise.all(
       (dates || []).map(async (date) => {
         const { count: applicantCount } = await supabaseAdmin
@@ -26,9 +26,28 @@ export async function GET() {
           .select('applicant_id', { count: 'exact', head: true })
           .eq('visit_date_id', date.id);
 
+        // コース×日程別定員を取得
+        const { data: courseCapacities } = await supabaseAdmin
+          .from('course_date_capacities')
+          .select(`
+            capacity,
+            current_count,
+            course_id,
+            event_courses (
+              name
+            )
+          `)
+          .eq('date_id', date.id);
+
         return {
           ...date,
           applicant_count: applicantCount || 0,
+          course_capacities: (courseCapacities || []).map((cc: any) => ({
+            course_id: cc.course_id,
+            course_name: cc.event_courses?.name || '不明',
+            capacity: cc.capacity,
+            current_count: cc.current_count,
+          })),
         };
       })
     );

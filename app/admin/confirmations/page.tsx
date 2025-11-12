@@ -42,6 +42,12 @@ interface DateInfo {
   capacity: number;
   current_count: number;
   event_id: string;
+  course_capacities?: {
+    course_id: string;
+    course_name: string;
+    capacity: number;
+    current_count: number;
+  }[];
 }
 
 export default function ConfirmationsPage() {
@@ -431,14 +437,34 @@ export default function ConfirmationsPage() {
             </p>
           </div>
           {selectedDate && (
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-600">選択日程の定員</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {selectedDate.current_count}/{selectedDate.capacity}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                残り {selectedDate.capacity - selectedDate.current_count}名
-              </p>
+            <div className="bg-white rounded-lg shadow p-4 md:col-span-2">
+              <p className="text-sm text-gray-600 mb-2">選択日程の定員</p>
+              <div className="mb-2">
+                <p className="text-2xl font-bold text-gray-900">
+                  合計: {selectedDate.current_count}/{selectedDate.capacity}名
+                </p>
+                <p className="text-xs text-gray-500">
+                  残り {selectedDate.capacity - selectedDate.current_count}名
+                </p>
+              </div>
+              {selectedDate.course_capacities && selectedDate.course_capacities.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-xs font-semibold text-gray-700 mb-2">コース別定員:</p>
+                  <div className="space-y-1">
+                    {selectedDate.course_capacities.map((course) => (
+                      <div key={course.course_id} className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">{course.course_name}</span>
+                        <span className="font-medium text-gray-900">
+                          {course.current_count}/{course.capacity}名
+                          <span className="text-xs text-gray-500 ml-1">
+                            (残り{course.capacity - course.current_count})
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
