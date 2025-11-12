@@ -146,7 +146,9 @@ export default function AdminEventsPage() {
         fetchData();
       } else {
         const error = await response.json();
-        alert(`エラー: ${error.message || '作成に失敗しました'}`);
+        const errorDetails = error.details ? `\n詳細: ${error.details}` : '';
+        alert(`エラー: ${error.error || '作成に失敗しました'}${errorDetails}`);
+        console.error('イベント作成エラー詳細:', error);
       }
     } catch (error) {
       console.error('イベント作成エラー:', error);

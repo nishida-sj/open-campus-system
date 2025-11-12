@@ -240,6 +240,7 @@ export async function POST(request: Request) {
     return NextResponse.json(event, { status: 201 });
   } catch (error) {
     console.error('サーバーエラー:', error);
-    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'サーバーエラー';
+    return NextResponse.json({ error: 'サーバーエラー', details: errorMessage }, { status: 500 });
   }
 }
