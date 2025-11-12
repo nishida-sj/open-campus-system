@@ -27,27 +27,37 @@ export async function GET() {
           .eq('visit_date_id', date.id);
 
         // コース×日程別定員を取得
-        const { data: courseCapacities } = await supabaseAdmin
+        const { data: courseCapacities, error: courseError } = await supabaseAdmin
           .from('course_date_capacities')
-          .select(`
-            capacity,
-            current_count,
-            course_id,
-            event_courses (
-              name
-            )
-          `)
+          .select('capacity, current_count, course_id')
           .eq('date_id', date.id);
+
+        if (courseError) {
+          console.error('Course capacities error:', courseError);
+        }
+
+        // コース名を取得
+        const courseCapacitiesWithNames = await Promise.all(
+          (courseCapacities || []).map(async (cc: any) => {
+            const { data: courseData } = await supabaseAdmin
+              .from('event_courses')
+              .select('name')
+              .eq('id', cc.course_id)
+              .single();
+
+            return {
+              course_id: cc.course_id,
+              course_name: courseData?.name || '不明',
+              capacity: cc.capacity,
+              current_count: cc.current_count,
+            };
+          })
+        );
 
         return {
           ...date,
           applicant_count: applicantCount || 0,
-          course_capacities: (courseCapacities || []).map((cc: any) => ({
-            course_id: cc.course_id,
-            course_name: cc.event_courses?.name || '不明',
-            capacity: cc.capacity,
-            current_count: cc.current_count,
-          })),
+          course_capacities: courseCapacitiesWithNames,
         };
       })
     );
