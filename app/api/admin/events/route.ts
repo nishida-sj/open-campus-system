@@ -49,12 +49,20 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, description, overview, confirmation_message, display_end_date, max_date_selections, is_active, allow_multiple_dates, dates, courses } = body;
+    const { name, description, overview, confirmation_message, display_end_date, max_date_selections, is_active, allow_multiple_dates, allow_multiple_candidates, dates, courses } = body;
 
     // バリデーション
     if (!name || !dates || dates.length === 0) {
       return NextResponse.json(
         { error: 'イベント名と開催日程を入力してください' },
+        { status: 400 }
+      );
+    }
+
+    // allow_multiple_datesとallow_multiple_candidatesの排他チェック
+    if (allow_multiple_dates && allow_multiple_candidates) {
+      return NextResponse.json(
+        { error: '複数日参加と複数候補入力は同時に許可できません' },
         { status: 400 }
       );
     }
@@ -99,6 +107,7 @@ export async function POST(request: Request) {
         max_date_selections: max_date_selections || 1,
         is_active: is_active !== undefined ? is_active : true,
         allow_multiple_dates: allow_multiple_dates || false,
+        allow_multiple_candidates: allow_multiple_candidates || false,
       })
       .select()
       .single();
@@ -152,20 +161,34 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'コースの作成に失敗しました' }, { status: 500 });
       }
 
-      // コースと日程の関連付けを作成
+      // コースと日程の関連付けとコース×日程別定員を作成
       if (insertedCourses) {
         const associations: any[] = [];
+        const capacities: any[] = [];
+
         courses.forEach((course: any, courseIndex: number) => {
           course.applicable_date_indices.forEach((dateIndex: number) => {
             if (dateIndex < insertedDates.length) {
+              const courseId = insertedCourses[courseIndex].id;
+              const dateId = insertedDates[dateIndex].id;
+
               associations.push({
-                course_id: insertedCourses[courseIndex].id,
-                date_id: insertedDates[dateIndex].id,
+                course_id: courseId,
+                date_id: dateId,
+              });
+
+              // コース×日程別定員レコードを作成
+              capacities.push({
+                course_id: courseId,
+                date_id: dateId,
+                capacity: course.capacity || 0,
+                current_count: 0,
               });
             }
           });
         });
 
+        // 関連付けテーブルに挿入
         if (associations.length > 0) {
           const { error: associationsError } = await supabaseAdmin
             .from('course_date_associations')
@@ -180,6 +203,34 @@ export async function POST(request: Request) {
               { status: 500 }
             );
           }
+        }
+
+        // コース×日程別定員テーブルに挿入
+        if (capacities.length > 0) {
+          const { error: capacitiesError } = await supabaseAdmin
+            .from('course_date_capacities')
+            .insert(capacities);
+
+          if (capacitiesError) {
+            console.error('コース定員登録エラー:', capacitiesError);
+            // ロールバック
+            await supabaseAdmin.from('open_campus_events').delete().eq('id', event.id);
+            return NextResponse.json(
+              { error: 'コース定員の登録に失敗しました' },
+              { status: 500 }
+            );
+          }
+        }
+
+        // 日程の合計定員を更新
+        for (const date of insertedDates) {
+          const dateCourseCapacities = capacities.filter(c => c.date_id === date.id);
+          const totalCapacity = dateCourseCapacities.reduce((sum, c) => sum + c.capacity, 0);
+
+          await supabaseAdmin
+            .from('open_campus_dates')
+            .update({ capacity: totalCapacity })
+            .eq('id', date.id);
         }
       }
     }

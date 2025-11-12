@@ -112,7 +112,7 @@ export async function PUT(
   try {
     const { id: eventId } = await params;
     const body = await request.json();
-    const { name, description, overview, confirmation_message, display_end_date, is_active, allow_multiple_dates, max_date_selections, dates, courses } = body;
+    const { name, description, overview, confirmation_message, display_end_date, is_active, allow_multiple_dates, allow_multiple_candidates, max_date_selections, dates, courses } = body;
 
     // バリデーション
     if (!name || !name.trim()) {
@@ -182,8 +182,22 @@ export async function PUT(
 
     // 申込者が0件の場合のみ、複数日設定を更新
     if ((totalApplicants || 0) === 0) {
+      // allow_multiple_datesとallow_multiple_candidatesの排他チェック
+      const newAllowMultipleDates = allow_multiple_dates !== undefined ? allow_multiple_dates : updateData.allow_multiple_dates;
+      const newAllowMultipleCandidates = allow_multiple_candidates !== undefined ? allow_multiple_candidates : updateData.allow_multiple_candidates;
+
+      if (newAllowMultipleDates && newAllowMultipleCandidates) {
+        return NextResponse.json(
+          { error: '複数日参加と複数候補入力は同時に許可できません' },
+          { status: 400 }
+        );
+      }
+
       if (allow_multiple_dates !== undefined) {
         updateData.allow_multiple_dates = allow_multiple_dates;
+      }
+      if (allow_multiple_candidates !== undefined) {
+        updateData.allow_multiple_candidates = allow_multiple_candidates;
       }
       if (max_date_selections !== undefined) {
         updateData.max_date_selections = max_date_selections;
