@@ -95,6 +95,57 @@ TOKEN_SECRET=your-random-secret-32-chars-or-more
 NEXT_PUBLIC_ADMIN_PASSWORD=your-secure-password
 ```
 
+### メール配信機能について（重要な変更）
+
+**2025年11月12日更新**: メール配信機能は**データベースのSMTP設定を使用**するように変更されました。
+
+#### 不要になった環境変数
+
+以下の環境変数は**設定不要**です（設定されていても無視されます）：
+
+```bash
+# ❌ これらは不要になりました
+RESEND_API_KEY=（不要）
+EMAIL_FROM=（不要）
+```
+
+#### メール送信の設定方法
+
+1. **管理画面のメール設定ページで設定**
+   ```
+   https://your-app.vercel.app/admin/email-settings
+   ```
+
+2. **必要な情報**
+   - SMTP Host（例: smtp.gmail.com）
+   - SMTP Port（例: 587 または 465）
+   - SMTPユーザー名（メールアドレス）
+   - SMTPパスワード（アプリパスワード推奨）
+   - 送信元メールアドレス
+   - 送信者名（オプション）
+
+3. **メール配信機能が利用可能に**
+   - メッセージ配信ページ（`/admin/broadcast`）で使用
+   - 設定したSMTP情報で自動的に送信
+
+#### Gmail使用時の注意点
+
+Gmailを使用する場合：
+
+1. **アプリパスワードの生成が必要**
+   - Googleアカウント → セキュリティ → 2段階認証を有効化
+   - アプリパスワードを生成
+   - 生成されたパスワードをSMTPパスワードとして使用
+
+2. **SMTP設定例**
+   ```
+   SMTP Host: smtp.gmail.com
+   SMTP Port: 587
+   TLS使用: ON
+   ユーザー名: your-email@gmail.com
+   パスワード: [生成したアプリパスワード]
+   ```
+
 ### 設定方法
 
 1. Vercel Dashboard > プロジェクト > **Settings** > **Environment Variables**
@@ -310,6 +361,10 @@ export async function POST(request: Request) {
 
 - [ ] **Deployment Protection** が無効化されている
 - [ ] すべての**環境変数**が設定されている（Production, Preview, Development）
+  - Supabase（URL, ANON_KEY, SERVICE_ROLE_KEY）
+  - LINE（ACCESS_TOKEN, SECRET, BASIC_ID）
+  - Application（APP_URL, TOKEN_SECRET, ADMIN_PASSWORD）
+  - ❌ RESEND_API_KEY, EMAIL_FROM は不要（削除してOK）
 - [ ] `.env.local` が `.gitignore` に含まれている
 - [ ] ローカルで `npm run build` が成功する
 - [ ] Webhook エンドポイントに `runtime = 'nodejs'` が設定されている
@@ -330,6 +385,9 @@ export async function POST(request: Request) {
 - [ ] LINE連携が動作する（友達追加 → トークン送信 → 完了メッセージ）
 - [ ] 管理画面にログインできる
 - [ ] CSVエクスポートが動作する
+- [ ] **メール設定ページ**（`/admin/email-settings`）でSMTP設定を登録
+- [ ] テストメール送信が成功する
+- [ ] メッセージ配信機能でメール送信が成功する
 
 ---
 
@@ -352,7 +410,7 @@ export async function POST(request: Request) {
 
 ---
 
-**最終更新**: 2025年11月11日
-**作成者**: Mikio
-**バージョン**: 1.0.0
-**ステータス**: LINE Webhook連携完了 ✅
+**最終更新**: 2025年11月12日
+**作成者**: Claude Code
+**バージョン**: 1.1.0
+**ステータス**: メール配信機能追加・SMTP統合完了 ✅
