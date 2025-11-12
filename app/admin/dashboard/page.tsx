@@ -28,6 +28,7 @@ interface DateInfo {
   date: string;
   capacity: number;
   current_count: number;
+  applicant_count: number;
   is_active: boolean;
   event_id: string | null;
 }
@@ -361,10 +362,13 @@ export default function AdminDashboard() {
                     weekday: 'short',
                   })}
                 </div>
-                <div className="text-sm text-gray-600">
-                  {date.current_count} / {date.capacity} 名
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div>申込数: {date.applicant_count || 0} 名</div>
+                  <div>確定数: {date.current_count} 名</div>
+                  <div>定員: {date.capacity} 名</div>
                 </div>
                 <div className="mt-2">
+                  <div className="text-xs text-gray-500 mb-1">確定率</div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full ${

@@ -18,7 +18,22 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json(dates || []);
+    // 各日程の申込数を追加
+    const datesWithApplicantCount = await Promise.all(
+      (dates || []).map(async (date) => {
+        const { count: applicantCount } = await supabaseAdmin
+          .from('applicant_visit_dates')
+          .select('applicant_id', { count: 'exact', head: true })
+          .eq('visit_date_id', date.id);
+
+        return {
+          ...date,
+          applicant_count: applicantCount || 0,
+        };
+      })
+    );
+
+    return NextResponse.json(datesWithApplicantCount);
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
