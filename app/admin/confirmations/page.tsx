@@ -74,6 +74,12 @@ export default function ConfirmationsPage() {
   const [pendingSortOrder, setPendingSortOrder] = useState<'asc' | 'desc'>('asc');
   const [confirmedSortOrder, setConfirmedSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  // CSV一括確定関連
+  const [showCSVDialog, setShowCSVDialog] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvResults, setCsvResults] = useState<any>(null);
+  const [isProcessingCSV, setIsProcessingCSV] = useState(false);
+
   // 認証チェック
   useEffect(() => {
     const isAuthenticated = sessionStorage.getItem('admin_authenticated');
@@ -354,6 +360,115 @@ export default function ConfirmationsPage() {
     }
   };
 
+  // CSVテンプレートダウンロード
+  const handleDownloadCSVTemplate = () => {
+    if (!selectedEventId) return;
+
+    // BOM付きUTF-8
+    const BOM = '\uFEFF';
+
+    // ヘッダー行
+    const headers = [
+      '申込者ID',
+      '氏名',
+      'メールアドレス',
+      '確定日程',
+      '確定コース',
+      '確定'
+    ];
+
+    // データ行を作成
+    const rows = allPendingApplicants.map((applicant) => {
+      // 第1希望の日程を取得
+      const firstDate = applicant.selected_dates[0];
+      const dateStr = firstDate
+        ? new Date(firstDate.date).toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          })
+        : '';
+
+      return [
+        applicant.id,
+        applicant.name,
+        applicant.email,
+        dateStr,
+        firstDate?.course_name || '',
+        '', // 確定列（空欄、ユーザーが○を入力）
+      ];
+    });
+
+    // CSV文字列を作成
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ].join('\n');
+
+    // ダウンロード
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+
+    const eventName = events.find((e) => e.id === selectedEventId)?.name || 'イベント';
+    const fileName = `確定用テンプレート_${eventName}_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '')}.csv`;
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // CSVファイル選択
+  const handleCSVFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setCsvFile(file);
+      setCsvResults(null);
+    }
+  };
+
+  // CSVアップロード処理
+  const handleCSVUpload = async () => {
+    if (!csvFile || !selectedEventId) return;
+
+    setIsProcessingCSV(true);
+
+    try {
+      // CSVファイルを読み込み
+      const text = await csvFile.text();
+
+      // APIに送信
+      const response = await fetch('/api/admin/confirmations/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          csv_data: text,
+          event_id: selectedEventId,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`エラー: ${error.error || '不明なエラー'}`);
+        setIsProcessingCSV(false);
+        return;
+      }
+
+      const results = await response.json();
+      setCsvResults(results);
+
+      // データを再取得
+      await fetchData();
+    } catch (error) {
+      console.error('CSVアップロードエラー:', error);
+      alert('CSVアップロードに失敗しました');
+    } finally {
+      setIsProcessingCSV(false);
+    }
+  };
+
   // 申込者カードコンポーネント
   const ApplicantCard = ({ applicant, isPending }: { applicant: Applicant; isPending: boolean }) => {
     const allowMultiple = selectedEvent?.allow_multiple_dates || false;
@@ -533,14 +648,46 @@ export default function ConfirmationsPage() {
           )}
         </div>
 
-        {/* 操作説明 */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-sm text-blue-800">
-            <strong>操作方法:</strong> 各申込者の日程ごとに「確定」ボタンをクリックして確定してください。
-            {selectedEvent?.allow_multiple_dates
-              ? ' 複数の日程を確定できます。'
-              : ' 1つの日程のみ確定できます。'}
-          </p>
+        {/* 操作説明 & CSV一括確定 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {/* 操作説明 */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              <strong>操作方法:</strong> 各申込者の日程ごとに「確定」ボタンをクリックして確定してください。
+              {selectedEvent?.allow_multiple_dates
+                ? ' 複数の日程を確定できます。'
+                : ' 1つの日程のみ確定できます。'}
+            </p>
+          </div>
+
+          {/* CSV一括確定 */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-green-900 mb-1">
+                  📊 CSV一括確定
+                </p>
+                <p className="text-xs text-green-700">
+                  Excelで編集して複数名を一括確定
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDownloadCSVTemplate}
+                  disabled={allPendingApplicants.length === 0}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition duration-200"
+                >
+                  テンプレートDL
+                </button>
+                <button
+                  onClick={() => setShowCSVDialog(true)}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition duration-200"
+                >
+                  CSVアップロード
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* 統計情報 */}
@@ -701,6 +848,121 @@ export default function ConfirmationsPage() {
           </div>
         </div>
       </main>
+
+      {/* CSVアップロードダイアログ */}
+      {showCSVDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">CSV一括確定</h2>
+
+            {/* 使い方説明 */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-sm font-semibold text-blue-900 mb-2">📖 使い方</p>
+              <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                <li>「テンプレートDL」ボタンでCSVをダウンロード</li>
+                <li>Excelで開き、「確定」列に○を入力（確定したい申込者のみ）</li>
+                <li>「確定日程」「確定コース」を必要に応じて編集</li>
+                <li>ファイルを保存してアップロード</li>
+              </ol>
+            </div>
+
+            {/* ファイル選択 */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                CSVファイルを選択
+              </label>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleCSVFileSelect}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {csvFile && (
+                <p className="text-sm text-gray-600 mt-2">
+                  選択ファイル: {csvFile.name}
+                </p>
+              )}
+            </div>
+
+            {/* 処理結果 */}
+            {csvResults && (
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm font-semibold text-gray-900 mb-2">処理結果</p>
+                <div className="grid grid-cols-3 gap-4 mb-3">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">{csvResults.succeeded}</p>
+                    <p className="text-xs text-gray-600">成功</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-red-600">{csvResults.failed}</p>
+                    <p className="text-xs text-gray-600">失敗</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-gray-600">{csvResults.skipped}</p>
+                    <p className="text-xs text-gray-600">スキップ</p>
+                  </div>
+                </div>
+
+                {/* エラー詳細 */}
+                {csvResults.results.error.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-semibold text-red-900 mb-2">エラー詳細:</p>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {csvResults.results.error.map((err: any, index: number) => (
+                        <div key={index} className="text-xs text-red-700 bg-red-50 p-2 rounded">
+                          行{err.row}: {err.message} ({err.data.name})
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 成功詳細 */}
+                {csvResults.results.success.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-semibold text-green-900 mb-2">成功:</p>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {csvResults.results.success.slice(0, 10).map((success: any, index: number) => (
+                        <div key={index} className="text-xs text-green-700 bg-green-50 p-2 rounded">
+                          行{success.row}: {success.data.name} - {success.message}
+                        </div>
+                      ))}
+                      {csvResults.results.success.length > 10 && (
+                        <div className="text-xs text-gray-600 text-center">
+                          他 {csvResults.results.success.length - 10}件
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ボタン */}
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowCSVDialog(false);
+                  setCsvFile(null);
+                  setCsvResults(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition duration-200"
+              >
+                閉じる
+              </button>
+              {csvFile && !csvResults && (
+                <button
+                  onClick={handleCSVUpload}
+                  disabled={isProcessingCSV}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition duration-200"
+                >
+                  {isProcessingCSV ? '処理中...' : 'アップロードして確定'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 確認ダイアログ */}
       {showConfirmDialog && targetApplicant && selectedDateForConfirm && (

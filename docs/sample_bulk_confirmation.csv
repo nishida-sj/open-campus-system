@@ -1,0 +1,6 @@
+申込者ID,氏名,メールアドレス,確定日程,確定コース,確定
+sample-id-001,田中太郎,tanaka@example.com,2025-12-15,工学部体験,○
+sample-id-002,佐藤花子,sato@example.com,2025-12-22,医学部体験,○
+sample-id-003,鈴木一郎,suzuki@example.com,2025-12-15,工学部体験,
+sample-id-004,高橋美咲,takahashi@example.com,2025-12-22,医学部体験,○
+sample-id-005,伊藤健太,ito@example.com,2026-01-12,工学部体験,
