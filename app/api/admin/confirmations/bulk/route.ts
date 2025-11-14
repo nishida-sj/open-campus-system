@@ -348,7 +348,7 @@ function parseCSV(csvText: string): { rows: CSVRow[]; error?: string } {
   const headerLine = lines[0];
   const headers = parseCSVLine(headerLine);
 
-  const expectedHeaders = ['申込者ID', '氏名', 'メールアドレス', '確定日程', '確定コース', '確定'];
+  const expectedHeaders = ['申込者ID', '氏名', 'ふりがな', '学校名', '学年', 'メールアドレス', '確定日程', '確定コース', '確定'];
   const hasValidHeaders = expectedHeaders.every((h, i) =>
     headers[i]?.includes(h) || h.includes(headers[i] || '')
   );
@@ -369,17 +369,18 @@ function parseCSV(csvText: string): { rows: CSVRow[]; error?: string } {
     // カンマで分割（ダブルクォートを考慮）
     const columns = parseCSVLine(line);
 
-    if (columns.length < 6) {
+    if (columns.length < 9) {
       continue; // 列数が足りない行はスキップ
     }
 
+    // 新しい列順序: 申込者ID, 氏名, ふりがな, 学校名, 学年, メールアドレス, 確定日程, 確定コース, 確定
     rows.push({
       applicant_id: columns[0]?.trim() || '',
       name: columns[1]?.trim() || '',
-      email: columns[2]?.trim() || '',
-      confirmed_date: columns[3]?.trim() || '',
-      confirmed_course: columns[4]?.trim() || '',
-      confirm_flag: columns[5]?.trim() || '',
+      email: columns[5]?.trim() || '', // メールアドレスは6列目
+      confirmed_date: columns[6]?.trim() || '', // 確定日程は7列目
+      confirmed_course: columns[7]?.trim() || '', // 確定コースは8列目
+      confirm_flag: columns[8]?.trim() || '', // 確定は9列目
     });
   }
 
