@@ -376,6 +376,7 @@ export default function ConfirmationsPage() {
       '学校名',
       '学年',
       'メールアドレス',
+      '候補',
       '確定日程',
       '確定コース',
       '確定'
@@ -393,6 +394,11 @@ export default function ConfirmationsPage() {
           })
         : '';
 
+      // 候補順序を取得（第1候補、第2候補など）
+      const priorityText = firstDate?.priority
+        ? `第${firstDate.priority}候補`
+        : '';
+
       return [
         applicant.id,
         applicant.name,
@@ -400,6 +406,7 @@ export default function ConfirmationsPage() {
         applicant.school_name || '',
         applicant.grade || '',
         applicant.email,
+        priorityText,
         dateStr,
         firstDate?.course_name || '',
         '', // 確定列（空欄、ユーザーが○を入力）
@@ -909,9 +916,9 @@ export default function ConfirmationsPage() {
                 </p>
                 <div className="bg-gray-50 rounded-lg p-3 text-xs font-mono overflow-x-auto">
                   <div className="font-semibold mb-1">ダウンロードされるCSV例:</div>
-                  <div className="whitespace-nowrap">申込者ID,氏名,ふりがな,学校名,学年,メールアドレス,確定日程,確定コース,確定</div>
-                  <div className="text-gray-600 whitespace-nowrap">abc-123,田中太郎,たなかたろう,〇〇高等学校,3年,tanaka@example.com,2025-12-15,工学部体験,</div>
-                  <div className="text-gray-600 whitespace-nowrap">def-456,佐藤花子,さとうはなこ,△△高等学校,2年,sato@example.com,2025-12-22,医学部体験,</div>
+                  <div className="whitespace-nowrap">申込者ID,氏名,ふりがな,学校名,学年,メールアドレス,候補,確定日程,確定コース,確定</div>
+                  <div className="text-gray-600 whitespace-nowrap">abc-123,田中太郎,たなかたろう,〇〇高等学校,3年,tanaka@example.com,第1候補,2025-12-15,工学部体験,</div>
+                  <div className="text-gray-600 whitespace-nowrap">def-456,佐藤花子,さとうはなこ,△△高等学校,2年,sato@example.com,第2候補,2025-12-22,医学部体験,</div>
                 </div>
               </div>
 
@@ -1026,7 +1033,7 @@ export default function ConfirmationsPage() {
             <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-yellow-900 mb-2">⚠️ 注意事項</h3>
               <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
-                <li>「申込者ID」「氏名」「ふりがな」「学校名」「学年」「メールアドレス」列は<strong>参照用</strong>のため編集しないでください</li>
+                <li>「申込者ID」「氏名」「ふりがな」「学校名」「学年」「メールアドレス」「候補」列は<strong>参照用</strong>のため編集しないでください</li>
                 <li>「確定」列には全角の「○」のみ有効です（半角×、その他の文字は無効）</li>
                 <li>申込者が選択していない日程は確定できません</li>
                 <li>CSVのヘッダー行（1行目）は削除・変更しないでください</li>
