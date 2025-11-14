@@ -272,33 +272,63 @@ async function handleMessage(event: WebhookEvent & { type: 'message' }) {
 
   console.log('✅ Applicant status is pending, proceeding with registration');
 
-  // LINE User IDとステータスを更新
-  console.log('Updating applicant:', applicant.id);
-  console.log('Setting line_user_id to:', userId);
-
-  const { error: updateError } = await supabaseAdmin
+  // 既に同じLINE User IDが他の申込に登録されているかチェック
+  const { data: existingApplicants } = await supabaseAdmin
     .from('applicants')
-    .update({
-      line_user_id: userId,
-      status: 'completed',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', applicant.id);
+    .select('id, name, email')
+    .eq('line_user_id', userId)
+    .neq('id', applicant.id); // 現在の申込以外
 
-  if (updateError) {
-    console.error('Failed to update applicant - Error details:', updateError);
-    console.error('Error message:', updateError.message);
-    console.error('Error code:', updateError.code);
-    console.error('Error details:', updateError.details);
+  if (existingApplicants && existingApplicants.length > 0) {
+    console.log('ℹ️ This LINE user already has other registrations:', existingApplicants.length);
+    // 既存の登録がある場合は、line_user_idを更新せずにstatusのみ更新
+    const { error: updateError } = await supabaseAdmin
+      .from('applicants')
+      .update({
+        status: 'completed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', applicant.id);
 
-    await client.replyMessage(event.replyToken, {
-      type: 'text',
-      text: '登録処理中にエラーが発生しました。\n\nしばらく時間をおいて再度お試しください。',
-    });
-    return;
+    if (updateError) {
+      console.error('Failed to update applicant status - Error details:', updateError);
+      await client.replyMessage(event.replyToken, {
+        type: 'text',
+        text: '登録処理中にエラーが発生しました。\n\nしばらく時間をおいて再度お試しください。',
+      });
+      return;
+    }
+
+    console.log('✅ Updated status to completed (without line_user_id due to duplicate)');
+  } else {
+    // 初めての登録の場合は、LINE User IDも含めて更新
+    console.log('Updating applicant:', applicant.id);
+    console.log('Setting line_user_id to:', userId);
+
+    const { error: updateError } = await supabaseAdmin
+      .from('applicants')
+      .update({
+        line_user_id: userId,
+        status: 'completed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', applicant.id);
+
+    if (updateError) {
+      console.error('Failed to update applicant - Error details:', updateError);
+      console.error('Error message:', updateError.message);
+      console.error('Error code:', updateError.code);
+      console.error('Error details:', updateError.details);
+
+      await client.replyMessage(event.replyToken, {
+        type: 'text',
+        text: '登録処理中にエラーが発生しました。\n\nしばらく時間をおいて再度お試しください。',
+      });
+      return;
+    }
+
+    console.log('✅ Successfully updated applicant status to completed with line_user_id');
   }
-
-  console.log('✅ Successfully updated applicant status to completed');
 
   // ログ記録
   await supabaseAdmin.from('application_logs').insert({

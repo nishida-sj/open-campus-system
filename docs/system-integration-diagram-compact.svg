@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="302" height="453" viewBox="0 0 302 453" xmlns="http://www.w3.org/2000/svg">
+  <!-- サイズ: 8cm × 12cm = 302px × 453px at 96dpi -->
+
+  <!-- 背景 -->
+  <rect width="302" height="453" fill="white"/>
+
+  <!-- グラデーション定義 -->
+  <defs>
+    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="systemGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:1" />
+    </linearGradient>
+    <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="2.5" orient="auto">
+      <polygon points="0 0, 8 2.5, 0 5" fill="#f59e0b" />
+    </marker>
+  </defs>
+
+  <!-- タイトル -->
+  <rect x="10" y="10" width="282" height="30" fill="#1e40af" rx="5"/>
+  <text x="151" y="30" font-family="Arial, sans-serif" font-size="14" fill="white" text-anchor="middle" font-weight="bold">システム連携構成</text>
+
+  <!-- LINE Business側 -->
+  <rect x="10" y="50" width="282" height="170" fill="#ecfdf5" stroke="#10b981" stroke-width="2" rx="8"/>
+
+  <!-- LINEヘッダー -->
+  <rect x="20" y="60" width="262" height="25" fill="url(#lineGrad)" rx="5"/>
+  <text x="151" y="77" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="bold">💬 LINE Business</text>
+
+  <!-- LINE機能リスト -->
+  <g>
+    <rect x="25" y="95" width="252" height="18" fill="white" stroke="#10b981" stroke-width="1" rx="4"/>
+    <text x="30" y="107" font-family="Arial, sans-serif" font-size="9" fill="#065f46" font-weight="bold">✓ メッセージ配信（プッシュ・リッチ）</text>
+  </g>
+
+  <g>
+    <rect x="25" y="118" width="252" height="18" fill="white" stroke="#10b981" stroke-width="1" rx="4"/>
+    <text x="30" y="130" font-family="Arial, sans-serif" font-size="9" fill="#065f46" font-weight="bold">✓ 自動応答・AI応答</text>
+  </g>
+
+  <g>
+    <rect x="25" y="141" width="252" height="18" fill="white" stroke="#10b981" stroke-width="1" rx="4"/>
+    <text x="30" y="153" font-family="Arial, sans-serif" font-size="9" fill="#065f46" font-weight="bold">✓ 配信分析（開封率・クリック率）</text>
+  </g>
+
+  <g>
+    <rect x="25" y="164" width="252" height="18" fill="white" stroke="#10b981" stroke-width="1" rx="4"/>
+    <text x="30" y="176" font-family="Arial, sans-serif" font-size="9" fill="#065f46" font-weight="bold">✓ 友だち管理・セグメント</text>
+  </g>
+
+  <text x="151" y="200" font-family="Arial, sans-serif" font-size="8" fill="#047857" text-anchor="middle" font-style="italic">メッセージング基盤・24時間対応</text>
+
+  <!-- 連携矢印エリア -->
+  <g>
+    <!-- 下向き矢印（Webhook） -->
+    <line x1="151" y1="220" x2="151" y2="245" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <rect x="128" y="225" width="46" height="24" fill="#fbbf24" rx="4"/>
+    <text x="151" y="234" font-family="Arial, sans-serif" font-size="8" fill="white" text-anchor="middle" font-weight="bold">Webhook</text>
+    <text x="151" y="242" font-family="Arial, sans-serif" font-size="7" fill="white" text-anchor="middle">受信</text>
+
+    <!-- 上向き矢印（Push配信） -->
+    <line x1="181" y1="270" x2="181" y2="245" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <rect x="158" y="251" width="46" height="24" fill="#fbbf24" rx="4"/>
+    <text x="181" y="260" font-family="Arial, sans-serif" font-size="8" fill="white" text-anchor="middle" font-weight="bold">Push</text>
+    <text x="181" y="268" font-family="Arial, sans-serif" font-size="7" fill="white" text-anchor="middle">配信指示</text>
+
+    <!-- API説明 -->
+    <text x="60" y="234" font-family="Arial, sans-serif" font-size="7" fill="#92400e" font-weight="bold">LINE API</text>
+    <text x="60" y="242" font-family="Arial, sans-serif" font-size="6" fill="#78350f">署名検証</text>
+  </g>
+
+  <!-- 本システム側 -->
+  <rect x="10" y="280" width="282" height="163" fill="#faf5ff" stroke="#a78bfa" stroke-width="2" rx="8"/>
+
+  <!-- システムヘッダー -->
+  <rect x="20" y="290" width="262" height="25" fill="url(#systemGrad)" rx="5"/>
+  <text x="151" y="307" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="bold">🖥️ 本システム</text>
+
+  <!-- システム機能リスト -->
+  <g>
+    <rect x="25" y="325" width="252" height="18" fill="white" stroke="#a78bfa" stroke-width="1" rx="4"/>
+    <text x="30" y="337" font-family="Arial, sans-serif" font-size="9" fill="#6d28d9" font-weight="bold">✓ 申込受付・トークン管理</text>
+  </g>
+
+  <g>
+    <rect x="25" y="348" width="252" height="18" fill="white" stroke="#a78bfa" stroke-width="1" rx="4"/>
+    <text x="30" y="360" font-family="Arial, sans-serif" font-size="9" fill="#6d28d9" font-weight="bold">✓ 定員管理・参加確定</text>
+  </g>
+
+  <g>
+    <rect x="25" y="371" width="252" height="18" fill="white" stroke="#a78bfa" stroke-width="1" rx="4"/>
+    <text x="30" y="383" font-family="Arial, sans-serif" font-size="9" fill="#6d28d9" font-weight="bold">✓ データ管理・CSV出力</text>
+  </g>
+
+  <g>
+    <rect x="25" y="394" width="252" height="18" fill="white" stroke="#a78bfa" stroke-width="1" rx="4"/>
+    <text x="30" y="406" font-family="Arial, sans-serif" font-size="9" fill="#6d28d9" font-weight="bold">✓ LINE連携制御・配信トリガー</text>
+  </g>
+
+  <text x="151" y="425" font-family="Arial, sans-serif" font-size="8" fill="#7c3aed" text-anchor="middle" font-style="italic">申込ロジック・データ一元管理</text>
+
+</svg>

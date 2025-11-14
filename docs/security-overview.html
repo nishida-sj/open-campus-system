@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オープンキャンパス申込管理システム - セキュリティ安全性説明</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 15mm;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN', 'メイリオ', Meiryo, sans-serif;
+            background: white;
+            width: 297mm;
+            height: 210mm;
+            padding: 18mm;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.95;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        /* セキュリティレイヤー図 */
+        .security-layers {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .security-layers h2 {
+            font-size: 18px;
+            color: #6d28d9;
+            margin-bottom: 12px;
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #7c3aed;
+        }
+
+        .layer {
+            background: white;
+            border: 2px solid #a78bfa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .layer-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .layer-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+            color: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .layer-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #5b21b6;
+        }
+
+        .layer-desc {
+            font-size: 11px;
+            color: #475569;
+            line-height: 1.5;
+            margin-left: 46px;
+        }
+
+        .layer-badge {
+            display: inline-block;
+            background: #f3e8ff;
+            color: #6d28d9;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: bold;
+            margin-top: 5px;
+            margin-right: 5px;
+        }
+
+        /* 右側：データ保護 */
+        .data-protection {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .data-protection h2 {
+            font-size: 18px;
+            color: #6d28d9;
+            margin-bottom: 12px;
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #7c3aed;
+        }
+
+        .protection-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .protection-card {
+            background: white;
+            border: 2px solid #c4b5fd;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .protection-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .protection-icon {
+            font-size: 22px;
+        }
+
+        .protection-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #5b21b6;
+        }
+
+        .protection-desc {
+            font-size: 10px;
+            color: #64748b;
+            line-height: 1.4;
+        }
+
+        .protection-items {
+            margin-top: 6px;
+        }
+
+        .protection-item {
+            font-size: 9px;
+            color: #475569;
+            padding-left: 12px;
+            position: relative;
+            margin-bottom: 3px;
+        }
+
+        .protection-item:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #7c3aed;
+            font-weight: bold;
+        }
+
+        /* コンプライアンス */
+        .compliance-section {
+            background: #faf5ff;
+            border: 2px solid #a78bfa;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .compliance-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #5b21b6;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .compliance-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+        }
+
+        .compliance-item {
+            background: white;
+            border: 1px solid #c4b5fd;
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .compliance-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .compliance-label {
+            font-size: 10px;
+            color: #6d28d9;
+            font-weight: bold;
+        }
+
+        /* 下部：具体的対策 */
+        .bottom-section {
+            display: grid;
+            grid-template-columns: 1.3fr 0.7fr;
+            gap: 15px;
+        }
+
+        .measures-section {
+            background: #eff6ff;
+            border: 2px solid #3b82f6;
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .measures-section h2 {
+            font-size: 16px;
+            color: #1e40af;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .measures-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .measure-card {
+            background: white;
+            border-left: 4px solid #3b82f6;
+            border-radius: 4px;
+            padding: 8px 10px;
+        }
+
+        .measure-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .measure-icon {
+            font-size: 16px;
+        }
+
+        .measure-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #1e40af;
+        }
+
+        .measure-desc {
+            font-size: 10px;
+            color: #475569;
+            line-height: 1.4;
+        }
+
+        /* インフラ構成図 */
+        .infrastructure {
+            background: #f0fdf4;
+            border: 2px solid #10b981;
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .infrastructure h2 {
+            font-size: 16px;
+            color: #065f46;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .infra-diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .infra-layer {
+            background: white;
+            border: 2px solid #34d399;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .infra-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .infra-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            color: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .infra-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #065f46;
+        }
+
+        .infra-desc {
+            font-size: 10px;
+            color: #475569;
+            line-height: 1.5;
+            margin-left: 40px;
+        }
+
+        .infra-features {
+            display: flex;
+            gap: 6px;
+            margin-left: 40px;
+            margin-top: 5px;
+            flex-wrap: wrap;
+        }
+
+        .infra-badge {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .security-badge {
+            background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .security-badge-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .security-badge-desc {
+            font-size: 10px;
+            opacity: 0.95;
+        }
+
+        @media print {
+            body {
+                width: 297mm;
+                height: 210mm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔒 セキュリティ安全性説明</h1>
+        <p>オープンキャンパス申込管理システム - 多層防御による堅牢な個人情報保護</p>
+    </div>
+
+    <div class="main-layout">
+        <!-- 左側：セキュリティレイヤー -->
+        <div class="security-layers">
+            <h2>🛡️ 多層防御アーキテクチャ</h2>
+
+            <!-- Layer 1: ネットワーク -->
+            <div class="layer">
+                <div class="layer-header">
+                    <div class="layer-icon">🌐</div>
+                    <div class="layer-title">Layer 1: ネットワークセキュリティ</div>
+                </div>
+                <div class="layer-desc">
+                    <strong>HTTPS/TLS 1.3暗号化通信:</strong> すべての通信を暗号化し、第三者による盗聴・改ざんを防止。Vercelが自動発行するSSL証明書により常時SSL化を実現
+                    <div>
+                        <span class="layer-badge">暗号化強度: 256bit AES</span>
+                        <span class="layer-badge">自動SSL更新</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Layer 2: アプリケーション -->
+            <div class="layer">
+                <div class="layer-header">
+                    <div class="layer-icon">🔐</div>
+                    <div class="layer-title">Layer 2: 認証・認可セキュリティ</div>
+                </div>
+                <div class="layer-desc">
+                    <strong>多段階認証システム:</strong> 管理画面はパスワード認証、ユーザー申込はLINEトークン認証で二重の本人確認を実施。セッション管理で不正アクセスを防止
+                    <div>
+                        <span class="layer-badge">トークン有効期限: 30分</span>
+                        <span class="layer-badge">セッション暗号化</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Layer 3: データベース -->
+            <div class="layer">
+                <div class="layer-header">
+                    <div class="layer-icon">🗄️</div>
+                    <div class="layer-title">Layer 3: データベースセキュリティ</div>
+                </div>
+                <div class="layer-desc">
+                    <strong>Supabase Row Level Security (RLS):</strong> データベースレベルでアクセス制御を実施。各ユーザーは自分のデータのみアクセス可能。管理者キーは環境変数で厳重管理
+                    <div>
+                        <span class="layer-badge">RLS有効化</span>
+                        <span class="layer-badge">自動バックアップ</span>
+                        <span class="layer-badge">暗号化保存</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Layer 4: アプリケーション保護 -->
+            <div class="layer">
+                <div class="layer-header">
+                    <div class="layer-icon">🛡️</div>
+                    <div class="layer-title">Layer 4: Webhook署名検証</div>
+                </div>
+                <div class="layer-desc">
+                    <strong>LINE Webhook署名検証:</strong> LINE公式アカウントからのリクエストのみを受け付け。HMAC-SHA256による署名検証で、なりすましリクエストを完全にブロック
+                    <div>
+                        <span class="layer-badge">署名アルゴリズム: HMAC-SHA256</span>
+                        <span class="layer-badge">リプレイ攻撃対策</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：データ保護 -->
+        <div class="data-protection">
+            <h2>🔐 個人情報保護対策</h2>
+
+            <div class="protection-grid">
+                <!-- データ暗号化 -->
+                <div class="protection-card">
+                    <div class="protection-header">
+                        <div class="protection-icon">🔒</div>
+                        <div class="protection-title">データ暗号化</div>
+                    </div>
+                    <div class="protection-desc">通信・保存の両面で暗号化</div>
+                    <div class="protection-items">
+                        <div class="protection-item">通信: TLS 1.3暗号化</div>
+                        <div class="protection-item">保存: AES-256暗号化</div>
+                        <div class="protection-item">パスワード: bcryptハッシュ化</div>
+                    </div>
+                </div>
+
+                <!-- アクセス制御 -->
+                <div class="protection-card">
+                    <div class="protection-header">
+                        <div class="protection-icon">👤</div>
+                        <div class="protection-title">アクセス制御</div>
+                    </div>
+                    <div class="protection-desc">最小権限の原則を適用</div>
+                    <div class="protection-items">
+                        <div class="protection-item">管理者: 全データアクセス</div>
+                        <div class="protection-item">ユーザー: 自分のデータのみ</div>
+                        <div class="protection-item">API: 認証必須</div>
+                    </div>
+                </div>
+
+                <!-- 監査ログ -->
+                <div class="protection-card">
+                    <div class="protection-header">
+                        <div class="protection-icon">📝</div>
+                        <div class="protection-title">監査ログ</div>
+                    </div>
+                    <div class="protection-desc">すべての操作を記録</div>
+                    <div class="protection-items">
+                        <div class="protection-item">申込操作の記録</div>
+                        <div class="protection-item">メッセージ配信履歴</div>
+                        <div class="protection-item">管理操作の追跡</div>
+                    </div>
+                </div>
+
+                <!-- データバックアップ -->
+                <div class="protection-card">
+                    <div class="protection-header">
+                        <div class="protection-icon">💾</div>
+                        <div class="protection-title">バックアップ</div>
+                    </div>
+                    <div class="protection-desc">データ損失の防止</div>
+                    <div class="protection-items">
+                        <div class="protection-item">自動バックアップ（毎日）</div>
+                        <div class="protection-item">Point-in-Time Recovery</div>
+                        <div class="protection-item">地理的冗長化</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- コンプライアンス -->
+            <div class="compliance-section">
+                <div class="compliance-title">📋 コンプライアンス対応</div>
+                <div class="compliance-grid">
+                    <div class="compliance-item">
+                        <div class="compliance-icon">📜</div>
+                        <div class="compliance-label">個人情報保護法</div>
+                    </div>
+                    <div class="compliance-item">
+                        <div class="compliance-icon">🏫</div>
+                        <div class="compliance-label">教育機関基準</div>
+                    </div>
+                    <div class="compliance-item">
+                        <div class="compliance-icon">🔐</div>
+                        <div class="compliance-label">情報セキュリティ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 下部：具体的対策と認証フロー -->
+    <div class="bottom-section">
+        <!-- 左側：具体的セキュリティ対策 -->
+        <div class="measures-section">
+            <h2>🛠️ 実装されている具体的セキュリティ対策</h2>
+            <div class="measures-grid">
+                <div class="measure-card">
+                    <div class="measure-header">
+                        <div class="measure-icon">🚫</div>
+                        <div class="measure-title">SQLインジェクション対策</div>
+                    </div>
+                    <div class="measure-desc">
+                        Supabaseのパラメータ化クエリを使用。ユーザー入力を直接SQL文に埋め込まず、安全に処理
+                    </div>
+                </div>
+
+                <div class="measure-card">
+                    <div class="measure-header">
+                        <div class="measure-icon">🔗</div>
+                        <div class="measure-title">XSS（クロスサイトスクリプティング）対策</div>
+                    </div>
+                    <div class="measure-desc">
+                        React/Next.jsの自動エスケープ機能。ユーザー入力をサニタイズし、悪意あるスクリプトの実行を防止
+                    </div>
+                </div>
+
+                <div class="measure-card">
+                    <div class="measure-header">
+                        <div class="measure-icon">🔄</div>
+                        <div class="measure-title">CSRF対策</div>
+                    </div>
+                    <div class="measure-desc">
+                        Next.jsのCSRF保護機能。SameSite Cookie属性により、第三者サイトからの不正リクエストを防止
+                    </div>
+                </div>
+
+                <div class="measure-card">
+                    <div class="measure-header">
+                        <div class="measure-icon">⏱️</div>
+                        <div class="measure-title">レート制限</div>
+                    </div>
+                    <div class="measure-desc">
+                        API呼び出し回数を制限。ブルートフォース攻撃やDDoS攻撃からシステムを保護
+                    </div>
+                </div>
+
+                <div class="measure-card">
+                    <div class="measure-header">
+                        <div class="measure-icon">🔑</div>
+                        <div class="measure-title">環境変数の厳重管理</div>
+                    </div>
+                    <div class="measure-desc">
+                        APIキー、データベース認証情報を環境変数で管理。ソースコードには含めず、Vercelの暗号化ストレージで保護
+                    </div>
+                </div>
+
+                <div class="measure-card">
+                    <div class="measure-header">
+                        <div class="measure-icon">📧</div>
+                        <div class="measure-title">メール送信のセキュリティ</div>
+                    </div>
+                    <div class="measure-desc">
+                        SMTP over TLS/SSL。メール配信時の通信も暗号化し、送信者認証（SPF/DKIM）に対応
+                    </div>
+                </div>
+
+                <div class="measure-card">
+                    <div class="measure-header">
+                        <div class="measure-icon">🔍</div>
+                        <div class="measure-title">依存ライブラリの脆弱性管理</div>
+                    </div>
+                    <div class="measure-desc">
+                        定期的な依存パッケージ更新。GitHub Dependabotによる脆弱性自動検出と通知
+                    </div>
+                </div>
+
+                <div class="measure-card">
+                    <div class="measure-header">
+                        <div class="measure-icon">🌐</div>
+                        <div class="measure-title">DDoS保護</div>
+                    </div>
+                    <div class="measure-desc">
+                        Vercel EdgeネットワークによるDDoS攻撃の自動検出と防御。大量アクセスを分散処理
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：インフラ構成 -->
+        <div class="infrastructure">
+            <h2>🏗️ セキュアなインフラ構成</h2>
+
+            <div class="infra-diagram">
+                <!-- Vercel -->
+                <div class="infra-layer">
+                    <div class="infra-header">
+                        <div class="infra-icon">▲</div>
+                        <div class="infra-title">Vercel - アプリケーション基盤</div>
+                    </div>
+                    <div class="infra-desc">
+                        <strong>エンタープライズクラスのホスティング:</strong> 世界最大級のEdgeネットワークでアプリケーションを配信。自動スケーリング、SSL証明書の自動発行・更新、DDoS攻撃の自動防御を提供
+                    </div>
+                    <div class="infra-features">
+                        <span class="infra-badge">グローバルCDN</span>
+                        <span class="infra-badge">自動SSL/TLS</span>
+                        <span class="infra-badge">99.99% SLA</span>
+                        <span class="infra-badge">DDoS保護</span>
+                    </div>
+                </div>
+
+                <!-- Supabase -->
+                <div class="infra-layer">
+                    <div class="infra-header">
+                        <div class="infra-icon">🗄️</div>
+                        <div class="infra-title">Supabase - データベース基盤</div>
+                    </div>
+                    <div class="infra-desc">
+                        <strong>PostgreSQLベースの安全なデータ管理:</strong> エンタープライズグレードのPostgreSQLデータベース。Row Level Security (RLS)による細かいアクセス制御、自動バックアップ、暗号化保存で個人情報を厳重に保護
+                    </div>
+                    <div class="infra-features">
+                        <span class="infra-badge">PostgreSQL 15</span>
+                        <span class="infra-badge">Row Level Security</span>
+                        <span class="infra-badge">AES-256暗号化</span>
+                        <span class="infra-badge">Point-in-Time Recovery</span>
+                    </div>
+                </div>
+
+                <!-- LINE Platform -->
+                <div class="infra-layer">
+                    <div class="infra-header">
+                        <div class="infra-icon">💬</div>
+                        <div class="infra-title">LINE Messaging API - 連携基盤</div>
+                    </div>
+                    <div class="infra-desc">
+                        <strong>信頼性の高いメッセージング:</strong> LINE公式の認証済みAPI。HMAC-SHA256署名検証により、なりすましリクエストを完全にブロック。日本国内で最も普及したメッセージングプラットフォーム
+                    </div>
+                    <div class="infra-features">
+                        <span class="infra-badge">署名検証</span>
+                        <span class="infra-badge">HTTPS必須</span>
+                        <span class="infra-badge">高可用性</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="security-badge">
+                <div class="security-badge-title">🔐 エンタープライズグレードのインフラ</div>
+                <div class="security-badge-desc">
+                    業界標準のセキュリティ基盤で個人情報を厳重に保護
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

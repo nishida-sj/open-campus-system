@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1122" height="794" viewBox="0 0 1122 794" xmlns="http://www.w3.org/2000/svg">
+  <!-- A4 横サイズ: 297mm × 210mm = 1122px × 794px at 96dpi -->
+
+  <!-- 背景 -->
+  <rect width="1122" height="794" fill="white"/>
+
+  <!-- ヘッダー -->
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="layerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34d399;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <rect x="35" y="35" width="1052" height="75" fill="url(#headerGrad)" rx="10"/>
+  <text x="561" y="68" font-family="Arial, sans-serif" font-size="30" fill="white" text-anchor="middle" font-weight="bold">🔒 セキュリティ安全性説明</text>
+  <text x="561" y="95" font-family="Arial, sans-serif" font-size="15" fill="white" text-anchor="middle">オープンキャンパス申込管理システム - 多層防御による堅牢な個人情報保護</text>
+
+  <!-- 左側：セキュリティレイヤー -->
+  <rect x="35" y="125" width="540" height="395" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" rx="10"/>
+  <text x="305" y="153" font-family="Arial, sans-serif" font-size="20" fill="#6d28d9" text-anchor="middle" font-weight="bold">🛡️ 多層防御アーキテクチャ</text>
+  <line x1="55" y1="160" x2="555" y2="160" stroke="#7c3aed" stroke-width="2"/>
+
+  <!-- Layer 1: ネットワーク -->
+  <rect x="50" y="175" width="510" height="60" fill="white" stroke="#a78bfa" stroke-width="2" rx="8"/>
+  <rect x="60" y="185" width="36" height="36" fill="url(#layerGrad)" rx="8"/>
+  <text x="78" y="210" font-family="Arial, sans-serif" font-size="20" fill="white" text-anchor="middle">🌐</text>
+  <text x="105" y="200" font-family="Arial, sans-serif" font-size="15" fill="#5b21b6" font-weight="bold">Layer 1: ネットワークセキュリティ</text>
+  <text x="105" y="215" font-family="Arial, sans-serif" font-size="10" fill="#475569">HTTPS/TLS 1.3暗号化通信: すべての通信を暗号化し、第三者による盗聴・改ざんを防止</text>
+  <rect x="105" y="220" width="105" height="12" fill="#f3e8ff" rx="4"/>
+  <text x="157.5" y="229" font-family="Arial, sans-serif" font-size="8" fill="#6d28d9" text-anchor="middle" font-weight="bold">暗号化強度: 256bit AES</text>
+
+  <!-- Layer 2: 認証 -->
+  <rect x="50" y="245" width="510" height="60" fill="white" stroke="#a78bfa" stroke-width="2" rx="8"/>
+  <rect x="60" y="255" width="36" height="36" fill="url(#layerGrad)" rx="8"/>
+  <text x="78" y="280" font-family="Arial, sans-serif" font-size="20" fill="white" text-anchor="middle">🔐</text>
+  <text x="105" y="270" font-family="Arial, sans-serif" font-size="15" fill="#5b21b6" font-weight="bold">Layer 2: 認証・認可セキュリティ</text>
+  <text x="105" y="285" font-family="Arial, sans-serif" font-size="10" fill="#475569">多段階認証システム: 管理画面はパスワード認証、ユーザー申込はLINEトークン認証</text>
+  <rect x="105" y="290" width="100" height="12" fill="#f3e8ff" rx="4"/>
+  <text x="155" y="299" font-family="Arial, sans-serif" font-size="8" fill="#6d28d9" text-anchor="middle" font-weight="bold">トークン有効期限: 30分</text>
+
+  <!-- Layer 3: データベース -->
+  <rect x="50" y="315" width="510" height="60" fill="white" stroke="#a78bfa" stroke-width="2" rx="8"/>
+  <rect x="60" y="325" width="36" height="36" fill="url(#layerGrad)" rx="8"/>
+  <text x="78" y="350" font-family="Arial, sans-serif" font-size="20" fill="white" text-anchor="middle">🗄️</text>
+  <text x="105" y="340" font-family="Arial, sans-serif" font-size="15" fill="#5b21b6" font-weight="bold">Layer 3: データベースセキュリティ</text>
+  <text x="105" y="355" font-family="Arial, sans-serif" font-size="10" fill="#475569">Supabase Row Level Security (RLS): データベースレベルでアクセス制御を実施</text>
+  <rect x="105" y="360" width="60" height="12" fill="#f3e8ff" rx="4"/>
+  <text x="135" y="369" font-family="Arial, sans-serif" font-size="8" fill="#6d28d9" text-anchor="middle" font-weight="bold">RLS有効化</text>
+  <rect x="170" y="360" width="70" height="12" fill="#f3e8ff" rx="4"/>
+  <text x="205" y="369" font-family="Arial, sans-serif" font-size="8" fill="#6d28d9" text-anchor="middle" font-weight="bold">自動バックアップ</text>
+
+  <!-- Layer 4: Webhook -->
+  <rect x="50" y="385" width="510" height="60" fill="white" stroke="#a78bfa" stroke-width="2" rx="8"/>
+  <rect x="60" y="395" width="36" height="36" fill="url(#layerGrad)" rx="8"/>
+  <text x="78" y="420" font-family="Arial, sans-serif" font-size="20" fill="white" text-anchor="middle">🛡️</text>
+  <text x="105" y="410" font-family="Arial, sans-serif" font-size="15" fill="#5b21b6" font-weight="bold">Layer 4: Webhook署名検証</text>
+  <text x="105" y="425" font-family="Arial, sans-serif" font-size="10" fill="#475569">LINE Webhook署名検証: HMAC-SHA256による署名検証で、なりすましリクエストをブロック</text>
+  <rect x="105" y="430" width="130" height="12" fill="#f3e8ff" rx="4"/>
+  <text x="170" y="439" font-family="Arial, sans-serif" font-size="8" fill="#6d28d9" text-anchor="middle" font-weight="bold">署名アルゴリズム: HMAC-SHA256</text>
+
+  <!-- 右側：データ保護 -->
+  <rect x="590" y="125" width="497" height="395" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" rx="10"/>
+  <text x="838" y="153" font-family="Arial, sans-serif" font-size="20" fill="#6d28d9" text-anchor="middle" font-weight="bold">🔐 個人情報保護対策</text>
+  <line x1="610" y1="160" x2="1067" y2="160" stroke="#7c3aed" stroke-width="2"/>
+
+  <!-- データ保護カードグリッド -->
+  <!-- データ暗号化 -->
+  <rect x="605" y="175" width="230" height="95" fill="white" stroke="#c4b5fd" stroke-width="2" rx="8"/>
+  <text x="620" y="195" font-family="Arial, sans-serif" font-size="22">🔒</text>
+  <text x="655" y="193" font-family="Arial, sans-serif" font-size="13" fill="#5b21b6" font-weight="bold">データ暗号化</text>
+  <text x="615" y="210" font-family="Arial, sans-serif" font-size="10" fill="#64748b">通信・保存の両面で暗号化</text>
+  <text x="625" y="228" font-family="Arial, sans-serif" font-size="9" fill="#475569">✓ 通信: TLS 1.3暗号化</text>
+  <text x="625" y="242" font-family="Arial, sans-serif" font-size="9" fill="#475569">✓ 保存: AES-256暗号化</text>
+  <text x="625" y="256" font-family="Arial, sans-serif" font-size="9" fill="#475569">✓ パスワード: bcryptハッシュ化</text>
+
+  <!-- アクセス制御 -->
+  <rect x="845" y="175" width="230" height="95" fill="white" stroke="#c4b5fd" stroke-width="2" rx="8"/>
+  <text x="860" y="195" font-family="Arial, sans-serif" font-size="22">👤</text>
+  <text x="895" y="193" font-family="Arial, sans-serif" font-size="13" fill="#5b21b6" font-weight="bold">アクセス制御</text>
+  <text x="855" y="210" font-family="Arial, sans-serif" font-size="10" fill="#64748b">最小権限の原則を適用</text>
+  <text x="865" y="228" font-family="Arial, sans-serif" font-size="9" fill="#475569">✓ 管理者: 全データアクセス</text>
+  <text x="865" y="242" font-family="Arial, sans-serif" font-size="9" fill="#475569">✓ ユーザー: 自分のデータのみ</text>
+  <text x="865" y="256" font-family="Arial, sans-serif" font-size="9" fill="#475569">✓ API: 認証必須</text>
+
+  <!-- 監査ログ -->
+  <rect x="605" y="280" width="230" height="95" fill="white" stroke="#c4b5fd" stroke-width="2" rx="8"/>
+  <text x="620" y="300" font-family="Arial, sans-serif" font-size="22">📝</text>
+  <text x="655" y="298" font-family="Arial, sans-serif" font-size="13" fill="#5b21b6" font-weight="bold">監査ログ</text>
+  <text x="615" y="315" font-family="Arial, sans-serif" font-size="10" fill="#64748b">すべての操作を記録</text>
+  <text x="625" y="333" font-family="Arial, sans-serif" font-size="9" fill="#475569">✓ 申込操作の記録</text>
+  <text x="625" y="347" font-family="Arial, sans-serif" font-size="9" fill="#475569">✓ メッセージ配信履歴</text>
+  <text x="625" y="361" font-family="Arial, sans-serif" font-size="9" fill="#475569">✓ 管理操作の追跡</text>
+
+  <!-- バックアップ -->
+  <rect x="845" y="280" width="230" height="95" fill="white" stroke="#c4b5fd" stroke-width="2" rx="8"/>
+  <text x="860" y="300" font-family="Arial, sans-serif" font-size="22">💾</text>
+  <text x="895" y="298" font-family="Arial, sans-serif" font-size="13" fill="#5b21b6" font-weight="bold">バックアップ</text>
+  <text x="855" y="315" font-family="Arial, sans-serif" font-size="10" fill="#64748b">データ損失の防止</text>
+  <text x="865" y="333" font-family="Arial, sans-serif" font-size="9" fill="#475569">✓ 自動バックアップ（毎日）</text>
+  <text x="865" y="347" font-family="Arial, sans-serif" font-size="9" fill="#475569">✓ Point-in-Time Recovery</text>
+  <text x="865" y="361" font-family="Arial, sans-serif" font-size="9" fill="#475569">✓ 地理的冗長化</text>
+
+  <!-- コンプライアンス -->
+  <rect x="605" y="385" width="470" height="125" fill="#faf5ff" stroke="#a78bfa" stroke-width="2" rx="8"/>
+  <text x="840" y="408" font-family="Arial, sans-serif" font-size="14" fill="#5b21b6" text-anchor="middle" font-weight="bold">📋 コンプライアンス対応</text>
+
+  <!-- コンプライアンスアイテム -->
+  <rect x="640" y="420" width="130" height="70" fill="white" stroke="#c4b5fd" stroke-width="1" rx="6"/>
+  <text x="705" y="455" font-family="Arial, sans-serif" font-size="26" text-anchor="middle">📜</text>
+  <text x="705" y="480" font-family="Arial, sans-serif" font-size="11" fill="#6d28d9" text-anchor="middle" font-weight="bold">個人情報保護法</text>
+
+  <rect x="785" y="420" width="130" height="70" fill="white" stroke="#c4b5fd" stroke-width="1" rx="6"/>
+  <text x="850" y="455" font-family="Arial, sans-serif" font-size="26" text-anchor="middle">🏫</text>
+  <text x="850" y="480" font-family="Arial, sans-serif" font-size="11" fill="#6d28d9" text-anchor="middle" font-weight="bold">教育機関基準</text>
+
+  <rect x="930" y="420" width="130" height="70" fill="white" stroke="#c4b5fd" stroke-width="1" rx="6"/>
+  <text x="995" y="455" font-family="Arial, sans-serif" font-size="26" text-anchor="middle">🔐</text>
+  <text x="995" y="480" font-family="Arial, sans-serif" font-size="11" fill="#6d28d9" text-anchor="middle" font-weight="bold">情報セキュリティ</text>
+
+  <!-- 下部：セキュリティ対策 -->
+  <rect x="35" y="535" width="720" height="224" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" rx="10"/>
+  <text x="395" y="560" font-family="Arial, sans-serif" font-size="18" fill="#1e40af" text-anchor="middle" font-weight="bold">🛠️ 実装されている具体的セキュリティ対策</text>
+
+  <!-- セキュリティ対策グリッド（2列×4行） -->
+  <!-- Row 1 -->
+  <rect x="50" y="575" width="340" height="40" fill="white" stroke="#3b82f6" stroke-width="0" rx="4"/>
+  <line x1="50" y1="575" x2="50" y2="615" stroke="#3b82f6" stroke-width="4"/>
+  <text x="65" y="593" font-family="Arial, sans-serif" font-size="16">🚫</text>
+  <text x="90" y="592" font-family="Arial, sans-serif" font-size="12" fill="#1e40af" font-weight="bold">SQLインジェクション対策</text>
+  <text x="60" y="607" font-family="Arial, sans-serif" font-size="10" fill="#475569">Supabaseのパラメータ化クエリを使用</text>
+
+  <rect x="405" y="575" width="340" height="40" fill="white" stroke="#3b82f6" stroke-width="0" rx="4"/>
+  <line x1="405" y1="575" x2="405" y2="615" stroke="#3b82f6" stroke-width="4"/>
+  <text x="420" y="593" font-family="Arial, sans-serif" font-size="16">🔗</text>
+  <text x="445" y="592" font-family="Arial, sans-serif" font-size="12" fill="#1e40af" font-weight="bold">XSS対策</text>
+  <text x="415" y="607" font-family="Arial, sans-serif" font-size="10" fill="#475569">React自動エスケープ機能で防止</text>
+
+  <!-- Row 2 -->
+  <rect x="50" y="625" width="340" height="40" fill="white" stroke="#3b82f6" stroke-width="0" rx="4"/>
+  <line x1="50" y1="625" x2="50" y2="665" stroke="#3b82f6" stroke-width="4"/>
+  <text x="65" y="643" font-family="Arial, sans-serif" font-size="16">🔄</text>
+  <text x="90" y="642" font-family="Arial, sans-serif" font-size="12" fill="#1e40af" font-weight="bold">CSRF対策</text>
+  <text x="60" y="657" font-family="Arial, sans-serif" font-size="10" fill="#475569">Next.jsのCSRF保護機能</text>
+
+  <rect x="405" y="625" width="340" height="40" fill="white" stroke="#3b82f6" stroke-width="0" rx="4"/>
+  <line x1="405" y1="625" x2="405" y2="665" stroke="#3b82f6" stroke-width="4"/>
+  <text x="420" y="643" font-family="Arial, sans-serif" font-size="16">⏱️</text>
+  <text x="445" y="642" font-family="Arial, sans-serif" font-size="12" fill="#1e40af" font-weight="bold">レート制限</text>
+  <text x="415" y="657" font-family="Arial, sans-serif" font-size="10" fill="#475569">API呼び出し回数制限でDDoS対策</text>
+
+  <!-- Row 3 -->
+  <rect x="50" y="675" width="340" height="40" fill="white" stroke="#3b82f6" stroke-width="0" rx="4"/>
+  <line x1="50" y1="675" x2="50" y2="715" stroke="#3b82f6" stroke-width="4"/>
+  <text x="65" y="693" font-family="Arial, sans-serif" font-size="16">🔑</text>
+  <text x="90" y="692" font-family="Arial, sans-serif" font-size="12" fill="#1e40af" font-weight="bold">環境変数の厳重管理</text>
+  <text x="60" y="707" font-family="Arial, sans-serif" font-size="10" fill="#475569">APIキーをVercel暗号化ストレージで保護</text>
+
+  <rect x="405" y="675" width="340" height="40" fill="white" stroke="#3b82f6" stroke-width="0" rx="4"/>
+  <line x1="405" y1="675" x2="405" y2="715" stroke="#3b82f6" stroke-width="4"/>
+  <text x="420" y="693" font-family="Arial, sans-serif" font-size="16">📧</text>
+  <text x="445" y="692" font-family="Arial, sans-serif" font-size="12" fill="#1e40af" font-weight="bold">メール送信のセキュリティ</text>
+  <text x="415" y="707" font-family="Arial, sans-serif" font-size="10" fill="#475569">SMTP over TLS/SSL暗号化通信</text>
+
+  <!-- Row 4 -->
+  <rect x="50" y="725" width="340" height="40" fill="white" stroke="#3b82f6" stroke-width="0" rx="4"/>
+  <line x1="50" y1="725" x2="50" y2="765" stroke="#3b82f6" stroke-width="4"/>
+  <text x="65" y="743" font-family="Arial, sans-serif" font-size="16">🔍</text>
+  <text x="90" y="742" font-family="Arial, sans-serif" font-size="12" fill="#1e40af" font-weight="bold">脆弱性管理</text>
+  <text x="60" y="757" font-family="Arial, sans-serif" font-size="10" fill="#475569">GitHub Dependabotによる自動検出</text>
+
+  <rect x="405" y="725" width="340" height="40" fill="white" stroke="#3b82f6" stroke-width="0" rx="4"/>
+  <line x1="405" y1="725" x2="405" y2="765" stroke="#3b82f6" stroke-width="4"/>
+  <text x="420" y="743" font-family="Arial, sans-serif" font-size="16">🌐</text>
+  <text x="445" y="742" font-family="Arial, sans-serif" font-size="12" fill="#1e40af" font-weight="bold">DDoS保護</text>
+  <text x="415" y="757" font-family="Arial, sans-serif" font-size="10" fill="#475569">Vercel Edgeネットワークで自動防御</text>
+
+  <!-- 右側：インフラ構成 -->
+  <defs>
+    <linearGradient id="infraGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34d399;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <rect x="770" y="535" width="317" height="224" fill="#f0fdf4" stroke="#10b981" stroke-width="2" rx="10"/>
+  <text x="928" y="560" font-family="Arial, sans-serif" font-size="18" fill="#065f46" text-anchor="middle" font-weight="bold">🏗️ セキュアなインフラ構成</text>
+
+  <!-- Vercel -->
+  <rect x="785" y="575" width="287" height="52" fill="white" stroke="#34d399" stroke-width="2" rx="8"/>
+  <rect x="793" y="583" width="32" height="32" fill="url(#infraGrad)" rx="6"/>
+  <text x="809" y="605" font-family="Arial, sans-serif" font-size="18" fill="white" text-anchor="middle" font-weight="bold">▲</text>
+  <text x="835" y="593" font-family="Arial, sans-serif" font-size="13" fill="#065f46" font-weight="bold">Vercel - アプリケーション基盤</text>
+  <text x="793" y="608" font-family="Arial, sans-serif" font-size="9" fill="#475569">世界最大級のEdgeネットワーク、自動スケーリング、DDoS保護</text>
+  <rect x="793" y="613" width="75" height="11" fill="#d1fae5" rx="4"/>
+  <text x="830.5" y="621" font-family="Arial, sans-serif" font-size="8" fill="#065f46" text-anchor="middle" font-weight="bold">グローバルCDN</text>
+  <rect x="873" y="613" width="65" height="11" fill="#d1fae5" rx="4"/>
+  <text x="905.5" y="621" font-family="Arial, sans-serif" font-size="8" fill="#065f46" text-anchor="middle" font-weight="bold">自動SSL/TLS</text>
+  <rect x="943" y="613" width="55" height="11" fill="#d1fae5" rx="4"/>
+  <text x="970.5" y="621" font-family="Arial, sans-serif" font-size="8" fill="#065f46" text-anchor="middle" font-weight="bold">99.99% SLA</text>
+
+  <!-- Supabase -->
+  <rect x="785" y="635" width="287" height="52" fill="white" stroke="#34d399" stroke-width="2" rx="8"/>
+  <rect x="793" y="643" width="32" height="32" fill="url(#infraGrad)" rx="6"/>
+  <text x="809" y="665" font-family="Arial, sans-serif" font-size="18" fill="white" text-anchor="middle" font-weight="bold">🗄️</text>
+  <text x="835" y="653" font-family="Arial, sans-serif" font-size="13" fill="#065f46" font-weight="bold">Supabase - データベース基盤</text>
+  <text x="793" y="668" font-family="Arial, sans-serif" font-size="9" fill="#475569">PostgreSQL、Row Level Security、暗号化保存で厳重保護</text>
+  <rect x="793" y="673" width="75" height="11" fill="#d1fae5" rx="4"/>
+  <text x="830.5" y="681" font-family="Arial, sans-serif" font-size="8" fill="#065f46" text-anchor="middle" font-weight="bold">PostgreSQL 15</text>
+  <rect x="873" y="673" width="100" height="11" fill="#d1fae5" rx="4"/>
+  <text x="923" y="681" font-family="Arial, sans-serif" font-size="8" fill="#065f46" text-anchor="middle" font-weight="bold">Row Level Security</text>
+
+  <!-- LINE Platform -->
+  <rect x="785" y="695" width="287" height="52" fill="white" stroke="#34d399" stroke-width="2" rx="8"/>
+  <rect x="793" y="703" width="32" height="32" fill="url(#infraGrad)" rx="6"/>
+  <text x="809" y="725" font-family="Arial, sans-serif" font-size="18" fill="white" text-anchor="middle" font-weight="bold">💬</text>
+  <text x="835" y="713" font-family="Arial, sans-serif" font-size="13" fill="#065f46" font-weight="bold">LINE Messaging API - 連携基盤</text>
+  <text x="793" y="728" font-family="Arial, sans-serif" font-size="9" fill="#475569">HMAC-SHA256署名検証でなりすましリクエストをブロック</text>
+  <rect x="793" y="733" width="55" height="11" fill="#d1fae5" rx="4"/>
+  <text x="820.5" y="741" font-family="Arial, sans-serif" font-size="8" fill="#065f46" text-anchor="middle" font-weight="bold">署名検証</text>
+  <rect x="853" y="733" width="60" height="11" fill="#d1fae5" rx="4"/>
+  <text x="883" y="741" font-family="Arial, sans-serif" font-size="8" fill="#065f46" text-anchor="middle" font-weight="bold">HTTPS必須</text>
+  <rect x="918" y="733" width="50" height="11" fill="#d1fae5" rx="4"/>
+  <text x="943" y="741" font-family="Arial, sans-serif" font-size="8" fill="#065f46" text-anchor="middle" font-weight="bold">高可用性</text>
+
+  <!-- セキュリティバッジ -->
+  <rect x="785" y="755" width="287" height="30" fill="url(#purpleGrad)" rx="8"/>
+  <text x="928" y="768" font-family="Arial, sans-serif" font-size="13" fill="white" text-anchor="middle" font-weight="bold">🔐 エンタープライズグレードのインフラ</text>
+  <text x="928" y="781" font-family="Arial, sans-serif" font-size="10" fill="white" text-anchor="middle">業界標準のセキュリティ基盤で個人情報を厳重に保護</text>
+</svg>

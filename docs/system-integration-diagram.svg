@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1122" height="794" viewBox="0 0 1122 794" xmlns="http://www.w3.org/2000/svg">
+  <!-- A4 横サイズ: 297mm × 210mm = 1122px × 794px at 96dpi -->
+
+  <!-- 背景 -->
+  <rect width="1122" height="794" fill="white"/>
+
+  <!-- グラデーション定義 -->
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e40af;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="systemGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="integrationGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fbbf24;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- ヘッダー -->
+  <rect x="35" y="35" width="1052" height="75" fill="url(#headerGrad)" rx="10"/>
+  <text x="561" y="68" font-family="Arial, sans-serif" font-size="30" fill="white" text-anchor="middle" font-weight="bold">🔗 システム連携構成図</text>
+  <text x="561" y="95" font-family="Arial, sans-serif" font-size="15" fill="white" text-anchor="middle">LINE Business側機能 × 本システム側機能の役割分担と連携フロー</text>
+
+  <!-- 左側：LINE Business側 -->
+  <rect x="35" y="130" width="480" height="620" fill="#ecfdf5" stroke="#10b981" stroke-width="3" rx="12"/>
+
+  <!-- LINE Businessヘッダー -->
+  <rect x="50" y="145" width="450" height="50" fill="url(#lineGrad)" rx="8"/>
+  <text x="275" y="175" font-family="Arial, sans-serif" font-size="24" fill="white" text-anchor="middle" font-weight="bold">💬 LINE Business 側機能</text>
+
+  <!-- LINE機能カテゴリ1: メッセージング -->
+  <rect x="65" y="210" width="420" height="140" fill="white" stroke="#34d399" stroke-width="2" rx="8"/>
+  <rect x="75" y="220" width="400" height="30" fill="#d1fae5" rx="6"/>
+  <text x="90" y="242" font-family="Arial, sans-serif" font-size="16" fill="#065f46" font-weight="bold">📱 メッセージング機能</text>
+
+  <g>
+    <rect x="85" y="260" width="180" height="35" fill="#f0fdf4" stroke="#10b981" stroke-width="1" rx="6"/>
+    <text x="95" y="275" font-family="Arial, sans-serif" font-size="12" fill="#065f46" font-weight="bold">✓ プッシュメッセージ配信</text>
+    <text x="95" y="288" font-family="Arial, sans-serif" font-size="9" fill="#475569">参加者へリアルタイム送信</text>
+  </g>
+
+  <g>
+    <rect x="275" y="260" width="190" height="35" fill="#f0fdf4" stroke="#10b981" stroke-width="1" rx="6"/>
+    <text x="285" y="275" font-family="Arial, sans-serif" font-size="12" fill="#065f46" font-weight="bold">✓ リッチメッセージ対応</text>
+    <text x="285" y="288" font-family="Arial, sans-serif" font-size="9" fill="#475569">画像・動画・カルーセル表示</text>
+  </g>
+
+  <g>
+    <rect x="85" y="305" width="180" height="35" fill="#f0fdf4" stroke="#10b981" stroke-width="1" rx="6"/>
+    <text x="95" y="320" font-family="Arial, sans-serif" font-size="12" fill="#065f46" font-weight="bold">✓ 双方向コミュニケーション</text>
+    <text x="95" y="333" font-family="Arial, sans-serif" font-size="9" fill="#475569">ユーザーからの返信受信</text>
+  </g>
+
+  <g>
+    <rect x="275" y="305" width="190" height="35" fill="#f0fdf4" stroke="#10b981" stroke-width="1" rx="6"/>
+    <text x="285" y="320" font-family="Arial, sans-serif" font-size="12" fill="#065f46" font-weight="bold">✓ ユーザーID管理</text>
+    <text x="285" y="333" font-family="Arial, sans-serif" font-size="9" fill="#475569">LINE固有のユーザー識別</text>
+  </g>
+
+  <!-- LINE機能カテゴリ2: 自動応答 -->
+  <rect x="65" y="365" width="420" height="130" fill="white" stroke="#34d399" stroke-width="2" rx="8"/>
+  <rect x="75" y="375" width="400" height="30" fill="#d1fae5" rx="6"/>
+  <text x="90" y="397" font-family="Arial, sans-serif" font-size="16" fill="#065f46" font-weight="bold">🤖 自動応答・AI機能</text>
+
+  <g>
+    <rect x="85" y="415" width="380" height="30" fill="#f0fdf4" stroke="#10b981" stroke-width="1" rx="6"/>
+    <text x="95" y="430" font-family="Arial, sans-serif" font-size="12" fill="#065f46" font-weight="bold">✓ 応答メッセージ設定（キーワード自動返信）</text>
+    <text x="95" y="440" font-family="Arial, sans-serif" font-size="9" fill="#475569">「営業時間」「料金」などのキーワードに自動返答</text>
+  </g>
+
+  <g>
+    <rect x="85" y="455" width="380" height="30" fill="#f0fdf4" stroke="#10b981" stroke-width="1" rx="6"/>
+    <text x="95" y="470" font-family="Arial, sans-serif" font-size="12" fill="#065f46" font-weight="bold">✓ AI応答メッセージ（LINE公式機能）</text>
+    <text x="95" y="480" font-family="Arial, sans-serif" font-size="9" fill="#475569">AIが自然な会話で質問に回答</text>
+  </g>
+
+  <!-- LINE機能カテゴリ3: 分析・管理 -->
+  <rect x="65" y="510" width="420" height="130" fill="white" stroke="#34d399" stroke-width="2" rx="8"/>
+  <rect x="75" y="520" width="400" height="30" fill="#d1fae5" rx="6"/>
+  <text x="90" y="542" font-family="Arial, sans-serif" font-size="16" fill="#065f46" font-weight="bold">📊 分析・管理機能</text>
+
+  <g>
+    <rect x="85" y="560" width="180" height="35" fill="#f0fdf4" stroke="#10b981" stroke-width="1" rx="6"/>
+    <text x="95" y="575" font-family="Arial, sans-serif" font-size="12" fill="#065f46" font-weight="bold">✓ メッセージ配信分析</text>
+    <text x="95" y="588" font-family="Arial, sans-serif" font-size="9" fill="#475569">開封率・クリック率計測</text>
+  </g>
+
+  <g>
+    <rect x="275" y="560" width="190" height="35" fill="#f0fdf4" stroke="#10b981" stroke-width="1" rx="6"/>
+    <text x="285" y="575" font-family="Arial, sans-serif" font-size="12" fill="#065f46" font-weight="bold">✓ 友だち管理</text>
+    <text x="285" y="588" font-family="Arial, sans-serif" font-size="9" fill="#475569">友だち数・ブロック数確認</text>
+  </g>
+
+  <g>
+    <rect x="85" y="605" width="380" height="25" fill="#f0fdf4" stroke="#10b981" stroke-width="1" rx="6"/>
+    <text x="95" y="621" font-family="Arial, sans-serif" font-size="12" fill="#065f46" font-weight="bold">✓ タグ・セグメント管理（LINE公式機能）</text>
+  </g>
+
+  <!-- LINE注釈 -->
+  <rect x="65" y="655" width="420" height="75" fill="#d1fae5" stroke="#10b981" stroke-width="2" rx="8"/>
+  <text x="275" y="675" font-family="Arial, sans-serif" font-size="13" fill="#065f46" text-anchor="middle" font-weight="bold">💡 LINE Business の役割</text>
+  <text x="275" y="693" font-family="Arial, sans-serif" font-size="10" fill="#047857" text-anchor="middle">メッセージ配信インフラとユーザーとの接点提供</text>
+  <text x="275" y="708" font-family="Arial, sans-serif" font-size="10" fill="#047857" text-anchor="middle">自動応答・AI機能で24時間対応を実現</text>
+  <text x="275" y="723" font-family="Arial, sans-serif" font-size="10" fill="#047857" text-anchor="middle">公式の管理画面で配信結果の分析が可能</text>
+
+  <!-- 右側：本システム側 -->
+  <rect x="607" y="130" width="480" height="620" fill="#faf5ff" stroke="#a78bfa" stroke-width="3" rx="12"/>
+
+  <!-- 本システムヘッダー -->
+  <rect x="622" y="145" width="450" height="50" fill="url(#systemGrad)" rx="8"/>
+  <text x="847" y="175" font-family="Arial, sans-serif" font-size="24" fill="white" text-anchor="middle" font-weight="bold">🖥️ 本システム側機能</text>
+
+  <!-- システム機能カテゴリ1: 申込管理 -->
+  <rect x="637" y="210" width="420" height="140" fill="white" stroke="#c4b5fd" stroke-width="2" rx="8"/>
+  <rect x="647" y="220" width="400" height="30" fill="#f3e8ff" rx="6"/>
+  <text x="662" y="242" font-family="Arial, sans-serif" font-size="16" fill="#6d28d9" font-weight="bold">📝 申込・予約管理機能</text>
+
+  <g>
+    <rect x="657" y="260" width="180" height="35" fill="#faf5ff" stroke="#a78bfa" stroke-width="1" rx="6"/>
+    <text x="667" y="275" font-family="Arial, sans-serif" font-size="12" fill="#6d28d9" font-weight="bold">✓ Webフォーム受付</text>
+    <text x="667" y="288" font-family="Arial, sans-serif" font-size="9" fill="#475569">申込情報の収集・保存</text>
+  </g>
+
+  <g>
+    <rect x="847" y="260" width="190" height="35" fill="#faf5ff" stroke="#a78bfa" stroke-width="1" rx="6"/>
+    <text x="857" y="275" font-family="Arial, sans-serif" font-size="12" fill="#6d28d9" font-weight="bold">✓ トークン生成・管理</text>
+    <text x="857" y="288" font-family="Arial, sans-serif" font-size="9" fill="#475569">LINE連携用6桁番号発行</text>
+  </g>
+
+  <g>
+    <rect x="657" y="305" width="180" height="35" fill="#faf5ff" stroke="#a78bfa" stroke-width="1" rx="6"/>
+    <text x="667" y="320" font-family="Arial, sans-serif" font-size="12" fill="#6d28d9" font-weight="bold">✓ 定員・残数管理</text>
+    <text x="667" y="333" font-family="Arial, sans-serif" font-size="9" fill="#475569">コース×日程ごとの管理</text>
+  </g>
+
+  <g>
+    <rect x="847" y="305" width="190" height="35" fill="#faf5ff" stroke="#a78bfa" stroke-width="1" rx="6"/>
+    <text x="857" y="320" font-family="Arial, sans-serif" font-size="12" fill="#6d28d9" font-weight="bold">✓ 参加確定・調整</text>
+    <text x="857" y="333" font-family="Arial, sans-serif" font-size="9" fill="#475569">複数候補から日程決定</text>
+  </g>
+
+  <!-- システム機能カテゴリ2: データ管理 -->
+  <rect x="637" y="365" width="420" height="130" fill="white" stroke="#c4b5fd" stroke-width="2" rx="8"/>
+  <rect x="647" y="375" width="400" height="30" fill="#f3e8ff" rx="6"/>
+  <text x="662" y="397" font-family="Arial, sans-serif" font-size="16" fill="#6d28d9" font-weight="bold">🗄️ データ管理・分析機能</text>
+
+  <g>
+    <rect x="657" y="415" width="180" height="30" fill="#faf5ff" stroke="#a78bfa" stroke-width="1" rx="6"/>
+    <text x="667" y="430" font-family="Arial, sans-serif" font-size="12" fill="#6d28d9" font-weight="bold">✓ 申込者データ管理</text>
+    <text x="667" y="440" font-family="Arial, sans-serif" font-size="9" fill="#475569">個人情報の安全な保存</text>
+  </g>
+
+  <g>
+    <rect x="847" y="415" width="190" height="30" fill="#faf5ff" stroke="#a78bfa" stroke-width="1" rx="6"/>
+    <text x="857" y="430" font-family="Arial, sans-serif" font-size="12" fill="#6d28d9" font-weight="bold">✓ CSV・Excelエクスポート</text>
+    <text x="857" y="440" font-family="Arial, sans-serif" font-size="9" fill="#475569">データの二次活用</text>
+  </g>
+
+  <g>
+    <rect x="657" y="455" width="380" height="30" fill="#faf5ff" stroke="#a78bfa" stroke-width="1" rx="6"/>
+    <text x="667" y="470" font-family="Arial, sans-serif" font-size="12" fill="#6d28d9" font-weight="bold">✓ イベント別・コース別統計分析</text>
+    <text x="667" y="480" font-family="Arial, sans-serif" font-size="9" fill="#475569">参加傾向の可視化、人気コース把握</text>
+  </g>
+
+  <!-- システム機能カテゴリ3: 連携制御 -->
+  <rect x="637" y="510" width="420" height="130" fill="white" stroke="#c4b5fd" stroke-width="2" rx="8"/>
+  <rect x="647" y="520" width="400" height="30" fill="#f3e8ff" rx="6"/>
+  <text x="662" y="542" font-family="Arial, sans-serif" font-size="16" fill="#6d28d9" font-weight="bold">🔗 LINE連携制御機能</text>
+
+  <g>
+    <rect x="657" y="560" width="180" height="35" fill="#faf5ff" stroke="#a78bfa" stroke-width="1" rx="6"/>
+    <text x="667" y="575" font-family="Arial, sans-serif" font-size="12" fill="#6d28d9" font-weight="bold">✓ Webhook受信処理</text>
+    <text x="667" y="588" font-family="Arial, sans-serif" font-size="9" fill="#475569">LINEイベントの受信</text>
+  </g>
+
+  <g>
+    <rect x="847" y="560" width="190" height="35" fill="#faf5ff" stroke="#a78bfa" stroke-width="1" rx="6"/>
+    <text x="857" y="575" font-family="Arial, sans-serif" font-size="12" fill="#6d28d9" font-weight="bold">✓ トークン照合・紐付け</text>
+    <text x="857" y="588" font-family="Arial, sans-serif" font-size="9" fill="#475569">申込者とLINE IDの連携</text>
+  </g>
+
+  <g>
+    <rect x="657" y="605" width="380" height="25" fill="#faf5ff" stroke="#a78bfa" stroke-width="1" rx="6"/>
+    <text x="667" y="621" font-family="Arial, sans-serif" font-size="12" fill="#6d28d9" font-weight="bold">✓ メッセージ配信トリガー制御（送信指示）</text>
+  </g>
+
+  <!-- システム注釈 -->
+  <rect x="637" y="655" width="420" height="75" fill="#f3e8ff" stroke="#a78bfa" stroke-width="2" rx="8"/>
+  <text x="847" y="675" font-family="Arial, sans-serif" font-size="13" fill="#6d28d9" text-anchor="middle" font-weight="bold">💡 本システムの役割</text>
+  <text x="847" y="693" font-family="Arial, sans-serif" font-size="10" fill="#7c3aed" text-anchor="middle">オープンキャンパス申込のビジネスロジック管理</text>
+  <text x="847" y="708" font-family="Arial, sans-serif" font-size="10" fill="#7c3aed" text-anchor="middle">参加者データの一元管理とLINE連携の制御</text>
+  <text x="847" y="723" font-family="Arial, sans-serif" font-size="10" fill="#7c3aed" text-anchor="middle">LINE APIを活用した配信指示とデータ同期</text>
+
+  <!-- 中央：連携フロー -->
+  <g>
+    <!-- 連携矢印 左→右 -->
+    <defs>
+      <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+        <polygon points="0 0, 10 3, 0 6" fill="#f59e0b" />
+      </marker>
+    </defs>
+
+    <!-- 矢印1: Webhook -->
+    <line x1="515" y1="300" x2="607" y2="300" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrowhead)"/>
+    <rect x="530" y="275" width="50" height="50" fill="url(#integrationGrad)" rx="8"/>
+    <text x="555" y="295" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="bold">📡</text>
+    <text x="555" y="310" font-family="Arial, sans-serif" font-size="9" fill="white" text-anchor="middle" font-weight="bold">Webhook</text>
+    <text x="555" y="320" font-family="Arial, sans-serif" font-size="8" fill="white" text-anchor="middle">受信</text>
+
+    <!-- 矢印2: メッセージ配信 右→左 -->
+    <line x1="607" y1="450" x2="515" y2="450" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrowhead)" transform="rotate(180 561 450)"/>
+    <rect x="530" y="425" width="50" height="50" fill="url(#integrationGrad)" rx="8"/>
+    <text x="555" y="445" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="bold">💬</text>
+    <text x="555" y="460" font-family="Arial, sans-serif" font-size="9" fill="white" text-anchor="middle" font-weight="bold">Push</text>
+    <text x="555" y="470" font-family="Arial, sans-serif" font-size="8" fill="white" text-anchor="middle">配信指示</text>
+
+    <!-- 連携説明ボックス -->
+    <rect x="525" y="550" width="70" height="90" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" rx="8"/>
+    <text x="560" y="570" font-family="Arial, sans-serif" font-size="11" fill="#92400e" text-anchor="middle" font-weight="bold">🔄 API連携</text>
+    <text x="560" y="588" font-family="Arial, sans-serif" font-size="8" fill="#78350f" text-anchor="middle">LINE</text>
+    <text x="560" y="599" font-family="Arial, sans-serif" font-size="8" fill="#78350f" text-anchor="middle">Messaging</text>
+    <text x="560" y="610" font-family="Arial, sans-serif" font-size="8" fill="#78350f" text-anchor="middle">API v2</text>
+    <text x="560" y="625" font-family="Arial, sans-serif" font-size="7" fill="#78350f" text-anchor="middle">HTTPS通信</text>
+    <text x="560" y="635" font-family="Arial, sans-serif" font-size="7" fill="#78350f" text-anchor="middle">署名検証</text>
+  </g>
+
+  <!-- フッター注釈 -->
+  <rect x="35" y="760" width="1052" height="20" fill="#f1f5f9" rx="5"/>
+  <text x="561" y="774" font-family="Arial, sans-serif" font-size="11" fill="#64748b" text-anchor="middle">💡 本システムはLINE Businessの機能を活用しながら、オープンキャンパス特有のビジネスロジックと詳細なデータ管理を実現</text>
+
+</svg>

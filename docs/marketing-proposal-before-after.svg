@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1122" height="794" viewBox="0 0 1122 794" xmlns="http://www.w3.org/2000/svg">
+  <!-- A4 Landscape Background -->
+  <rect width="1122" height="794" fill="#ffffff"/>
+
+  <!-- Definitions -->
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06c755;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="beforeBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fef3c7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fde68a;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="afterBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#d1fae5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a7f3d0;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#06c755;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00b900;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.2"/>
+    </filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Arrow Markers -->
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#10b981" />
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#3b82f6" />
+    </marker>
+  </defs>
+
+  <!-- Header Section -->
+  <rect x="0" y="0" width="1122" height="100" fill="url(#headerGradient)"/>
+  <text x="561" y="45" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#ffffff" text-anchor="middle">
+    オープンキャンパス × LINE連携 マーケティング戦略
+  </text>
+  <text x="561" y="75" font-family="Arial, sans-serif" font-size="18" fill="#e0e7ff" text-anchor="middle">
+    Instagramからの導線強化 × LINE公式アカウントによる継続的な接点構築
+  </text>
+
+  <!-- Center Divider -->
+  <line x1="561" y1="120" x2="561" y2="794" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8,4"/>
+
+  <!-- ========== BEFORE SECTION ========== -->
+  <g id="before-section">
+    <!-- Before Header -->
+    <rect x="30" y="120" width="500" height="60" fill="url(#beforeBg)" rx="8" filter="url(#shadow)"/>
+    <text x="280" y="155" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#92400e" text-anchor="middle">
+      【BEFORE】現在の状態
+    </text>
+
+    <!-- Instagram Icon -->
+    <g id="instagram-icon">
+      <circle cx="280" cy="240" r="45" fill="#E4405F" filter="url(#shadow)"/>
+      <rect x="260" y="220" width="40" height="40" rx="8" fill="#ffffff"/>
+      <circle cx="280" cy="240" r="12" fill="#E4405F"/>
+      <circle cx="292" cy="228" r="4" fill="#ffffff"/>
+    </g>
+
+    <text x="280" y="305" font-family="Arial, sans-serif" font-size="22" fill="#1f2937" text-anchor="middle" font-weight="bold">
+      Instagram のみ
+    </text>
+
+    <!-- Issues Box -->
+    <rect x="60" y="340" width="440" height="330" fill="#fffbeb" stroke="#f59e0b" stroke-width="2" rx="8"/>
+    <text x="280" y="370" font-family="Arial, sans-serif" font-size="16" fill="#92400e" text-anchor="middle" font-weight="bold">
+      現在の課題
+    </text>
+
+    <!-- Issue 1 -->
+    <circle cx="90" cy="405" r="6" fill="#f59e0b"/>
+    <text x="110" y="410" font-family="Arial, sans-serif" font-size="14" fill="#374151" font-weight="bold">
+      一方通行のコミュニケーション
+    </text>
+    <text x="120" y="430" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">
+      • フォロワーとの継続的な接点が弱い
+    </text>
+    <text x="120" y="448" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">
+      • 投稿を見逃されると情報が届かない
+    </text>
+
+    <!-- Issue 2 -->
+    <circle cx="90" cy="478" r="6" fill="#f59e0b"/>
+    <text x="110" y="483" font-family="Arial, sans-serif" font-size="14" fill="#374151" font-weight="bold">
+      問い合わせ対応の限界
+    </text>
+    <text x="120" y="503" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">
+      • DMは気軽に送りづらい雰囲気
+    </text>
+    <text x="120" y="521" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">
+      • コメントでの質問は公開されるため躊躇
+    </text>
+
+    <!-- Issue 3 -->
+    <circle cx="90" cy="551" r="6" fill="#f59e0b"/>
+    <text x="110" y="556" font-family="Arial, sans-serif" font-size="14" fill="#374151" font-weight="bold">
+      申込導線の弱さ
+    </text>
+    <text x="120" y="576" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">
+      • プロフィールリンクのみでは訴求力不足
+    </text>
+    <text x="120" y="594" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">
+      • 投稿からの直接申込ができない
+    </text>
+
+    <!-- Issue 4 -->
+    <circle cx="90" cy="624" r="6" fill="#f59e0b"/>
+    <text x="110" y="629" font-family="Arial, sans-serif" font-size="14" fill="#374151" font-weight="bold">
+      リマインドの困難さ
+    </text>
+    <text x="120" y="649" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">
+      • イベント前の通知ができない
+    </text>
+
+    <!-- Summary Box -->
+    <rect x="60" y="685" width="440" height="50" fill="#fef3c7" stroke="#f59e0b" stroke-width="2" rx="6"/>
+    <text x="280" y="715" font-family="Arial, sans-serif" font-size="15" fill="#92400e" text-anchor="middle" font-weight="bold">
+      ⚠️ Instagramだけでは継続的な関係構築が困難
+    </text>
+  </g>
+
+  <!-- ========== AFTER SECTION ========== -->
+  <g id="after-section">
+    <!-- After Header -->
+    <rect x="592" y="120" width="500" height="60" fill="url(#afterBg)" rx="8" filter="url(#shadow)"/>
+    <text x="842" y="155" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#065f46" text-anchor="middle">
+      【AFTER】システム導入後
+    </text>
+
+    <!-- Flow: Open Campus -->
+    <rect x="620" y="210" width="90" height="70" fill="#3b82f6" rx="8" filter="url(#shadow)"/>
+    <text x="665" y="238" font-family="Arial, sans-serif" font-size="32" fill="#ffffff" text-anchor="middle">📝</text>
+    <text x="665" y="262" font-family="Arial, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">オープン</text>
+    <text x="665" y="276" font-family="Arial, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="bold">キャンパス</text>
+
+    <!-- Arrow: Open Campus → LINE -->
+    <path d="M 710 245 L 755 245" stroke="#10b981" stroke-width="4" fill="none" marker-end="url(#arrowGreen)"/>
+    <text x="732" y="235" font-family="Arial, sans-serif" font-size="11" fill="#059669" font-weight="bold" text-anchor="middle">申込時</text>
+
+    <!-- Flow: LINE -->
+    <rect x="755" y="210" width="90" height="70" fill="url(#lineGradient)" rx="8" filter="url(#shadow)"/>
+    <text x="800" y="240" font-family="Arial, sans-serif" font-size="24" fill="#ffffff" text-anchor="middle" font-weight="bold">LINE</text>
+    <text x="800" y="262" font-family="Arial, sans-serif" font-size="11" fill="#ffffff" text-anchor="middle">友達登録</text>
+
+    <!-- Arrow: LINE → Down -->
+    <path d="M 800 280 L 800 320" stroke="#10b981" stroke-width="4" fill="none" marker-end="url(#arrowGreen)"/>
+
+    <!-- LINE Hub Box -->
+    <rect x="730" y="320" width="140" height="160" fill="#f0fdf4" stroke="#06c755" stroke-width="3" rx="8" filter="url(#shadow)"/>
+    <text x="800" y="345" font-family="Arial, sans-serif" font-size="15" fill="#065f46" text-anchor="middle" font-weight="bold">🎯 LINEハブ機能</text>
+
+    <circle cx="750" cy="365" r="4" fill="#06c755"/>
+    <text x="760" y="370" font-family="Arial, sans-serif" font-size="12" fill="#374151">リッチメニュー</text>
+
+    <circle cx="750" cy="390" r="4" fill="#06c755"/>
+    <text x="760" y="395" font-family="Arial, sans-serif" font-size="12" fill="#374151">情報配信</text>
+
+    <circle cx="750" cy="415" r="4" fill="#06c755"/>
+    <text x="760" y="420" font-family="Arial, sans-serif" font-size="12" fill="#374151">気軽な問合せ</text>
+
+    <circle cx="750" cy="440" r="4" fill="#06c755"/>
+    <text x="760" y="445" font-family="Arial, sans-serif" font-size="12" fill="#374151">リマインド通知</text>
+
+    <circle cx="750" cy="465" r="4" fill="#06c755"/>
+    <text x="760" y="470" font-family="Arial, sans-serif" font-size="12" fill="#374151">1to1 コミュニケーション</text>
+
+    <!-- Arrow: LINE Hub → Instagram -->
+    <path d="M 870 380 L 925 380" stroke="#3b82f6" stroke-width="4" fill="none" marker-end="url(#arrowBlue)"/>
+    <text x="897" y="370" font-family="Arial, sans-serif" font-size="10" fill="#2563eb" text-anchor="middle" font-weight="bold">リッチ</text>
+    <text x="897" y="383" font-family="Arial, sans-serif" font-size="10" fill="#2563eb" text-anchor="middle" font-weight="bold">メニュー</text>
+
+    <!-- Flow: Instagram -->
+    <g id="instagram-icon-after">
+      <circle cx="965" cy="380" r="40" fill="#E4405F" filter="url(#shadow)"/>
+      <rect x="947" y="362" width="36" height="36" rx="7" fill="#ffffff"/>
+      <circle cx="965" cy="380" r="11" fill="#E4405F"/>
+      <circle cx="976" cy="369" r="3.5" fill="#ffffff"/>
+    </g>
+
+    <text x="965" y="438" font-family="Arial, sans-serif" font-size="13" fill="#374151" text-anchor="middle" font-weight="bold">Instagram</text>
+    <text x="965" y="454" font-family="Arial, sans-serif" font-size="11" fill="#6b7280" text-anchor="middle">継続的な情報発信</text>
+
+    <!-- Benefits Section -->
+    <text x="842" y="510" font-family="Arial, sans-serif" font-size="18" fill="#065f46" text-anchor="middle" font-weight="bold">💡 期待される効果</text>
+
+    <rect x="602" y="525" width="480" height="195" fill="#ecfdf5" stroke="#10b981" stroke-width="2" rx="8"/>
+
+    <!-- Benefit 1 -->
+    <circle cx="625" cy="550" r="6" fill="#10b981" filter="url(#glow)"/>
+    <text x="640" y="555" font-family="Arial, sans-serif" font-size="14" fill="#065f46" font-weight="bold">確実な情報到達</text>
+    <text x="650" y="573" font-family="Arial, sans-serif" font-size="12" fill="#374151">• プッシュ通知で確実に情報を届けられる</text>
+    <text x="650" y="589" font-family="Arial, sans-serif" font-size="12" fill="#374151">• イベント前のリマインドで参加率向上</text>
+
+    <!-- Benefit 2 -->
+    <circle cx="625" cy="615" r="6" fill="#10b981" filter="url(#glow)"/>
+    <text x="640" y="620" font-family="Arial, sans-serif" font-size="14" fill="#065f46" font-weight="bold">双方向コミュニケーション強化</text>
+    <text x="650" y="638" font-family="Arial, sans-serif" font-size="12" fill="#374151">• LINEチャットで気軽に質問・相談が可能</text>
+    <text x="650" y="654" font-family="Arial, sans-serif" font-size="12" fill="#374151">• 1to1 の丁寧な対応で信頼関係構築</text>
+
+    <!-- Benefit 3 -->
+    <circle cx="625" cy="680" r="6" fill="#10b981" filter="url(#glow)"/>
+    <text x="640" y="685" font-family="Arial, sans-serif" font-size="14" fill="#065f46" font-weight="bold">Instagram連携で集客力UP</text>
+    <text x="650" y="703" font-family="Arial, sans-serif" font-size="12" fill="#374151">• LINEリッチメニューからInstagramへ誘導</text>
+    <text x="650" y="719" font-family="Arial, sans-serif" font-size="12" fill="#374151">• 新規投稿の通知でInstagramのエンゲージメント向上</text>
+  </g>
+
+  <!-- Bottom Summary -->
+  <rect x="30" y="745" width="1062" height="40" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" rx="6"/>
+  <text x="561" y="770" font-family="Arial, sans-serif" font-size="16" fill="#1e40af" text-anchor="middle" font-weight="bold">
+    🚀 結論：オープンキャンパス申込 → LINE友達登録 → Instagram連携で、強固な導線と継続的な関係構築を実現
+  </text>
+</svg>
