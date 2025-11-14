@@ -372,6 +372,9 @@ export default function ConfirmationsPage() {
     const headers = [
       '申込者ID',
       '氏名',
+      'ふりがな',
+      '学校名',
+      '学年',
       'メールアドレス',
       '確定日程',
       '確定コース',
@@ -393,6 +396,9 @@ export default function ConfirmationsPage() {
       return [
         applicant.id,
         applicant.name,
+        applicant.kana_name || '',
+        applicant.school_name || '',
+        applicant.grade || '',
         applicant.email,
         dateStr,
         firstDate?.course_name || '',
