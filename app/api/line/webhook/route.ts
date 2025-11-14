@@ -181,16 +181,33 @@ async function handleMessage(event: WebhookEvent & { type: 'message' }) {
     return;
   }
 
-  const token = message.text.trim();
+  // 受信したメッセージをログ出力（デバッグ用）
+  console.log('Received message from user:', userId);
+  console.log('Message text (raw):', JSON.stringify(message.text));
+  console.log('Message length:', message.text.length);
+
+  // トークンを抽出（空白、改行をすべて削除）
+  const rawToken = message.text.trim();
+  const cleanedToken = rawToken.replace(/\s/g, ''); // すべての空白文字（改行、タブ含む）を削除
+
+  console.log('Cleaned token:', cleanedToken);
+  console.log('Cleaned token length:', cleanedToken.length);
 
   // トークンの形式チェック（64文字の16進数）
-  if (!/^[a-f0-9]{64}$/i.test(token)) {
+  if (!/^[a-f0-9]{64}$/i.test(cleanedToken)) {
+    console.log('Token format validation failed');
+    console.log('Token does not match pattern: /^[a-f0-9]{64}$/i');
+
     await client.replyMessage(event.replyToken, {
       type: 'text',
       text: '申込番号の形式が正しくありません。\n\n申込完了ページに表示された64文字の番号を正確に入力してください。',
     });
     return;
   }
+
+  // 以降の処理ではcleanedTokenを使用
+  const token = cleanedToken;
+  console.log('Searching for applicant with token:', token);
 
   // トークンでapplicantを検索
   const { data: applicant, error } = await supabaseAdmin
@@ -210,7 +227,9 @@ async function handleMessage(event: WebhookEvent & { type: 'message' }) {
     .single();
 
   if (error || !applicant) {
-    console.error('Applicant not found:', error);
+    console.error('Applicant not found - Error:', error);
+    console.error('Search token:', token);
+
     await client.replyMessage(event.replyToken, {
       type: 'text',
       text: '申込番号が見つかりませんでした。\n\n番号を再度確認して入力してください。',
@@ -218,11 +237,20 @@ async function handleMessage(event: WebhookEvent & { type: 'message' }) {
     return;
   }
 
+  console.log('✅ Found applicant:', applicant.id, '-', applicant.name);
+  console.log('Current status:', applicant.status);
+  console.log('Token expires at:', applicant.token_expires_at);
+
   // トークン有効期限チェック
   const expiresAt = new Date(applicant.token_expires_at);
   const now = new Date();
 
+  console.log('Checking token expiration...');
+  console.log('Current time:', now.toISOString());
+  console.log('Expires at:', expiresAt.toISOString());
+
   if (now > expiresAt) {
+    console.log('❌ Token expired');
     await client.replyMessage(event.replyToken, {
       type: 'text',
       text: '申込番号の有効期限が切れています。\n\nお手数ですが、再度お申し込みをお願いします。',
@@ -230,8 +258,11 @@ async function handleMessage(event: WebhookEvent & { type: 'message' }) {
     return;
   }
 
+  console.log('✅ Token is still valid');
+
   // 既に登録済みかチェック
   if (applicant.status === 'completed') {
+    console.log('ℹ️ Applicant already completed');
     await client.replyMessage(event.replyToken, {
       type: 'text',
       text: 'この申込番号は既に登録済みです。\n\nご不明な点がございましたら、お問い合わせください。',
@@ -239,7 +270,12 @@ async function handleMessage(event: WebhookEvent & { type: 'message' }) {
     return;
   }
 
+  console.log('✅ Applicant status is pending, proceeding with registration');
+
   // LINE User IDとステータスを更新
+  console.log('Updating applicant:', applicant.id);
+  console.log('Setting line_user_id to:', userId);
+
   const { error: updateError } = await supabaseAdmin
     .from('applicants')
     .update({
@@ -250,13 +286,19 @@ async function handleMessage(event: WebhookEvent & { type: 'message' }) {
     .eq('id', applicant.id);
 
   if (updateError) {
-    console.error('Failed to update applicant:', updateError);
+    console.error('Failed to update applicant - Error details:', updateError);
+    console.error('Error message:', updateError.message);
+    console.error('Error code:', updateError.code);
+    console.error('Error details:', updateError.details);
+
     await client.replyMessage(event.replyToken, {
       type: 'text',
       text: '登録処理中にエラーが発生しました。\n\nしばらく時間をおいて再度お試しください。',
     });
     return;
   }
+
+  console.log('✅ Successfully updated applicant status to completed');
 
   // ログ記録
   await supabaseAdmin.from('application_logs').insert({
