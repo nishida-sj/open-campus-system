@@ -79,6 +79,7 @@ export default function ConfirmationsPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvResults, setCsvResults] = useState<any>(null);
   const [isProcessingCSV, setIsProcessingCSV] = useState(false);
+  const [showCSVGuideDialog, setShowCSVGuideDialog] = useState(false);
 
   // 認証チェック
   useEffect(() => {
@@ -663,13 +664,22 @@ export default function ConfirmationsPage() {
           {/* CSV一括確定 */}
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-green-900 mb-1">
-                  📊 CSV一括確定
-                </p>
-                <p className="text-xs text-green-700">
-                  Excelで編集して複数名を一括確定
-                </p>
+              <div className="flex items-center gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-green-900 mb-1">
+                    📊 CSV一括確定
+                  </p>
+                  <p className="text-xs text-green-700">
+                    Excelで編集して複数名を一括確定
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowCSVGuideDialog(true)}
+                  className="w-6 h-6 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded-full text-xs font-bold transition duration-200"
+                  title="使い方を見る"
+                >
+                  ?
+                </button>
               </div>
               <div className="flex gap-2">
                 <button
@@ -848,6 +858,187 @@ export default function ConfirmationsPage() {
           </div>
         </div>
       </main>
+
+      {/* CSV使い方ガイドダイアログ */}
+      {showCSVGuideDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">📚 CSV一括確定の使い方</h2>
+              <button
+                onClick={() => setShowCSVGuideDialog(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* 概要 */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">💡 この機能について</h3>
+              <p className="text-sm text-blue-800">
+                CSVファイルを使って、複数の申込者を一括で確定できる機能です。
+                100名規模の申込者でも、Excelの強力な検索・フィルター機能を活用して効率的に管理・確定できます。
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div className="bg-white rounded p-2">
+                  <span className="font-semibold text-red-600">従来の方法:</span> 100名 → 約10〜15分
+                </div>
+                <div className="bg-white rounded p-2">
+                  <span className="font-semibold text-green-600">CSV一括確定:</span> 100名 → 約2〜3分
+                </div>
+              </div>
+            </div>
+
+            {/* ステップバイステップガイド */}
+            <div className="space-y-6">
+              {/* Step 1 */}
+              <div className="border-l-4 border-blue-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-full font-bold">1</span>
+                  <h3 className="text-lg font-semibold text-gray-900">CSVテンプレートをダウンロード</h3>
+                </div>
+                <p className="text-sm text-gray-700 mb-2">
+                  「テンプレートDL」ボタンをクリックして、未確定申込者のCSVファイルをダウンロードします。
+                </p>
+                <div className="bg-gray-50 rounded-lg p-3 text-xs font-mono">
+                  <div className="font-semibold mb-1">ダウンロードされるCSV例:</div>
+                  <div>申込者ID,氏名,メールアドレス,確定日程,確定コース,確定</div>
+                  <div className="text-gray-600">abc-123,田中太郎,tanaka@example.com,2025-12-15,工学部体験,</div>
+                  <div className="text-gray-600">def-456,佐藤花子,sato@example.com,2025-12-22,医学部体験,</div>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="border-l-4 border-green-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-8 h-8 flex items-center justify-center bg-green-500 text-white rounded-full font-bold">2</span>
+                  <h3 className="text-lg font-semibold text-gray-900">Excelで編集</h3>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-gray-700 mb-2">
+                      <strong>①</strong> ダウンロードしたCSVファイルをExcelで開きます
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-700 mb-2">
+                      <strong>②</strong> 「確定」列に <span className="bg-yellow-200 px-2 py-1 rounded font-bold">○</span> を入力（確定したい申込者のみ）
+                    </p>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs">
+                      <strong>⚠️ 重要:</strong> 全角の「○」を入力してください。半角や他の文字は無効です。
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-700 mb-2">
+                      <strong>③</strong> 必要に応じて「確定日程」「確定コース」を編集
+                    </p>
+                    <ul className="text-xs text-gray-600 list-disc list-inside ml-4 space-y-1">
+                      <li>申込者が選択した日程のみ確定できます</li>
+                      <li>日付形式: 2025-12-15、2025/12/15、2025年12月15日 など</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-700">
+                      <strong>④</strong> ファイルを保存（CSV形式のまま）
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="border-l-4 border-purple-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-8 h-8 flex items-center justify-center bg-purple-500 text-white rounded-full font-bold">3</span>
+                  <h3 className="text-lg font-semibold text-gray-900">CSVアップロード</h3>
+                </div>
+                <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+                  <li>「CSVアップロード」ボタンをクリック</li>
+                  <li>ダイアログで「CSVファイルを選択」から編集したファイルを選択</li>
+                  <li>「アップロードして確定」ボタンをクリック</li>
+                </ol>
+              </div>
+
+              {/* Step 4 */}
+              <div className="border-l-4 border-orange-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-8 h-8 flex items-center justify-center bg-orange-500 text-white rounded-full font-bold">4</span>
+                  <h3 className="text-lg font-semibold text-gray-900">処理結果を確認</h3>
+                </div>
+                <p className="text-sm text-gray-700 mb-2">
+                  処理完了後、以下が表示されます:
+                </p>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div className="bg-green-50 border border-green-200 rounded p-2 text-center">
+                    <div className="text-2xl font-bold text-green-600">✓</div>
+                    <div className="text-xs text-gray-600">成功</div>
+                  </div>
+                  <div className="bg-red-50 border border-red-200 rounded p-2 text-center">
+                    <div className="text-2xl font-bold text-red-600">✗</div>
+                    <div className="text-xs text-gray-600">失敗</div>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-200 rounded p-2 text-center">
+                    <div className="text-2xl font-bold text-gray-600">⊘</div>
+                    <div className="text-xs text-gray-600">スキップ</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Excelの便利な機能 */}
+            <div className="mt-6 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">💡 Excelの便利な機能を活用</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="bg-white rounded p-3">
+                  <div className="font-semibold text-blue-900 mb-1">🔍 フィルター機能</div>
+                  <div className="text-xs text-gray-600">
+                    学校名や日程でフィルターして、該当行のみ「確定」列に○を入力
+                  </div>
+                </div>
+                <div className="bg-white rounded p-3">
+                  <div className="font-semibold text-blue-900 mb-1">🎨 条件付き書式</div>
+                  <div className="text-xs text-gray-600">
+                    ○がある行を色分けして、入力漏れを防止
+                  </div>
+                </div>
+                <div className="bg-white rounded p-3">
+                  <div className="font-semibold text-blue-900 mb-1">📝 複数回処理</div>
+                  <div className="text-xs text-gray-600">
+                    1回目: 第1希望で確定 → 2回目: 第2希望で確定
+                  </div>
+                </div>
+                <div className="bg-white rounded p-3">
+                  <div className="font-semibold text-blue-900 mb-1">💾 バックアップ</div>
+                  <div className="text-xs text-gray-600">
+                    編集前のCSVを別名保存して、万が一に備える
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 注意事項 */}
+            <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-yellow-900 mb-2">⚠️ 注意事項</h3>
+              <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
+                <li>「申込者ID」「氏名」「メールアドレス」列は編集しないでください</li>
+                <li>「確定」列には全角の「○」のみ有効です（半角×、その他の文字は無効）</li>
+                <li>申込者が選択していない日程は確定できません</li>
+                <li>CSVのヘッダー行（1行目）は削除・変更しないでください</li>
+              </ul>
+            </div>
+
+            {/* 閉じるボタン */}
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowCSVGuideDialog(false)}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition duration-200"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CSVアップロードダイアログ */}
       {showCSVDialog && (
