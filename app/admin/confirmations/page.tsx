@@ -907,11 +907,11 @@ export default function ConfirmationsPage() {
                 <p className="text-sm text-gray-700 mb-2">
                   「テンプレートDL」ボタンをクリックして、未確定申込者のCSVファイルをダウンロードします。
                 </p>
-                <div className="bg-gray-50 rounded-lg p-3 text-xs font-mono">
+                <div className="bg-gray-50 rounded-lg p-3 text-xs font-mono overflow-x-auto">
                   <div className="font-semibold mb-1">ダウンロードされるCSV例:</div>
-                  <div>申込者ID,氏名,メールアドレス,確定日程,確定コース,確定</div>
-                  <div className="text-gray-600">abc-123,田中太郎,tanaka@example.com,2025-12-15,工学部体験,</div>
-                  <div className="text-gray-600">def-456,佐藤花子,sato@example.com,2025-12-22,医学部体験,</div>
+                  <div className="whitespace-nowrap">申込者ID,氏名,ふりがな,学校名,学年,メールアドレス,確定日程,確定コース,確定</div>
+                  <div className="text-gray-600 whitespace-nowrap">abc-123,田中太郎,たなかたろう,〇〇高等学校,3年,tanaka@example.com,2025-12-15,工学部体験,</div>
+                  <div className="text-gray-600 whitespace-nowrap">def-456,佐藤花子,さとうはなこ,△△高等学校,2年,sato@example.com,2025-12-22,医学部体験,</div>
                 </div>
               </div>
 
@@ -998,7 +998,7 @@ export default function ConfirmationsPage() {
                 <div className="bg-white rounded p-3">
                   <div className="font-semibold text-blue-900 mb-1">🔍 フィルター機能</div>
                   <div className="text-xs text-gray-600">
-                    学校名や日程でフィルターして、該当行のみ「確定」列に○を入力
+                    学校名、学年、日程でフィルターして、該当行のみ「確定」列に○を入力
                   </div>
                 </div>
                 <div className="bg-white rounded p-3">
@@ -1026,7 +1026,7 @@ export default function ConfirmationsPage() {
             <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-yellow-900 mb-2">⚠️ 注意事項</h3>
               <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
-                <li>「申込者ID」「氏名」「メールアドレス」列は編集しないでください</li>
+                <li>「申込者ID」「氏名」「ふりがな」「学校名」「学年」「メールアドレス」列は<strong>参照用</strong>のため編集しないでください</li>
                 <li>「確定」列には全角の「○」のみ有効です（半角×、その他の文字は無効）</li>
                 <li>申込者が選択していない日程は確定できません</li>
                 <li>CSVのヘッダー行（1行目）は削除・変更しないでください</li>
