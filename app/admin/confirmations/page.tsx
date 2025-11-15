@@ -382,35 +382,36 @@ export default function ConfirmationsPage() {
       '確定'
     ];
 
-    // データ行を作成
-    const rows = allPendingApplicants.map((applicant) => {
-      // 第1希望の日程を取得
-      const firstDate = applicant.selected_dates[0];
-      const dateStr = firstDate
-        ? new Date(firstDate.date).toLocaleDateString('ja-JP', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-          })
-        : '';
+    // データ行を作成（全ての候補を出力）
+    const rows = allPendingApplicants.flatMap((applicant) => {
+      // 全ての候補日程をループして、それぞれを1行として出力
+      return applicant.selected_dates.map((selectedDate) => {
+        const dateStr = selectedDate
+          ? new Date(selectedDate.date).toLocaleDateString('ja-JP', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            })
+          : '';
 
-      // 候補順序を取得（第1候補、第2候補など）
-      const priorityText = firstDate?.priority
-        ? `第${firstDate.priority}候補`
-        : '';
+        // 候補順序を取得（第1候補、第2候補など）
+        const priorityText = selectedDate?.priority
+          ? `第${selectedDate.priority}候補`
+          : '';
 
-      return [
-        applicant.id,
-        applicant.name,
-        applicant.kana_name || '',
-        applicant.school_name || '',
-        applicant.grade || '',
-        applicant.email,
-        priorityText,
-        dateStr,
-        firstDate?.course_name || '',
-        '', // 確定列（空欄、ユーザーが○を入力）
-      ];
+        return [
+          applicant.id,
+          applicant.name,
+          applicant.kana_name || '',
+          applicant.school_name || '',
+          applicant.grade || '',
+          applicant.email,
+          priorityText,
+          dateStr,
+          selectedDate?.course_name || '',
+          '', // 確定列（空欄、ユーザーが○を入力）
+        ];
+      });
     });
 
     // CSV文字列を作成
