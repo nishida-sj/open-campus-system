@@ -210,6 +210,13 @@ async function handleTokenVerification(
   event: WebhookEvent & { type: 'message' },
   token: string
 ) {
+  const userId = event.source.userId;
+
+  if (!userId) {
+    console.error('No userId in token verification event');
+    return;
+  }
+
   console.log('Searching for applicant with token:', token);
 
   // トークンでapplicantを検索
