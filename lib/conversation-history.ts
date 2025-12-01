@@ -51,7 +51,7 @@ export async function getConversationHistory(
   try {
     const { data, error } = await supabaseAdmin
       .from('conversation_history')
-      .select('role, message as content, created_at')
+      .select('role, message, created_at')
       .eq('line_user_id', lineUserId)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -70,7 +70,7 @@ export async function getConversationHistory(
       .reverse()
       .map((msg) => ({
         role: msg.role as 'user' | 'assistant',
-        content: msg.content,
+        content: msg.message,
       }));
   } catch (error) {
     console.error('Exception in getConversationHistory:', error);
