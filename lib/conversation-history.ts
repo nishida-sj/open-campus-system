@@ -6,7 +6,7 @@
 import { supabaseAdmin } from './supabase';
 
 export interface ConversationMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant';
   content: string;
   created_at?: string;
 }
