@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { Client, validateSignature, WebhookEvent, TextMessage } from '@line/bot-sdk';
 import { supabaseAdmin } from '@/lib/supabase';
 import crypto from 'crypto';
+import { generateAIResponse, isApplicationRelated, isUrgentQuestion } from '@/lib/ai-response';
+import { saveMessage, getConversationHistory, clearConversationHistory } from '@/lib/conversation-history';
+import { emergencyContact } from '@/lib/school-knowledge';
 
 // Next.js Route Handler設定
 export const runtime = 'nodejs'; // Node.js Runtimeを使用
@@ -159,10 +162,10 @@ async function handleFollow(event: WebhookEvent & { type: 'follow' }) {
 
   console.log('New friend added:', userId);
 
-  // ウェルカムメッセージを送信
+  // ウェルカムメッセージを送信（AI機能の案内を追加）
   const welcomeMessage: TextMessage = {
     type: 'text',
-    text: 'ご登録ありがとうございます！\n\nオープンキャンパスのお申し込みが完了している方は、申込時に発行された申込番号（トークン）を送信してください。\n\n申込完了後、詳しい情報をお送りします。',
+    text: 'ご登録ありがとうございます！🎉\n\n【できること】\n✅ オープンキャンパスの申込\n✅ 学校に関する質問への自動回答（AI搭載）\n✅ イベント情報のお知らせ\n\n【申込済みの方】\n申込時に発行された申込番号（64文字）を送信してください。\n\n【質問がある方】\nお気軽にメッセージしてください。AIが24時間対応いたします🤖\n\n例）「アクセスを教えて」「学費について知りたい」',
   };
 
   try {
@@ -172,7 +175,7 @@ async function handleFollow(event: WebhookEvent & { type: 'follow' }) {
   }
 }
 
-// メッセージイベント処理（トークン検証）
+// メッセージイベント処理（統合版：トークン検証 + AI自動応答）
 async function handleMessage(event: WebhookEvent & { type: 'message' }) {
   const userId = event.source.userId;
   const message = event.message;
@@ -181,32 +184,32 @@ async function handleMessage(event: WebhookEvent & { type: 'message' }) {
     return;
   }
 
+  const userMessage = message.text.trim();
+
   // 受信したメッセージをログ出力（デバッグ用）
   console.log('Received message from user:', userId);
-  console.log('Message text (raw):', JSON.stringify(message.text));
-  console.log('Message length:', message.text.length);
+  console.log('Message text:', userMessage);
 
-  // トークンを抽出（空白、改行をすべて削除）
-  const rawToken = message.text.trim();
-  const cleanedToken = rawToken.replace(/\s/g, ''); // すべての空白文字（改行、タブ含む）を削除
+  // 1. トークン形式チェック（64文字の16進数）
+  const cleanedToken = userMessage.replace(/\s/g, ''); // 空白文字を削除
 
-  console.log('Cleaned token:', cleanedToken);
-  console.log('Cleaned token length:', cleanedToken.length);
-
-  // トークンの形式チェック（64文字の16進数）
-  if (!/^[a-f0-9]{64}$/i.test(cleanedToken)) {
-    console.log('Token format validation failed');
-    console.log('Token does not match pattern: /^[a-f0-9]{64}$/i');
-
-    await client.replyMessage(event.replyToken, {
-      type: 'text',
-      text: '申込番号の形式が正しくありません。\n\n申込完了ページに表示された64文字の番号を正確に入力してください。',
-    });
+  if (/^[a-f0-9]{64}$/i.test(cleanedToken)) {
+    // トークン形式の場合 → 既存の申込完了処理
+    console.log('Token format detected, processing application...');
+    await handleTokenVerification(event, cleanedToken);
     return;
   }
 
-  // 以降の処理ではcleanedTokenを使用
-  const token = cleanedToken;
+  // 2. トークン以外の場合 → AI自動応答処理
+  console.log('Regular message detected, processing AI response...');
+  await handleAIResponse(event, userMessage);
+}
+
+// トークン検証処理（既存の処理を関数化）
+async function handleTokenVerification(
+  event: WebhookEvent & { type: 'message' },
+  token: string
+) {
   console.log('Searching for applicant with token:', token);
 
   // トークンでapplicantを検索
@@ -364,5 +367,116 @@ async function handleMessage(event: WebhookEvent & { type: 'message' }) {
     await client.replyMessage(event.replyToken, completionMessage);
   } catch (error) {
     console.error('Failed to send completion message:', error);
+  }
+}
+
+// ===================================================
+// AI自動応答処理（新機能）
+// ===================================================
+
+/**
+ * AI自動応答処理
+ */
+async function handleAIResponse(
+  event: WebhookEvent & { type: 'message' },
+  userMessage: string
+) {
+  const userId = event.source.userId!;
+
+  try {
+    // 1. 特殊コマンドの処理
+    if (userMessage === 'リセット' || userMessage === 'reset' || userMessage.toLowerCase() === 'reset') {
+      await clearConversationHistory(userId);
+      await client.replyMessage(event.replyToken, {
+        type: 'text',
+        text: '会話履歴をリセットしました。\n新しく質問をどうぞ！😊',
+      });
+      return;
+    }
+
+    // 2. 緊急の質問の場合
+    if (isUrgentQuestion(userMessage)) {
+      await client.replyMessage(event.replyToken, {
+        type: 'text',
+        text: `お急ぎのご用件ですね。\n恐れ入りますが、直接お電話でお問い合わせいただけますでしょうか。\n\n📞 TEL: ${emergencyContact.phone}\n⏰ 受付時間: ${emergencyContact.hours}\n\n担当者が直接対応させていただきます。`,
+      });
+      return;
+    }
+
+    // 3. 申込関連の質問の場合
+    if (isApplicationRelated(userMessage)) {
+      // ユーザーの申込情報を確認
+      const { data: applicant } = await supabaseAdmin
+        .from('applicants')
+        .select('*, open_campus_dates(date)')
+        .eq('line_user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (applicant) {
+        const visitDate = applicant.open_campus_dates?.date
+          ? new Date(applicant.open_campus_dates.date).toLocaleDateString('ja-JP', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              weekday: 'short',
+            })
+          : '未定';
+
+        await client.replyMessage(event.replyToken, {
+          type: 'text',
+          text: `【現在のお申し込み状況】\n\n📅 参加予定日: ${visitDate}\n✅ 受付完了しています\n\n【キャンセル・変更について】\nお手数ですが、お電話でお問い合わせください。\n📞 TEL: ${emergencyContact.phone}\n⏰ 受付時間: ${emergencyContact.hours}`,
+        });
+      } else {
+        await client.replyMessage(event.replyToken, {
+          type: 'text',
+          text: `オープンキャンパスのお申し込みは、\nWebサイトから可能です。\n\n詳しくは以下からお問い合わせください。\n📞 TEL: ${emergencyContact.phone}\n⏰ 受付時間: ${emergencyContact.hours}`,
+        });
+      }
+      return;
+    }
+
+    // 4. 通常のAI応答
+    // 会話履歴を取得
+    const history = await getConversationHistory(userId, 10);
+
+    // AI応答生成
+    const result = await generateAIResponse(userId, userMessage, history);
+
+    if (!result.success) {
+      // 使用量制限に達した場合
+      if (result.usageLimited) {
+        await client.replyMessage(event.replyToken, {
+          type: 'text',
+          text: `申し訳ございません。現在、自動応答機能の利用制限に達しています。\n\nお問い合わせは以下までお願いいたします。\n📞 TEL: ${emergencyContact.phone}\n⏰ 受付時間: ${emergencyContact.hours}`,
+        });
+      } else {
+        // その他のエラー
+        await client.replyMessage(event.replyToken, {
+          type: 'text',
+          text: result.error || '申し訳ございません。一時的にエラーが発生しました。\nしばらくしてからもう一度お試しください。',
+        });
+      }
+      return;
+    }
+
+    // 5. AI応答を送信
+    await client.replyMessage(event.replyToken, {
+      type: 'text',
+      text: result.response!,
+    });
+
+    // 6. 会話履歴を保存
+    await saveMessage(userId, 'user', userMessage);
+    await saveMessage(userId, 'assistant', result.response!);
+
+    console.log('AI response sent successfully');
+  } catch (error) {
+    console.error('Error in handleAIResponse:', error);
+    await client.replyMessage(event.replyToken, {
+      type: 'text',
+      text: '申し訳ございません。一時的にエラーが発生しました。\nしばらくしてからもう一度お試しください。',
+    });
   }
 }
