@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   console.log('Timestamp:', new Date().toISOString());
 
   // デバッグモード（一時的に署名検証をスキップ）
-  const DEBUG_MODE = false; // 本番環境では false にする
+  const DEBUG_MODE = false; // 本番環境では必ず false にする
 
   try {
     // リクエストボディを取得（生のテキストとして）
@@ -139,15 +139,26 @@ export async function POST(request: Request) {
 // イベント処理
 async function handleEvent(event: WebhookEvent) {
   console.log('Event received:', event.type);
+  console.log('Event details:', JSON.stringify(event, null, 2));
 
   // followイベント（友達追加時）
   if (event.type === 'follow') {
+    console.log('Processing follow event');
     await handleFollow(event);
+    return;
   }
 
   // messageイベント（メッセージ受信時）
-  if (event.type === 'message' && event.message.type === 'text') {
-    await handleMessage(event);
+  if (event.type === 'message') {
+    console.log('Message event detected');
+    console.log('Message type:', event.message.type);
+
+    if (event.message.type === 'text') {
+      console.log('Text message confirmed, calling handleMessage');
+      await handleMessage(event);
+    } else {
+      console.log('Non-text message type, skipping');
+    }
   }
 }
 
