@@ -4,13 +4,77 @@
  */
 
 import OpenAI from 'openai';
-import { schoolKnowledge, emergencyContact, isApplicationRelated, isUrgentQuestion } from './school-knowledge';
+import { emergencyContact, isApplicationRelated, isUrgentQuestion } from './school-knowledge';
 import { checkUsageLimit, logUsage, getAISetting } from './usage-monitor';
+
+// プロンプトキャッシュ（5分間有効）
+let cachedPrompt: string | null = null;
+let promptCacheTime: number = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5分
 
 // OpenAI Client初期化
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
+
+/**
+ * 動的プロンプトをAPIから取得（キャッシュ付き）
+ */
+async function fetchSystemPrompt(): Promise<string> {
+  try {
+    // キャッシュが有効な場合はキャッシュを返す
+    const now = Date.now();
+    if (cachedPrompt && now - promptCacheTime < CACHE_DURATION) {
+      console.log('Using cached prompt');
+      return cachedPrompt;
+    }
+
+    // APIからプロンプトを取得
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/admin/ai-prompt`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch prompt: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success || !data.prompt) {
+      throw new Error('Invalid prompt response');
+    }
+
+    // キャッシュを更新
+    cachedPrompt = data.prompt;
+    promptCacheTime = now;
+    console.log('Prompt fetched and cached successfully');
+
+    return data.prompt;
+  } catch (error) {
+    console.error('Error fetching system prompt:', error);
+    // フォールバックとして基本的なプロンプトを返す
+    return `あなたは学校の公式LINEアカウントのAIアシスタントです。
+以下のルールに従って回答してください：
+
+【回答ルール】
+- 常に丁寧で親しみやすい口調で話す
+- 絵文字を適度に使用（1-2個/メッセージ）
+- 長文は避け、簡潔に（200文字以内推奨）
+- 不確かな情報は提供しない
+- 質問の意図を理解して適切に回答
+
+【回答できない場合】
+申し訳ございませんが、その質問にはお答えできません。
+お電話でお問い合わせください。
+
+📞 ${emergencyContact.phone}
+⏰ ${emergencyContact.hours}`;
+  }
+}
 
 export interface AIResponseResult {
   success: boolean;
@@ -43,32 +107,8 @@ export async function generateAIResponse(
       };
     }
 
-    // 2. システムプロンプト取得（DBから）
-    const customPrompt = await getAISetting('system_prompt');
-    const systemPrompt =
-      customPrompt ||
-      `あなたは学校の公式LINEアカウントのAIアシスタントです。
-
-以下の学校情報に基づいて、正確かつ親切に回答してください：
-
-${schoolKnowledge}
-
-【応答ルール】
-1. 常に丁寧で親しみやすい口調で話す
-2. 絵文字を適度に使用（1-2個/メッセージ）
-3. 長文は避け、簡潔に（200文字以内推奨）
-4. 不確かな情報は提供しない
-5. 質問の意図を理解して適切に回答
-
-【対応できない質問への回答】
-- 個人情報の変更 → 電話でお問い合わせいただくよう案内
-- 複雑な相談 → 個別相談会の予約を提案
-- 学校情報以外の質問 → 「学校に関する質問にお答えできます」
-
-【緊急時の連絡先】
-電話: ${emergencyContact.phone}
-受付: ${emergencyContact.hours}
-メール: ${emergencyContact.email}`;
+    // 2. システムプロンプトを動的に取得（キャッシュ付き）
+    const systemPrompt = await fetchSystemPrompt();
 
     // 3. メッセージ構築
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
@@ -152,6 +192,15 @@ ${schoolKnowledge}
       error: getDefaultErrorMessage(),
     };
   }
+}
+
+/**
+ * プロンプトキャッシュをクリア（テスト用・設定更新後に使用）
+ */
+export function clearPromptCache(): void {
+  cachedPrompt = null;
+  promptCacheTime = 0;
+  console.log('Prompt cache cleared');
 }
 
 /**
