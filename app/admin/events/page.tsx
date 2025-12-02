@@ -356,6 +356,7 @@ export default function AdminEventsPage() {
               <div>
                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
                   説明（管理用）
+                  <span className="text-gray-500 text-xs ml-2">このイベントのAIプロンプトになります</span>
                 </label>
                 <textarea
                   id="description"
