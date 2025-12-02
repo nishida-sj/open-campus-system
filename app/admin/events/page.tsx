@@ -38,6 +38,7 @@ export default function AdminEventsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [copiedEventId, setCopiedEventId] = useState<string | null>(null);
 
   // フォーム状態
   const [formData, setFormData] = useState({
@@ -193,6 +194,21 @@ export default function AdminEventsPage() {
       alert('エラーが発生しました');
     } finally {
       setDeleting(null);
+    }
+  };
+
+  // 申込URLをコピー
+  const copyApplyUrl = async (eventId: string) => {
+    const baseUrl = window.location.origin;
+    const applyUrl = `${baseUrl}/apply?event=${eventId}`;
+
+    try {
+      await navigator.clipboard.writeText(applyUrl);
+      setCopiedEventId(eventId);
+      setTimeout(() => setCopiedEventId(null), 2000);
+    } catch (error) {
+      console.error('コピーエラー:', error);
+      alert('URLのコピーに失敗しました');
     }
   };
 
@@ -898,6 +914,28 @@ export default function AdminEventsPage() {
                         <span>
                           作成日: {new Date(event.created_at).toLocaleDateString('ja-JP')}
                         </span>
+                      </div>
+
+                      {/* 申込ページURL */}
+                      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-gray-700 mb-1">申込ページURL（ホームページ等でリンク用）</p>
+                            <p className="text-sm text-gray-600 truncate font-mono">
+                              {typeof window !== 'undefined' ? `${window.location.origin}/apply?event=${event.id}` : `/apply?event=${event.id}`}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => copyApplyUrl(event.id)}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                              copiedEventId === event.id
+                                ? 'bg-green-600 text-white'
+                                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                            }`}
+                          >
+                            {copiedEventId === event.id ? '✓ コピー完了' : '📋 URLをコピー'}
+                          </button>
+                        </div>
                       </div>
 
                       {/* 編集ボタン */}
