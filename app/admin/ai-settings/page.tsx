@@ -448,27 +448,6 @@ export default function AISettingsPage() {
                 </label>
               </div>
 
-              {/* モデル設定 */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  AIモデル
-                </label>
-                <select
-                  value={basicSettings.model}
-                  onChange={(e) =>
-                    setBasicSettings({ ...basicSettings, model: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="gpt-4o-mini">GPT-4o-mini（推奨 - 高性能・低コスト）</option>
-                  <option value="gpt-4o">GPT-4o（最高性能・高コスト）</option>
-                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo（旧モデル）</option>
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  現在使用中: {basicSettings.model}
-                </p>
-              </div>
-
               {/* Temperature設定 */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
