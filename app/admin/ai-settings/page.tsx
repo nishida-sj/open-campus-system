@@ -289,39 +289,8 @@ export default function AISettingsPage() {
     setCustomItems(customItems.filter((item) => item.id !== id));
   };
 
-  // 自動追記ルールを保存
-  const saveAutoAppendRules = async () => {
-    setSaving(true);
-    setMessage('');
-
-    try {
-      const res = await fetch('/api/admin/ai-prompt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          setting_key: 'prompt_auto_append_rules',
-          setting_value: JSON.stringify(autoAppendRules),
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        setMessage('自動追記ルールを保存しました ✅');
-        setTimeout(() => setMessage(''), 3000);
-        fetchPromptPreview();
-      } else {
-        setMessage('保存に失敗しました ❌');
-      }
-    } catch (error) {
-      setMessage('エラーが発生しました ❌');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   // 自動追記ルールを追加
-  const addAutoAppendRule = () => {
+  const addAutoAppendRule = async () => {
     if (!newRuleName.trim() || !newRuleKeywords.trim() || !newRuleMessage.trim()) {
       alert('ルール名、キーワード、メッセージをすべて入力してください');
       return;
@@ -337,39 +306,174 @@ export default function AISettingsPage() {
       order: autoAppendRules.length,
     };
 
-    setAutoAppendRules([...autoAppendRules, newRule]);
+    const updatedRules = [...autoAppendRules, newRule];
+    setAutoAppendRules(updatedRules);
     setNewRuleName('');
     setNewRuleKeywords('');
     setNewRuleMessage('');
     setNewRulePosition('end');
     setShowAddRuleForm(false);
+
+    // 自動保存
+    setSaving(true);
+    setMessage('');
+
+    try {
+      console.log('[addAutoAppendRule] Auto-saving new rule:', newRule);
+
+      const res = await fetch('/api/admin/ai-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setting_key: 'prompt_auto_append_rules',
+          setting_value: JSON.stringify(updatedRules),
+        }),
+      });
+
+      console.log('[addAutoAppendRule] Response status:', res.status);
+      const data = await res.json();
+      console.log('[addAutoAppendRule] Response data:', data);
+
+      if (data.success) {
+        setMessage('ルールを追加して保存しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+        fetchPromptPreview();
+      } else {
+        console.error('[addAutoAppendRule] Save failed:', data);
+        setMessage(`ルールは追加されましたが保存に失敗しました: ${data.error || '不明なエラー'} ❌`);
+      }
+    } catch (error) {
+      console.error('[addAutoAppendRule] Exception:', error);
+      setMessage(`ルールは追加されましたが保存中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'} ❌`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // 自動追記ルールを更新
-  const updateAutoAppendRule = () => {
+  const updateAutoAppendRule = async () => {
     if (!editingRule) return;
 
-    setAutoAppendRules(
-      autoAppendRules.map((rule) =>
-        rule.id === editingRule.id ? editingRule : rule
-      )
+    const updatedRules = autoAppendRules.map((rule) =>
+      rule.id === editingRule.id ? editingRule : rule
     );
+    setAutoAppendRules(updatedRules);
     setEditingRule(null);
+
+    // 自動保存
+    setSaving(true);
+    setMessage('');
+
+    try {
+      console.log('[updateAutoAppendRule] Auto-saving updated rule:', editingRule);
+
+      const res = await fetch('/api/admin/ai-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setting_key: 'prompt_auto_append_rules',
+          setting_value: JSON.stringify(updatedRules),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setMessage('ルールを更新して保存しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+        fetchPromptPreview();
+      } else {
+        console.error('[updateAutoAppendRule] Save failed:', data);
+        setMessage(`ルールは更新されましたが保存に失敗しました: ${data.error || '不明なエラー'} ❌`);
+      }
+    } catch (error) {
+      console.error('[updateAutoAppendRule] Exception:', error);
+      setMessage(`ルールは更新されましたが保存中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'} ❌`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // 自動追記ルールを削除
-  const deleteAutoAppendRule = (id: string) => {
+  const deleteAutoAppendRule = async (id: string) => {
     if (!confirm('このルールを削除しますか？')) return;
-    setAutoAppendRules(autoAppendRules.filter((rule) => rule.id !== id));
+
+    const updatedRules = autoAppendRules.filter((rule) => rule.id !== id);
+    setAutoAppendRules(updatedRules);
+
+    // 自動保存
+    setSaving(true);
+    setMessage('');
+
+    try {
+      console.log('[deleteAutoAppendRule] Auto-saving after deletion, remaining rules:', updatedRules.length);
+
+      const res = await fetch('/api/admin/ai-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setting_key: 'prompt_auto_append_rules',
+          setting_value: JSON.stringify(updatedRules),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setMessage('ルールを削除して保存しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+        fetchPromptPreview();
+      } else {
+        console.error('[deleteAutoAppendRule] Save failed:', data);
+        setMessage(`ルールは削除されましたが保存に失敗しました: ${data.error || '不明なエラー'} ❌`);
+      }
+    } catch (error) {
+      console.error('[deleteAutoAppendRule] Exception:', error);
+      setMessage(`ルールは削除されましたが保存中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'} ❌`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // 自動追記ルールの有効/無効を切り替え
-  const toggleRuleActive = (id: string) => {
-    setAutoAppendRules(
-      autoAppendRules.map((rule) =>
-        rule.id === id ? { ...rule, is_active: !rule.is_active } : rule
-      )
+  const toggleRuleActive = async (id: string) => {
+    const updatedRules = autoAppendRules.map((rule) =>
+      rule.id === id ? { ...rule, is_active: !rule.is_active } : rule
     );
+    setAutoAppendRules(updatedRules);
+
+    // 自動保存
+    setSaving(true);
+    setMessage('');
+
+    try {
+      console.log('[toggleRuleActive] Auto-saving after toggle, rule id:', id);
+
+      const res = await fetch('/api/admin/ai-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setting_key: 'prompt_auto_append_rules',
+          setting_value: JSON.stringify(updatedRules),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setMessage('ルールの状態を変更して保存しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+        fetchPromptPreview();
+      } else {
+        console.error('[toggleRuleActive] Save failed:', data);
+        setMessage(`ルールの状態は変更されましたが保存に失敗しました: ${data.error || '不明なエラー'} ❌`);
+      }
+    } catch (error) {
+      console.error('[toggleRuleActive] Exception:', error);
+      setMessage(`ルールの状態は変更されましたが保存中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'} ❌`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -1180,17 +1284,6 @@ export default function AISettingsPage() {
                     </div>
                   </div>
                 </div>
-              )}
-
-              {/* 保存ボタン */}
-              {autoAppendRules.length > 0 && (
-                <button
-                  onClick={saveAutoAppendRules}
-                  disabled={saving}
-                  className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400"
-                >
-                  {saving ? '保存中...' : '自動追記ルールを保存'}
-                </button>
               )}
             </div>
           )}
