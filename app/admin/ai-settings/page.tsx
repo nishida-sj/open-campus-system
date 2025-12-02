@@ -870,6 +870,36 @@ export default function AISettingsPage() {
                 </div>
               )}
 
+              {/* カスタム項目プレビュー */}
+              {promptParts && promptParts.custom_items && promptParts.custom_items.length > 0 && (
+                <div className="mb-6 p-6 bg-purple-50 border border-purple-200 rounded-lg">
+                  <h3 className="font-bold text-gray-900 mb-4 text-lg">
+                    ✨ カスタム項目プレビュー（プロンプトに含まれる内容）
+                  </h3>
+                  <div className="space-y-4">
+                    {promptParts.custom_items
+                      .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+                      .map((item: any, index: number) => (
+                        <div key={item.id || index} className="bg-white p-5 rounded-lg border border-purple-200 shadow-sm">
+                          <h4 className="font-bold text-gray-900 text-lg mb-2">【{item.name}】</h4>
+                          <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded whitespace-pre-wrap">
+                            {item.content}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2">表示順: {item.order + 1}</p>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {promptParts && (!promptParts.custom_items || promptParts.custom_items.length === 0) && (
+                <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    ℹ️ カスタム項目が登録されていません。カスタム項目タブから追加できます。
+                  </p>
+                </div>
+              )}
+
               {/* 最終プロンプト */}
               <div className="mb-4">
                 <h3 className="font-bold text-gray-900 mb-3 text-lg">🤖 AIに送信される最終プロンプト</h3>

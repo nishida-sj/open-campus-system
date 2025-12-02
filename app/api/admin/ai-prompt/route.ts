@@ -170,11 +170,13 @@ export async function GET() {
     let customItems: any[] = [];
     try {
       const customItemsStr = settingsMap.prompt_custom_items || '[]';
+      console.log('[AI Prompt GET] Custom items raw string:', customItemsStr);
       customItems = JSON.parse(customItemsStr);
       if (!Array.isArray(customItems)) {
         console.warn('[AI Prompt GET] Custom items is not an array, resetting to empty');
         customItems = [];
       }
+      console.log('[AI Prompt GET] Parsed custom items count:', customItems.length);
     } catch (parseError) {
       console.error('[AI Prompt GET] Failed to parse custom items:', parseError);
       customItems = [];
@@ -186,6 +188,8 @@ export async function GET() {
         .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
         .map((item: any) => `\n【${item.name || ''}】\n${item.content || ''}`)
         .join('\n');
+      console.log('[AI Prompt GET] Generated custom prompts length:', customPrompts.length);
+      console.log('[AI Prompt GET] Custom prompts preview:', customPrompts.substring(0, 200));
     } catch (customError) {
       console.error('[AI Prompt GET] Error generating custom prompts:', customError);
     }
