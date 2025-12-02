@@ -53,11 +53,12 @@ export async function GET() {
       const today = new Date().toISOString().split('T')[0];
 
       const { data: events, error: eventsError } = await supabaseAdmin
-        .from('events')
+        .from('open_campus_events')
         .select(`
           id,
           name,
           description,
+          overview,
           is_active,
           display_end_date
         `)
@@ -82,11 +83,11 @@ export async function GET() {
                 .eq('is_active', true)
                 .order('date', { ascending: true });
 
-              // コース情報を取得
+              // コース情報を取得（このイベントに紐づくコースのみ）
               const { data: courses } = await supabaseAdmin
-                .from('courses')
+                .from('event_courses')
                 .select('name, description')
-                .eq('is_active', true)
+                .eq('event_id', event.id)
                 .order('display_order', { ascending: true });
 
               return {
@@ -118,8 +119,8 @@ export async function GET() {
         .map((event) => {
           let prompt = `\n【${event.name}】\n`;
 
-          if (event.description) {
-            prompt += `${event.description}\n\n`;
+          if (event.overview) {
+            prompt += `${event.overview}\n\n`;
           }
 
           if (event.dates && event.dates.length > 0) {
