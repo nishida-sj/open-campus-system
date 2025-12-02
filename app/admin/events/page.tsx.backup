@@ -83,19 +83,7 @@ export default function AdminEventsPage() {
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 必須項目チェック
-    if (!formData.display_end_date) {
-      alert('イベント一覧表示終了日を入力してください');
-      return;
-    }
-
     if (formData.dates.length === 0) {
-    // 必須項目チェック
-    if (!formData.display_end_date) {
-      alert('イベント一覧表示終了日を入力してください');
-      return;
-    }
-
       alert('少なくとも1つの開催日を追加してください');
       return;
     }
