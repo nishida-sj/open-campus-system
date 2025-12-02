@@ -58,15 +58,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 各設定を更新
+    // 各設定を更新（UPSERT: 存在しない場合は挿入、存在する場合は更新）
     const updatePromises = Object.entries(settings).map(([key, value]) => {
       return supabaseAdmin
         .from('ai_settings')
-        .update({
-          setting_value: String(value),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('setting_key', key);
+        .upsert(
+          {
+            setting_key: key,
+            setting_value: String(value),
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'setting_key',
+          }
+        );
     });
 
     const results = await Promise.all(updatePromises);
@@ -75,6 +80,7 @@ export async function POST(request: NextRequest) {
     const errors = results.filter((result) => result.error);
     if (errors.length > 0) {
       console.error('Failed to update some settings:', errors);
+      console.error('Error details:', errors.map((e) => e.error));
       throw new Error('Failed to update settings');
     }
 

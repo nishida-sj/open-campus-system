@@ -181,16 +181,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // 設定を更新
+    // 設定を更新（UPSERT: 存在しない場合は挿入、存在する場合は更新）
     const { error } = await supabaseAdmin
       .from('ai_settings')
-      .update({
-        setting_value: setting_value || '',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('setting_key', setting_key);
+      .upsert(
+        {
+          setting_key: setting_key,
+          setting_value: setting_value || '',
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'setting_key',
+        }
+      );
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error upserting AI setting:', error);
+      throw error;
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
