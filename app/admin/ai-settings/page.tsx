@@ -786,34 +786,83 @@ export default function AISettingsPage() {
 
           {/* プレビュータブ */}
           {activeTab === 'preview' && (
-            <div className="p-6">
+            <div className="p-6 space-y-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6">最終プロンプトのプレビュー</h2>
 
-              {/* イベント情報 */}
+              {/* イベントプレビュー */}
               {promptParts && promptParts.events.length > 0 && (
-                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h3 className="font-bold text-gray-900 mb-3">
-                    📅 開催予定のイベント（{promptParts.events.length}件）
+                <div className="mb-6 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h3 className="font-bold text-gray-900 mb-4 text-lg">
+                    📅 イベントプレビュー（プロンプトに含まれる内容）
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {promptParts.events.map((event: any) => (
-                      <div key={event.id} className="bg-white p-3 rounded-lg border border-blue-100">
-                        <p className="font-bold text-gray-900">{event.name}</p>
-                        {event.description && (
-                          <p className="text-sm text-gray-600 mt-1">{event.description}</p>
+                      <div key={event.id} className="bg-white p-5 rounded-lg border border-blue-200 shadow-sm">
+                        <h4 className="font-bold text-gray-900 text-lg mb-2">{event.name}</h4>
+
+                        {event.overview && (
+                          <div className="mb-3">
+                            <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">{event.overview}</p>
+                          </div>
                         )}
-                        <p className="text-xs text-gray-500 mt-2">
-                          日程: {event.dates?.length || 0}件 | コース: {event.courses?.length || 0}件
-                        </p>
+
+                        {event.dates && event.dates.length > 0 && (
+                          <div className="mb-3">
+                            <p className="font-semibold text-gray-800 mb-2 text-sm">開催日程:</p>
+                            <div className="space-y-1 ml-4">
+                              {event.dates.map((date: any, idx: number) => {
+                                const dateStr = new Date(date.date).toLocaleDateString('ja-JP', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                  weekday: 'short',
+                                });
+                                const remaining = (date.capacity || 0) - (date.current_count || 0);
+                                return (
+                                  <p key={idx} className="text-sm text-gray-700">
+                                    • {dateStr}: 定員{date.capacity || 0}名（残り{remaining}名）
+                                  </p>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {event.courses && event.courses.length > 0 && (
+                          <div>
+                            <p className="font-semibold text-gray-800 mb-2 text-sm">コース情報:</p>
+                            <div className="space-y-1 ml-4">
+                              {event.courses.map((course: any, idx: number) => (
+                                <p key={idx} className="text-sm text-gray-700">
+                                  • {course.name}
+                                  {course.description && <span className="text-gray-600">: {course.description}</span>}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {(!event.dates || event.dates.length === 0) &&
+                         (!event.courses || event.courses.length === 0) && (
+                          <p className="text-xs text-gray-500 italic">日程・コース情報なし</p>
+                        )}
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
+              {promptParts && promptParts.events.length === 0 && (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ 現在、有効なイベントが登録されていません。イベント管理画面から表示終了日が未来のイベントを作成してください。
+                  </p>
+                </div>
+              )}
+
               {/* 最終プロンプト */}
               <div className="mb-4">
-                <h3 className="font-bold text-gray-900 mb-3">🤖 AIに送信される最終プロンプト</h3>
+                <h3 className="font-bold text-gray-900 mb-3 text-lg">🤖 AIに送信される最終プロンプト</h3>
                 <div className="bg-gray-900 text-gray-100 p-6 rounded-lg font-mono text-sm overflow-x-auto max-h-96 overflow-y-auto">
                   <pre className="whitespace-pre-wrap">{finalPrompt}</pre>
                 </div>
