@@ -17,11 +17,12 @@ export async function GET() {
       prompt_unable_response: '',
       prompt_closing_message: '',
       prompt_custom_items: '[]',
+      prompt_auto_append_rules: '[]',
     };
 
     // 1. 固定項目を取得
     try {
-      const { data: settings, error: settingsError } = await supabaseAdmin
+      const { data: settings, error: settingsError} = await supabaseAdmin
         .from('ai_settings')
         .select('setting_key, setting_value')
         .in('setting_key', [
@@ -30,6 +31,7 @@ export async function GET() {
           'prompt_unable_response',
           'prompt_closing_message',
           'prompt_custom_items',
+          'prompt_auto_append_rules',
         ]);
 
       if (settingsError) {
@@ -194,7 +196,43 @@ export async function GET() {
       console.error('[AI Prompt GET] Error generating custom prompts:', customError);
     }
 
-    // 6. 最終的なシステムプロンプトを組み立て
+    // 6. 自動追記ルールを取得・生成
+    let autoAppendRules: any[] = [];
+    let autoAppendPrompts = '';
+    try {
+      const autoAppendRulesStr = settingsMap.prompt_auto_append_rules || '[]';
+      console.log('[AI Prompt GET] Auto append rules raw string:', autoAppendRulesStr);
+      autoAppendRules = JSON.parse(autoAppendRulesStr);
+      if (!Array.isArray(autoAppendRules)) {
+        console.warn('[AI Prompt GET] Auto append rules is not an array, resetting to empty');
+        autoAppendRules = [];
+      }
+      console.log('[AI Prompt GET] Parsed auto append rules count:', autoAppendRules.length);
+
+      // 有効なルールのみフィルタリング
+      const activeRules = autoAppendRules.filter((rule: any) => rule.is_active);
+
+      if (activeRules.length > 0) {
+        autoAppendPrompts = '\n【自動追記ルール - 重要】\n';
+        autoAppendPrompts += '以下のキーワードを含む質問には、必ず指定のメッセージを回答に追加してください：\n\n';
+
+        activeRules
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+          .forEach((rule: any) => {
+            const keywords = Array.isArray(rule.keywords) ? rule.keywords.join('、') : '';
+            const position = rule.position === 'start' ? '回答の最初' : '回答の最後';
+            autoAppendPrompts += `・「${keywords}」のいずれかを含む質問の場合\n`;
+            autoAppendPrompts += `  → ${position}に必ず以下を追加：\n`;
+            autoAppendPrompts += `  ${rule.message}\n\n`;
+          });
+
+        console.log('[AI Prompt GET] Generated auto append prompts length:', autoAppendPrompts.length);
+      }
+    } catch (autoAppendError) {
+      console.error('[AI Prompt GET] Error parsing auto append rules:', autoAppendError);
+    }
+
+    // 7. 最終的なシステムプロンプトを組み立て
     const finalPrompt = `あなたは学校の公式LINEアカウントのAIアシスタントです。
 以下の情報に基づいて、正確かつ親切に回答してください。
 
@@ -205,6 +243,7 @@ ${settingsMap.prompt_school_info || '（未設定）'}
 ${settingsMap.prompt_access || '（未設定）'}
 ${customPrompts}
 ${eventPrompts ? '\n【開催予定のイベント】' + eventPrompts : ''}
+${autoAppendPrompts}
 
 【回答ルール】
 - 常に丁寧で親しみやすい口調で話す
@@ -233,6 +272,7 @@ ${settingsMap.prompt_closing_message || ''}`;
         unable_response: settingsMap.prompt_unable_response || '',
         closing_message: settingsMap.prompt_closing_message || '',
         custom_items: customItems,
+        auto_append_rules: autoAppendRules,
         events: eventsWithDetails,
         event_prompts: eventPrompts,
       },
@@ -275,6 +315,7 @@ ${settingsMap.prompt_closing_message || ''}`;
           unable_response: '',
           closing_message: '',
           custom_items: [],
+          auto_append_rules: [],
           events: [],
           event_prompts: '',
         },

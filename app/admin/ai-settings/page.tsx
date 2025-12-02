@@ -9,12 +9,23 @@ interface CustomItem {
   order: number;
 }
 
+interface AutoAppendRule {
+  id: string;
+  name: string;
+  keywords: string[];
+  message: string;
+  position: 'end' | 'start';
+  is_active: boolean;
+  order: number;
+}
+
 interface PromptParts {
   school_info: string;
   access: string;
   unable_response: string;
   closing_message: string;
   custom_items: CustomItem[];
+  auto_append_rules: AutoAppendRule[];
   events: any[];
   event_prompts: string;
 }
@@ -56,12 +67,21 @@ export default function AISettingsPage() {
   const [newItemName, setNewItemName] = useState('');
   const [newItemContent, setNewItemContent] = useState('');
 
+  // 自動追記ルール
+  const [autoAppendRules, setAutoAppendRules] = useState<AutoAppendRule[]>([]);
+  const [editingRule, setEditingRule] = useState<AutoAppendRule | null>(null);
+  const [showAddRuleForm, setShowAddRuleForm] = useState(false);
+  const [newRuleName, setNewRuleName] = useState('');
+  const [newRuleKeywords, setNewRuleKeywords] = useState('');
+  const [newRuleMessage, setNewRuleMessage] = useState('');
+  const [newRulePosition, setNewRulePosition] = useState<'end' | 'start'>('end');
+
   // プレビュー
   const [finalPrompt, setFinalPrompt] = useState('');
   const [promptParts, setPromptParts] = useState<PromptParts | null>(null);
 
   // タブ管理
-  const [activeTab, setActiveTab] = useState<'basic' | 'fixed' | 'custom' | 'preview'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'fixed' | 'custom' | 'rules' | 'preview'>('basic');
 
   // 状態管理
   const [loading, setLoading] = useState(true);
@@ -119,6 +139,7 @@ export default function AISettingsPage() {
         setUnableResponse(data.parts.unable_response || '');
         setClosingMessage(data.parts.closing_message || '');
         setCustomItems(data.parts.custom_items || []);
+        setAutoAppendRules(data.parts.auto_append_rules || []);
       }
     } catch (error) {
       console.error('Failed to fetch prompt settings:', error);
@@ -268,6 +289,89 @@ export default function AISettingsPage() {
     setCustomItems(customItems.filter((item) => item.id !== id));
   };
 
+  // 自動追記ルールを保存
+  const saveAutoAppendRules = async () => {
+    setSaving(true);
+    setMessage('');
+
+    try {
+      const res = await fetch('/api/admin/ai-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setting_key: 'prompt_auto_append_rules',
+          setting_value: JSON.stringify(autoAppendRules),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setMessage('自動追記ルールを保存しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+        fetchPromptPreview();
+      } else {
+        setMessage('保存に失敗しました ❌');
+      }
+    } catch (error) {
+      setMessage('エラーが発生しました ❌');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 自動追記ルールを追加
+  const addAutoAppendRule = () => {
+    if (!newRuleName.trim() || !newRuleKeywords.trim() || !newRuleMessage.trim()) {
+      alert('ルール名、キーワード、メッセージをすべて入力してください');
+      return;
+    }
+
+    const newRule: AutoAppendRule = {
+      id: Date.now().toString(),
+      name: newRuleName.trim(),
+      keywords: newRuleKeywords.split(',').map(k => k.trim()).filter(k => k),
+      message: newRuleMessage.trim(),
+      position: newRulePosition,
+      is_active: true,
+      order: autoAppendRules.length,
+    };
+
+    setAutoAppendRules([...autoAppendRules, newRule]);
+    setNewRuleName('');
+    setNewRuleKeywords('');
+    setNewRuleMessage('');
+    setNewRulePosition('end');
+    setShowAddRuleForm(false);
+  };
+
+  // 自動追記ルールを更新
+  const updateAutoAppendRule = () => {
+    if (!editingRule) return;
+
+    setAutoAppendRules(
+      autoAppendRules.map((rule) =>
+        rule.id === editingRule.id ? editingRule : rule
+      )
+    );
+    setEditingRule(null);
+  };
+
+  // 自動追記ルールを削除
+  const deleteAutoAppendRule = (id: string) => {
+    if (!confirm('このルールを削除しますか？')) return;
+    setAutoAppendRules(autoAppendRules.filter((rule) => rule.id !== id));
+  };
+
+  // 自動追記ルールの有効/無効を切り替え
+  const toggleRuleActive = (id: string) => {
+    setAutoAppendRules(
+      autoAppendRules.map((rule) =>
+        rule.id === id ? { ...rule, is_active: !rule.is_active } : rule
+      )
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -399,6 +503,16 @@ export default function AISettingsPage() {
                 }`}
               >
                 ✨ カスタム項目
+              </button>
+              <button
+                onClick={() => setActiveTab('rules')}
+                className={`px-6 py-4 text-sm font-medium border-b-2 ${
+                  activeTab === 'rules'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+              >
+                🎯 自動追記ルール
               </button>
               <button
                 onClick={() => {
@@ -784,6 +898,303 @@ export default function AISettingsPage() {
             </div>
           )}
 
+          {/* 自動追記ルールタブ */}
+          {activeTab === 'rules' && (
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">自動追記ルールの管理</h2>
+                <button
+                  onClick={() => setShowAddRuleForm(true)}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  + 新しいルールを追加
+                </button>
+              </div>
+
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="font-semibold text-gray-900 mb-2">💡 自動追記ルールとは？</h3>
+                <p className="text-sm text-gray-700">
+                  特定のキーワードを含む質問に対して、AIが自動的に指定のメッセージを回答の最後（または最初）に追加する機能です。
+                </p>
+                <p className="text-sm text-gray-700 mt-2">
+                  例：「進路」「就職」などのキーワードを含む質問には、進路情報ページのURLを必ず案内する
+                </p>
+              </div>
+
+              {/* 新規追加フォーム */}
+              {showAddRuleForm && (
+                <div className="mb-6 p-6 bg-white border-2 border-green-500 rounded-lg shadow-lg">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">新しいルールを追加</h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ルール名 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newRuleName}
+                        onChange={(e) => setNewRuleName(e.target.value)}
+                        placeholder="例: 進路情報案内"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        トリガーキーワード（カンマ区切り） <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newRuleKeywords}
+                        onChange={(e) => setNewRuleKeywords(e.target.value)}
+                        placeholder="例: 進路, 就職, 進学, 卒業後"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        これらのキーワードのいずれかが質問に含まれている場合、メッセージが追加されます
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        追加するメッセージ <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={newRuleMessage}
+                        onChange={(e) => setNewRuleMessage(e.target.value)}
+                        placeholder={'例:\n詳しくは進路情報ページをご覧ください\nhttps://www.isegakuen.ac.jp/highschool/shinro/jokyo/index.html'}
+                        rows={4}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        挿入位置
+                      </label>
+                      <select
+                        value={newRulePosition}
+                        onChange={(e) => setNewRulePosition(e.target.value as 'end' | 'start')}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="end">回答の最後</option>
+                        <option value="start">回答の最初</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={addAutoAppendRule}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                    >
+                      ルールを追加
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAddRuleForm(false);
+                        setNewRuleName('');
+                        setNewRuleKeywords('');
+                        setNewRuleMessage('');
+                        setNewRulePosition('end');
+                      }}
+                      className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
+                    >
+                      キャンセル
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ルール一覧 */}
+              {autoAppendRules.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p className="text-lg mb-2">自動追記ルールがありません</p>
+                  <p className="text-sm">「+ 新しいルールを追加」ボタンから追加してください</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {autoAppendRules
+                    .sort((a, b) => a.order - b.order)
+                    .map((rule) => (
+                      <div
+                        key={rule.id}
+                        className={`p-5 rounded-lg border-2 shadow ${
+                          rule.is_active
+                            ? 'bg-white border-green-200'
+                            : 'bg-gray-50 border-gray-300 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => toggleRuleActive(rule.id)}
+                              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                                rule.is_active
+                                  ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              }`}
+                            >
+                              {rule.is_active ? '✓ 有効' : '無効'}
+                            </button>
+                            <h3 className="text-lg font-bold text-gray-900">{rule.name}</h3>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setEditingRule(rule)}
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                              編集
+                            </button>
+                            <button
+                              onClick={() => deleteAutoAppendRule(rule.id)}
+                              className="text-red-600 hover:text-red-800 text-sm font-medium"
+                            >
+                              削除
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-xs text-gray-600 font-semibold mb-1">トリガーキーワード:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {rule.keywords.map((keyword, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                                >
+                                  {keyword}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-gray-600 font-semibold mb-1">追加メッセージ:</p>
+                            <div className="bg-gray-50 p-3 rounded text-sm text-gray-800 whitespace-pre-wrap">
+                              {rule.message}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4 text-xs text-gray-600">
+                            <span>
+                              📍 挿入位置: <span className="font-semibold">{rule.position === 'end' ? '回答の最後' : '回答の最初'}</span>
+                            </span>
+                            <span>
+                              📊 表示順: {rule.order + 1}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              {/* 編集モーダル */}
+              {editingRule && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">ルールを編集</h3>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ルール名
+                        </label>
+                        <input
+                          type="text"
+                          value={editingRule.name}
+                          onChange={(e) =>
+                            setEditingRule({ ...editingRule, name: e.target.value })
+                          }
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          トリガーキーワード（カンマ区切り）
+                        </label>
+                        <input
+                          type="text"
+                          value={editingRule.keywords.join(', ')}
+                          onChange={(e) =>
+                            setEditingRule({
+                              ...editingRule,
+                              keywords: e.target.value.split(',').map(k => k.trim()).filter(k => k),
+                            })
+                          }
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          追加するメッセージ
+                        </label>
+                        <textarea
+                          value={editingRule.message}
+                          onChange={(e) =>
+                            setEditingRule({ ...editingRule, message: e.target.value })
+                          }
+                          rows={4}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          挿入位置
+                        </label>
+                        <select
+                          value={editingRule.position}
+                          onChange={(e) =>
+                            setEditingRule({
+                              ...editingRule,
+                              position: e.target.value as 'end' | 'start',
+                            })
+                          }
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="end">回答の最後</option>
+                          <option value="start">回答の最初</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-6">
+                      <button
+                        onClick={updateAutoAppendRule}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                      >
+                        更新
+                      </button>
+                      <button
+                        onClick={() => setEditingRule(null)}
+                        className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
+                      >
+                        キャンセル
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 保存ボタン */}
+              {autoAppendRules.length > 0 && (
+                <button
+                  onClick={saveAutoAppendRules}
+                  disabled={saving}
+                  className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400"
+                >
+                  {saving ? '保存中...' : '自動追記ルールを保存'}
+                </button>
+              )}
+            </div>
+          )}
+
           {/* プレビュータブ */}
           {activeTab === 'preview' && (
             <div className="p-6 space-y-6">
@@ -896,6 +1307,85 @@ export default function AISettingsPage() {
                 <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                   <p className="text-sm text-gray-600">
                     ℹ️ カスタム項目が登録されていません。カスタム項目タブから追加できます。
+                  </p>
+                </div>
+              )}
+
+              {/* 自動追記ルールプレビュー */}
+              {promptParts && promptParts.auto_append_rules && promptParts.auto_append_rules.length > 0 && (
+                <div className="mb-6 p-6 bg-green-50 border border-green-200 rounded-lg">
+                  <h3 className="font-bold text-gray-900 mb-4 text-lg">
+                    🎯 自動追記ルールプレビュー（プロンプトに含まれる内容）
+                  </h3>
+                  <div className="space-y-4">
+                    {promptParts.auto_append_rules
+                      .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+                      .map((rule: any, index: number) => (
+                        <div
+                          key={rule.id || index}
+                          className={`p-5 rounded-lg border-2 shadow-sm ${
+                            rule.is_active
+                              ? 'bg-white border-green-300'
+                              : 'bg-gray-50 border-gray-300 opacity-60'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                rule.is_active
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-gray-200 text-gray-600'
+                              }`}
+                            >
+                              {rule.is_active ? '✓ 有効' : '無効'}
+                            </span>
+                            <h4 className="font-bold text-gray-900 text-lg">{rule.name}</h4>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div>
+                              <p className="text-xs text-gray-600 font-semibold mb-1">
+                                トリガーキーワード:
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {Array.isArray(rule.keywords) &&
+                                  rule.keywords.map((keyword: string, idx: number) => (
+                                    <span
+                                      key={idx}
+                                      className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                                    >
+                                      {keyword}
+                                    </span>
+                                  ))}
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="text-xs text-gray-600 font-semibold mb-1">
+                                追加メッセージ:
+                              </p>
+                              <div className="bg-gray-50 p-3 rounded text-sm text-gray-800 whitespace-pre-wrap">
+                                {rule.message}
+                              </div>
+                            </div>
+
+                            <div className="text-xs text-gray-600">
+                              📍 挿入位置:{' '}
+                              <span className="font-semibold">
+                                {rule.position === 'end' ? '回答の最後' : '回答の最初'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {promptParts && (!promptParts.auto_append_rules || promptParts.auto_append_rules.length === 0) && (
+                <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    ℹ️ 自動追記ルールが登録されていません。自動追記ルールタブから追加できます。
                   </p>
                 </div>
               )}
