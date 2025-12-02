@@ -20,10 +20,13 @@ export async function GET() {
         'prompt_custom_items',
       ]);
 
-    if (settingsError) throw settingsError;
+    if (settingsError) {
+      console.error('Settings fetch error:', settingsError);
+      throw settingsError;
+    }
 
-    // 設定をオブジェクトに変換
-    const settingsMap = settings.reduce((acc, item) => {
+    // 設定をオブジェクトに変換（デフォルト値を設定）
+    const settingsMap = (settings || []).reduce((acc, item) => {
       acc[item.setting_key] = item.setting_value;
       return acc;
     }, {} as Record<string, string>);
@@ -44,11 +47,14 @@ export async function GET() {
       .eq('is_active', true)
       .order('display_end_date', { ascending: true });
 
-    if (eventsError) throw eventsError;
+    if (eventsError) {
+      console.error('Events fetch error:', eventsError);
+      throw eventsError;
+    }
 
     // 3. 各イベントの開催日程とコース情報を取得
     const eventsWithDetails = await Promise.all(
-      events.map(async (event) => {
+      (events || []).map(async (event) => {
         // 開催日程を取得
         const { data: dates } = await supabaseAdmin
           .from('open_campus_dates')
@@ -112,7 +118,13 @@ export async function GET() {
       .join('\n');
 
     // 5. カスタム項目を取得
-    const customItems = JSON.parse(settingsMap.prompt_custom_items || '[]');
+    let customItems = [];
+    try {
+      customItems = JSON.parse(settingsMap.prompt_custom_items || '[]');
+    } catch (parseError) {
+      console.error('Failed to parse custom items:', parseError);
+      customItems = [];
+    }
     const customPrompts = customItems
       .sort((a: any, b: any) => a.order - b.order)
       .map((item: any) => `\n【${item.name}】\n${item.content}`)
@@ -158,8 +170,16 @@ ${settingsMap.prompt_closing_message || ''}`;
     });
   } catch (error) {
     console.error('Error generating AI prompt:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json(
-      { success: false, error: 'プロンプト生成に失敗しました' },
+      {
+        success: false,
+        error: 'プロンプト生成に失敗しました',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
