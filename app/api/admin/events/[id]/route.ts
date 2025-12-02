@@ -332,3 +332,124 @@ export async function PUT(
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
   }
 }
+
+// イベント削除（申込者が0人の場合のみ）
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: eventId } = await params;
+
+    console.log(`[Event DELETE] Deleting event: ${eventId}`);
+
+    // イベントが存在するか確認
+    const { data: existingEvent, error: checkError } = await supabaseAdmin
+      .from('open_campus_events')
+      .select('id, name')
+      .eq('id', eventId)
+      .single();
+
+    if (checkError || !existingEvent) {
+      return NextResponse.json(
+        { error: 'イベントが見つかりません' },
+        { status: 404 }
+      );
+    }
+
+    // イベントに紐づく日程を取得
+    const { data: existingDates } = await supabaseAdmin
+      .from('open_campus_dates')
+      .select('id')
+      .eq('event_id', eventId);
+
+    const dateIds = (existingDates || []).map(d => d.id);
+
+    // 申込者数を確認
+    if (dateIds.length > 0) {
+      const { count: applicantCount } = await supabaseAdmin
+        .from('applicant_visit_dates')
+        .select('applicant_id', { count: 'exact', head: true })
+        .in('visit_date_id', dateIds);
+
+      if ((applicantCount || 0) > 0) {
+        console.log(`[Event DELETE] Cannot delete event ${eventId}: has ${applicantCount} applicants`);
+        return NextResponse.json(
+          { error: '申込者がいるイベントは削除できません' },
+          { status: 400 }
+        );
+      }
+    }
+
+    console.log(`[Event DELETE] Event ${eventId} has no applicants, proceeding with deletion`);
+
+    // 1. コースと日程の関連を削除
+    const { data: existingCourses } = await supabaseAdmin
+      .from('event_courses')
+      .select('id')
+      .eq('event_id', eventId);
+
+    const courseIds = (existingCourses || []).map(c => c.id);
+
+    if (courseIds.length > 0) {
+      const { error: assocDeleteError } = await supabaseAdmin
+        .from('course_date_associations')
+        .delete()
+        .in('course_id', courseIds);
+
+      if (assocDeleteError) {
+        console.error('[Event DELETE] Error deleting course associations:', assocDeleteError);
+        throw assocDeleteError;
+      }
+    }
+
+    // 2. コースを削除
+    const { error: courseDeleteError } = await supabaseAdmin
+      .from('event_courses')
+      .delete()
+      .eq('event_id', eventId);
+
+    if (courseDeleteError) {
+      console.error('[Event DELETE] Error deleting courses:', courseDeleteError);
+      throw courseDeleteError;
+    }
+
+    // 3. 日程を削除
+    const { error: dateDeleteError } = await supabaseAdmin
+      .from('open_campus_dates')
+      .delete()
+      .eq('event_id', eventId);
+
+    if (dateDeleteError) {
+      console.error('[Event DELETE] Error deleting dates:', dateDeleteError);
+      throw dateDeleteError;
+    }
+
+    // 4. イベントを削除
+    const { error: eventDeleteError } = await supabaseAdmin
+      .from('open_campus_events')
+      .delete()
+      .eq('id', eventId);
+
+    if (eventDeleteError) {
+      console.error('[Event DELETE] Error deleting event:', eventDeleteError);
+      throw eventDeleteError;
+    }
+
+    console.log(`[Event DELETE] Successfully deleted event: ${existingEvent.name}`);
+
+    return NextResponse.json({
+      success: true,
+      message: 'イベントを削除しました',
+    });
+  } catch (error) {
+    console.error('[Event DELETE] Server error:', error);
+    return NextResponse.json(
+      {
+        error: 'イベントの削除に失敗しました',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}

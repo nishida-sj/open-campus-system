@@ -36,6 +36,8 @@ export default function AdminEventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   // フォーム状態
   const [formData, setFormData] = useState({
@@ -90,12 +92,6 @@ export default function AdminEventsPage() {
     }
 
     if (formData.dates.length === 0) {
-    // 必須項目チェック
-    if (!formData.display_end_date) {
-      alert('イベント一覧表示終了日を入力してください');
-      return;
-    }
-
       alert('少なくとも1つの開催日を追加してください');
       return;
     }
@@ -129,6 +125,8 @@ export default function AdminEventsPage() {
         }
       }
     }
+
+    setSubmitting(true);
 
     try {
       const response = await fetch('/api/admin/events', {
@@ -165,6 +163,36 @@ export default function AdminEventsPage() {
     } catch (error) {
       console.error('イベント作成エラー:', error);
       alert('エラーが発生しました');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // イベント削除
+  const handleDeleteEvent = async (eventId: string, eventName: string) => {
+    if (!confirm(`「${eventName}」を削除しますか？\nこの操作は取り消せません。`)) {
+      return;
+    }
+
+    setDeleting(eventId);
+
+    try {
+      const response = await fetch(`/api/admin/events/${eventId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        alert('イベントを削除しました');
+        fetchData();
+      } else {
+        const error = await response.json();
+        alert(`エラー: ${error.error || '削除に失敗しました'}`);
+      }
+    } catch (error) {
+      console.error('削除エラー:', error);
+      alert('エラーが発生しました');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -818,9 +846,14 @@ export default function AdminEventsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition duration-200"
+                  disabled={submitting}
+                  className={`px-6 py-2 ${
+                    submitting
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  } text-white rounded-lg font-semibold transition duration-200`}
                 >
-                  イベントを作成
+                  {submitting ? '作成中...' : 'イベントを作成'}
                 </button>
               </div>
             </form>
@@ -876,9 +909,22 @@ export default function AdminEventsPage() {
                           {event.total_applicants === 0 ? '編集・日程管理' : '編集'}
                         </button>
                         {event.total_applicants === 0 && (
-                          <span className="text-xs text-blue-600 font-medium">
-                            申込なし - 日程・コース変更可
-                          </span>
+                          <>
+                            <button
+                              onClick={() => handleDeleteEvent(event.id, event.name)}
+                              disabled={deleting === event.id}
+                              className={`text-sm ${
+                                deleting === event.id
+                                  ? 'bg-gray-400 cursor-not-allowed'
+                                  : 'bg-red-600 hover:bg-red-700'
+                              } text-white px-4 py-2 rounded-lg transition duration-200`}
+                            >
+                              {deleting === event.id ? '削除中...' : '削除'}
+                            </button>
+                            <span className="text-xs text-blue-600 font-medium">
+                              申込なし - 日程・コース変更可
+                            </span>
+                          </>
                         )}
                       </div>
                     </div>
