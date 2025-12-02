@@ -56,14 +56,6 @@ export default function AdminDashboard() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 認証チェック
-  useEffect(() => {
-    const isAuthenticated = sessionStorage.getItem('admin_authenticated');
-    if (!isAuthenticated) {
-      router.push('/admin/login');
-    }
-  }, [router]);
-
   // データ取得
   useEffect(() => {
     const fetchData = async () => {
@@ -177,12 +169,6 @@ export default function AdminDashboard() {
     document.body.removeChild(link);
   };
 
-  // ログアウト
-  const handleLogout = () => {
-    sessionStorage.removeItem('admin_authenticated');
-    router.push('/admin/login');
-  };
-
   // 日程情報を取得
   const getDateInfo = (dateId: string) => {
     const dateInfo = dates.find((d) => d.id === dateId);
@@ -231,85 +217,38 @@ export default function AdminDashboard() {
   const selectedEvent = events.find((e) => e.id === selectedEventId);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* ヘッダー */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div className="h-full bg-gray-100">
+      {/* ページヘッダー */}
+      <div className="bg-white shadow">
+        <div className="px-8 py-6">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">管理ダッシュボード</h1>
-            <button
-              onClick={handleLogout}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm transition duration-200"
-            >
-              ログアウト
-            </button>
+            <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
+
+            {/* イベント選択 */}
+            {events.length > 0 && (
+              <div className="flex items-center space-x-4">
+                <label htmlFor="event-select" className="text-sm font-medium text-gray-700">
+                  表示するイベント:
+                </label>
+                <select
+                  id="event-select"
+                  value={selectedEventId || ''}
+                  onChange={(e) => setSelectedEventId(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {events.map((event) => (
+                    <option key={event.id} value={event.id}>
+                      {event.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* ナビゲーションメニュー */}
-        <div className="mb-8 flex flex-wrap justify-between items-center gap-4">
-          <div className="flex gap-4">
-            <button
-              onClick={() => router.push('/')}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
-            >
-              イベント一覧ページ
-            </button>
-            <button
-              onClick={() => router.push('/admin/events')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
-            >
-              イベント管理
-            </button>
-            <button
-              onClick={() => router.push('/admin/confirmations')}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
-            >
-              申込確定管理
-            </button>
-            <button
-              onClick={() => router.push('/admin/confirmed-list')}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
-            >
-              確定者管理
-            </button>
-            <button
-              onClick={() => router.push('/admin/email-settings')}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
-            >
-              メール設定
-            </button>
-            <button
-              onClick={() => router.push('/admin/broadcast')}
-              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-200"
-            >
-              メッセージ配信
-            </button>
-          </div>
-
-          {/* イベント選択 */}
-          {events.length > 0 && (
-            <div className="flex items-center space-x-4">
-              <label htmlFor="event-select" className="text-sm font-medium text-gray-700">
-                表示するイベント:
-              </label>
-              <select
-                id="event-select"
-                value={selectedEventId || ''}
-                onChange={(e) => setSelectedEventId(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {events.map((event) => (
-                  <option key={event.id} value={event.id}>
-                    {event.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
+      <main className="p-8">
 
         {/* イベント情報 */}
         {selectedEvent && (
