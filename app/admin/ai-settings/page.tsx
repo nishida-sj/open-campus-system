@@ -802,7 +802,17 @@ export default function AISettingsPage() {
 
                         {event.overview && (
                           <div className="mb-3">
+                            <p className="text-sm font-semibold text-gray-600 mb-1">概要:</p>
                             <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">{event.overview}</p>
+                          </div>
+                        )}
+
+                        {event.description && (
+                          <div className="mb-3">
+                            <p className="text-sm font-semibold text-gray-600 mb-1">補足情報（管理用メモ）:</p>
+                            <p className="text-sm text-gray-700 bg-yellow-50 p-3 rounded border border-yellow-200">
+                              {event.description}
+                            </p>
                           </div>
                         )}
 

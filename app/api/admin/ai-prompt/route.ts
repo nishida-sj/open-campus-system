@@ -119,8 +119,14 @@ export async function GET() {
         .map((event) => {
           let prompt = `\n【${event.name}】\n`;
 
+          // 概要（ユーザー向け説明）
           if (event.overview) {
             prompt += `${event.overview}\n\n`;
+          }
+
+          // 説明（管理用メモ）- AIプロンプトに追加
+          if (event.description) {
+            prompt += `補足情報: ${event.description}\n\n`;
           }
 
           if (event.dates && event.dates.length > 0) {
