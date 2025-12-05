@@ -1,27 +1,43 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirectTo') || '/admin/events';
+
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const supabase = createClientComponentClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    // パスワードチェック
-    if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
-      // sessionStorageに認証情報を保存
-      sessionStorage.setItem('admin_authenticated', 'true');
-      // ダッシュボードへリダイレクト
-      router.push('/admin/dashboard');
-    } else {
-      setError('パスワードが正しくありません');
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setError('メールアドレスまたはパスワードが正しくありません');
+        setLoading(false);
+        return;
+      }
+
+      router.push(redirectTo);
+      router.refresh();
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('ログイン中にエラーが発生しました');
       setLoading(false);
     }
   };
@@ -61,6 +77,23 @@ export default function AdminLoginPage() {
               </div>
             )}
 
+            {/* メールアドレス */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                メールアドレス
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="admin@example.com"
+                autoFocus
+              />
+            </div>
+
             {/* パスワード入力 */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
@@ -74,7 +107,6 @@ export default function AdminLoginPage() {
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="••••••••"
-                autoFocus
               />
             </div>
 
@@ -87,13 +119,6 @@ export default function AdminLoginPage() {
               {loading ? 'ログイン中...' : 'ログイン'}
             </button>
           </form>
-
-          {/* 注意事項 */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center">
-              ⚠️ 本番環境では適切な認証システム（NextAuth.js等）の使用を推奨します
-            </p>
-          </div>
         </div>
 
         {/* フッター */}
