@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface Event {
   id: string;
@@ -34,6 +35,7 @@ interface Course {
 
 export default function AdminEventsPage() {
   const router = useRouter();
+  const supabase = createClientComponentClient();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -58,11 +60,14 @@ export default function AdminEventsPage() {
 
   // 認証チェック
   useEffect(() => {
-    const isAuthenticated = sessionStorage.getItem('admin_authenticated');
-    if (!isAuthenticated) {
-      router.push('/admin/login');
-    }
-  }, [router]);
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/admin/login?redirectTo=/admin/events');
+      }
+    };
+    checkAuth();
+  }, [router, supabase]);
 
   // データ取得
   useEffect(() => {
