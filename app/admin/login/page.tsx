@@ -48,7 +48,7 @@ function LoginForm() {
       }
 
       // ログイン成功を記録
-      await fetch('/api/auth/log-login', {
+      const logResponse = await fetch('/api/auth/log-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -56,7 +56,13 @@ function LoginForm() {
           success: true,
           session_id: data.session?.access_token || null,
         }),
-      }).catch(err => console.error('Failed to log login attempt:', err));
+      });
+
+      console.log('[LOGIN] Log login response:', {
+        status: logResponse.status,
+        ok: logResponse.ok,
+        body: await logResponse.json().catch(() => null),
+      });
 
       router.push(redirectTo);
       router.refresh();

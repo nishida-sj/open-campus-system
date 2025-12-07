@@ -276,39 +276,62 @@ export async function logLogin(
   sessionId?: string
 ): Promise<void> {
   try {
+    console.log('[logLogin] Starting login logging:', { email, success });
+
     // ユーザーIDを取得
     let userId: string | null = null;
     if (success) {
-      const { data } = await supabaseAdmin
+      const { data, error: userError } = await supabaseAdmin
         .from('users')
         .select('id')
         .eq('email', email)
         .single();
 
+      if (userError) {
+        console.error('[logLogin] Failed to fetch user ID:', userError);
+      }
+
       userId = data?.id || null;
+      console.log('[logLogin] User ID:', userId);
 
       // ログイン成功時はlast_login_atを更新
       if (userId) {
-        await supabaseAdmin
+        const { error: updateError } = await supabaseAdmin
           .from('users')
           .update({ last_login_at: new Date().toISOString() })
           .eq('id', userId);
+
+        if (updateError) {
+          console.error('[logLogin] Failed to update last_login_at:', updateError);
+        } else {
+          console.log('[logLogin] Updated last_login_at for user:', userId);
+        }
       }
     }
 
     // ログイン履歴を記録
-    await supabaseAdmin
+    const logData = {
+      user_id: userId,
+      email,
+      success,
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      failure_reason: failureReason,
+      session_id: sessionId,
+    };
+
+    console.log('[logLogin] Inserting log entry:', logData);
+
+    const { error: insertError } = await supabaseAdmin
       .from('login_logs')
-      .insert({
-        user_id: userId,
-        email,
-        success,
-        ip_address: ipAddress,
-        user_agent: userAgent,
-        failure_reason: failureReason,
-        session_id: sessionId,
-      });
+      .insert(logData);
+
+    if (insertError) {
+      console.error('[logLogin] Failed to insert login log:', insertError);
+    } else {
+      console.log('[logLogin] Successfully inserted login log');
+    }
   } catch (error) {
-    console.error('Failed to log login:', error);
+    console.error('[logLogin] Failed to log login:', error);
   }
 }
