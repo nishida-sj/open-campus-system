@@ -8,8 +8,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const supabase = createClientComponentClient();
 
-  // ログインページ、ユーザー管理、ログイン履歴ではサイドバーを表示しない
-  if (pathname === '/admin/login' || pathname === '/admin/users' || pathname === '/admin/login-logs') {
+  // ログインページではサイドバーを表示しない
+  if (pathname === '/admin/login') {
     return <>{children}</>;
   }
 
@@ -53,6 +53,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       name: 'AI設定',
       icon: '🤖',
       path: '/admin/ai-settings',
+    },
+    {
+      name: 'ユーザー管理',
+      icon: '👤',
+      path: '/admin/users',
+    },
+    {
+      name: 'ログイン履歴',
+      icon: '📋',
+      path: '/admin/login-logs',
     },
   ];
 
