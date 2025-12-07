@@ -32,13 +32,6 @@ export default function EmailSettingsPage() {
   });
   const [testEmail, setTestEmail] = useState('');
 
-  // 認証チェック
-  useEffect(() => {
-    const isAuthenticated = sessionStorage.getItem('admin_authenticated');
-    if (!isAuthenticated) {
-      router.push('/admin/login');
-    }
-  }, [router]);
 
   // 設定読み込み
   useEffect(() => {

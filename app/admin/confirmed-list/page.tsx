@@ -40,13 +40,6 @@ export default function ConfirmedListPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [dateFilter, setDateFilter] = useState<string>('all');
 
-  // 認証チェック
-  useEffect(() => {
-    const isAuthenticated = sessionStorage.getItem('admin_authenticated');
-    if (!isAuthenticated) {
-      router.push('/admin/login');
-    }
-  }, [router]);
 
   // イベント一覧取得
   useEffect(() => {

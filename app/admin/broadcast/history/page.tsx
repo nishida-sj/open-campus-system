@@ -23,13 +23,6 @@ export default function BroadcastHistoryPage() {
   const [selectedHistory, setSelectedHistory] = useState<BroadcastHistory | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // 認証チェック
-  useEffect(() => {
-    const isAuthenticated = sessionStorage.getItem('admin_authenticated');
-    if (!isAuthenticated) {
-      router.push('/admin/login');
-    }
-  }, [router]);
 
   // 履歴取得
   useEffect(() => {

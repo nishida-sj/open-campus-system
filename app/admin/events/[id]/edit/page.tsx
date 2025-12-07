@@ -69,13 +69,6 @@ export default function EventEditPage() {
     max_date_selections: 1,
   });
 
-  // 認証チェック
-  useEffect(() => {
-    const isAuthenticated = sessionStorage.getItem('admin_authenticated');
-    if (!isAuthenticated) {
-      router.push('/admin/login');
-    }
-  }, [router]);
 
   // イベントデータ取得
   useEffect(() => {
