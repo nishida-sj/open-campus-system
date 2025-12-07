@@ -53,51 +53,51 @@ export async function getCurrentUser(): Promise<UserWithRoles | null> {
       }
     );
 
-    // Supabase Authからセッションを取得
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Supabase Authからユーザー情報を取得（セキュアな方法）
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
-    if (sessionError) {
-      console.error('[Auth] Session error:', sessionError);
+    if (authError) {
+      console.error('[Auth] User auth error:', authError);
       return null;
     }
 
-    if (!session) {
-      console.log('[Auth] No session found');
+    if (!authUser) {
+      console.log('[Auth] No authenticated user found');
       return null;
     }
 
-    console.log('[Auth] Session found for:', session.user.email);
+    console.log('[Auth] Authenticated user:', authUser.email);
 
     // データベースからユーザー情報とロールを取得
-    const { data: user, error: userError } = await supabaseAdmin
+    const { data: dbUser, error: dbError } = await supabaseAdmin
       .from('users_with_roles')
       .select('*')
-      .eq('email', session.user.email)
+      .eq('email', authUser.email)
       .single();
 
-    if (userError) {
-      console.error('[Auth] User fetch error:', userError);
+    if (dbError) {
+      console.error('[Auth] User fetch error:', dbError);
       return null;
     }
 
-    if (!user) {
-      console.error('[Auth] User not found for email:', session.user.email);
+    if (!dbUser) {
+      console.error('[Auth] User not found for email:', authUser.email);
       return null;
     }
 
     console.log('[Auth] User found:', {
-      email: user.email,
-      max_role_level: user.max_role_level,
-      roles: user.roles
+      email: dbUser.email,
+      max_role_level: dbUser.max_role_level,
+      roles: dbUser.roles
     });
 
     // アクティブでないユーザーは拒否
-    if (!user.is_active) {
-      console.warn('[Auth] User is not active:', user.email);
+    if (!dbUser.is_active) {
+      console.warn('[Auth] User is not active:', dbUser.email);
       return null;
     }
 
-    return user as UserWithRoles;
+    return dbUser as UserWithRoles;
   } catch (error) {
     console.error('[Auth] getCurrentUser error:', error);
     return null;
@@ -132,51 +132,51 @@ export async function getCurrentUserFromRequest(): Promise<UserWithRoles | null>
       }
     );
 
-    // セッションを取得
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Supabase Authからユーザー情報を取得（セキュアな方法）
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
-    if (sessionError) {
-      console.error('[Auth API] Session error:', sessionError);
+    if (authError) {
+      console.error('[Auth API] User auth error:', authError);
       return null;
     }
 
-    if (!session) {
-      console.log('[Auth API] No session found');
+    if (!authUser) {
+      console.log('[Auth API] No authenticated user found');
       return null;
     }
 
-    console.log('[Auth API] Session found for:', session.user.email);
+    console.log('[Auth API] Authenticated user:', authUser.email);
 
     // データベースからユーザー情報とロールを取得
-    const { data: user, error: userError } = await supabaseAdmin
+    const { data: dbUser, error: dbError } = await supabaseAdmin
       .from('users_with_roles')
       .select('*')
-      .eq('email', session.user.email)
+      .eq('email', authUser.email)
       .single();
 
-    if (userError) {
-      console.error('[Auth API] User fetch error:', userError);
+    if (dbError) {
+      console.error('[Auth API] User fetch error:', dbError);
       return null;
     }
 
-    if (!user) {
-      console.error('[Auth API] User not found for email:', session.user.email);
+    if (!dbUser) {
+      console.error('[Auth API] User not found for email:', authUser.email);
       return null;
     }
 
     console.log('[Auth API] User found:', {
-      email: user.email,
-      max_role_level: user.max_role_level,
-      roles: user.roles
+      email: dbUser.email,
+      max_role_level: dbUser.max_role_level,
+      roles: dbUser.roles
     });
 
     // アクティブでないユーザーは拒否
-    if (!user.is_active) {
-      console.warn('[Auth API] User is not active:', user.email);
+    if (!dbUser.is_active) {
+      console.warn('[Auth API] User is not active:', dbUser.email);
       return null;
     }
 
-    return user as UserWithRoles;
+    return dbUser as UserWithRoles;
   } catch (error) {
     console.error('[Auth API] getCurrentUserFromRequest error:', error);
     return null;
