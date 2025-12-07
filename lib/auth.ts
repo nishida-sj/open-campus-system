@@ -3,7 +3,7 @@
  * サーバーサイドでの認証チェックとユーザー情報取得
  */
 
-import { createServerComponentClient, createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from './supabase';
 
@@ -30,7 +30,28 @@ export interface UserWithRoles {
  */
 export async function getCurrentUser(): Promise<UserWithRoles | null> {
   try {
-    const supabase = createServerComponentClient({ cookies });
+    const cookieStore = await cookies();
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Server Component内では set は呼ばれないため無視
+            }
+          },
+        },
+      }
+    );
 
     // Supabase Authからセッションを取得
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -88,8 +109,28 @@ export async function getCurrentUser(): Promise<UserWithRoles | null> {
  */
 export async function getCurrentUserFromRequest(): Promise<UserWithRoles | null> {
   try {
-    // Route Handler用のSupabaseクライアントを作成
-    const supabase = createRouteHandlerClient({ cookies });
+    const cookieStore = await cookies();
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Route Handler内でもsetは使用可能
+            }
+          },
+        },
+      }
+    );
 
     // セッションを取得
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
