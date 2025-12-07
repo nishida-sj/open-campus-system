@@ -54,7 +54,6 @@ function LoginForm() {
         body: JSON.stringify({
           email,
           success: true,
-          session_id: data.session?.access_token || null,
         }),
       });
 

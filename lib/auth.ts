@@ -314,10 +314,10 @@ export async function logLogin(
       user_id: userId,
       email,
       success,
-      ip_address: ipAddress,
-      user_agent: userAgent,
-      failure_reason: failureReason,
-      session_id: sessionId,
+      ip_address: ipAddress ? ipAddress.substring(0, 255) : undefined,
+      user_agent: userAgent ? userAgent.substring(0, 500) : undefined,
+      failure_reason: failureReason ? failureReason.substring(0, 500) : undefined,
+      session_id: sessionId ? sessionId.substring(0, 255) : undefined,
     };
 
     console.log('[logLogin] Inserting log entry:', logData);
