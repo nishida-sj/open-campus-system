@@ -18,7 +18,16 @@ export async function GET() {
     if (!currentUser || currentUser.max_role_level < ROLE_LEVELS.SUPER_ADMIN) {
       console.log('[DEBUG] Access denied - insufficient permissions');
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        {
+          error: 'Unauthorized',
+          debug: {
+            userExists: !!currentUser,
+            email: currentUser?.email || 'N/A',
+            maxRoleLevel: currentUser?.max_role_level || 'N/A',
+            requiredLevel: ROLE_LEVELS.SUPER_ADMIN,
+            isActive: currentUser?.is_active || 'N/A',
+          }
+        },
         { status: 403 }
       );
     }
