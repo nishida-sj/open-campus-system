@@ -349,7 +349,7 @@ export default function AdminEventsPage() {
             <Link href="/admin/events" className="text-blue-600 font-medium">
               イベント管理
             </Link>
-            <Link href="/admin/applicants" className="text-gray-600 hover:text-gray-900">
+            <Link href="/admin/dashboard" className="text-gray-600 hover:text-gray-900">
               申込者管理
             </Link>
             <Link href="/admin/ai-settings" className="text-gray-600 hover:text-gray-900">

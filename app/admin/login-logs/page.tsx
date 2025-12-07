@@ -26,11 +26,20 @@ export default function LoginLogsPage() {
       const res = await fetch('/api/admin/login-logs');
       const data = await res.json();
 
+      console.log('[LOGIN LOGS] API Response:', {
+        status: res.status,
+        ok: res.ok,
+        data: data,
+        logsCount: data.logs?.length || 0,
+      });
+
       if (res.ok) {
         setLogs(data.logs || []);
+      } else {
+        console.error('[LOGIN LOGS] API Error:', data);
       }
     } catch (error) {
-      console.error('Failed to fetch logs:', error);
+      console.error('[LOGIN LOGS] Failed to fetch logs:', error);
     } finally {
       setLoading(false);
     }

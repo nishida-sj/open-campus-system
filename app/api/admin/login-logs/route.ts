@@ -46,7 +46,12 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json({ logs });
+    console.log('[DEBUG] Successfully fetched login logs:', {
+      count: logs?.length || 0,
+      firstLog: logs?.[0] || null,
+    });
+
+    return NextResponse.json({ logs: logs || [] });
   } catch (error) {
     console.error('GET /api/admin/login-logs error:', error);
     return NextResponse.json(
