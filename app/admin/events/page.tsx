@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 interface Event {
   id: string;
@@ -327,11 +326,6 @@ export default function AdminEventsPage() {
     }));
   };
 
-  // ダッシュボードに戻る
-  const handleBackToDashboard = () => {
-    router.push('/admin/dashboard');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -342,41 +336,10 @@ export default function AdminEventsPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* ナビゲーションメニュー */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4">
-          <nav className="flex gap-6 py-4">
-            <Link href="/admin/events" className="text-blue-600 font-medium">
-              イベント管理
-            </Link>
-            <Link href="/admin/dashboard" className="text-gray-600 hover:text-gray-900">
-              申込者管理
-            </Link>
-            <Link href="/admin/ai-settings" className="text-gray-600 hover:text-gray-900">
-              AI設定
-            </Link>
-            <Link href="/admin/users" className="text-gray-600 hover:text-gray-900">
-              ユーザー管理
-            </Link>
-            <Link href="/admin/login-logs" className="text-gray-600 hover:text-gray-900">
-              ログイン履歴
-            </Link>
-          </nav>
-        </div>
-      </div>
-
       {/* ヘッダー */}
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">イベント管理</h1>
-            <button
-              onClick={handleBackToDashboard}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm transition duration-200"
-            >
-              ダッシュボードに戻る
-            </button>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900">イベント管理</h1>
         </div>
       </header>
 
