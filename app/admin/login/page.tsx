@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
-export default function AdminLoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo') || '/admin/events';
@@ -22,21 +22,55 @@ export default function AdminLoginPage() {
     setError('');
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) {
+        // ログイン失敗を記録
+        await fetch('/api/auth/log-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            success: false,
+            failure_reason: signInError.message,
+          }),
+        }).catch(err => console.error('Failed to log login attempt:', err));
+
         setError('メールアドレスまたはパスワードが正しくありません');
         setLoading(false);
         return;
       }
 
+      // ログイン成功を記録
+      await fetch('/api/auth/log-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          success: true,
+          session_id: data.session?.access_token || null,
+        }),
+      }).catch(err => console.error('Failed to log login attempt:', err));
+
       router.push(redirectTo);
       router.refresh();
     } catch (error) {
       console.error('Login error:', error);
+
+      // ログイン失敗を記録（予期しないエラー）
+      await fetch('/api/auth/log-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          success: false,
+          failure_reason: 'Unexpected error during login',
+        }),
+      }).catch(err => console.error('Failed to log login attempt:', err));
+
       setError('ログイン中にエラーが発生しました');
       setLoading(false);
     }
@@ -132,5 +166,17 @@ export default function AdminLoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
+        <p className="text-white">読み込み中...</p>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
