@@ -2,34 +2,52 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const supabase = createClientComponentClient();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // 認証チェック
   useEffect(() => {
-    const auth = sessionStorage.getItem('admin_authenticated');
-    if (!auth && pathname !== '/admin/login') {
-      router.push('/admin/login');
-    } else {
-      setIsAuthenticated(true);
-    }
-  }, [pathname, router]);
+    const checkAuth = async () => {
+      if (pathname === '/admin/login' || pathname === '/admin/users' || pathname === '/admin/login-logs') {
+        setIsAuthenticated(true);
+        setLoading(false);
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/admin/login');
+        setLoading(false);
+      } else {
+        setIsAuthenticated(true);
+        setLoading(false);
+      }
+    };
+    checkAuth();
+  }, [pathname, router, supabase]);
 
   // ログインページではサイドバーを表示しない
-  if (pathname === '/admin/login') {
+  if (pathname === '/admin/login' || pathname === '/admin/users' || pathname === '/admin/login-logs') {
     return <>{children}</>;
   }
 
   // 認証チェック中は何も表示しない
-  if (!isAuthenticated) {
-    return null;
+  if (loading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-gray-600">読み込み中...</div>
+      </div>
+    );
   }
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('admin_authenticated');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     router.push('/admin/login');
   };
 
