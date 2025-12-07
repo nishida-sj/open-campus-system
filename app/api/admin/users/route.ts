@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getCurrentUser, ROLE_LEVELS } from '@/lib/auth';
+import { getCurrentUserFromRequest, ROLE_LEVELS } from '@/lib/auth';
 
 // ユーザー一覧取得
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // 権限チェック：スーパー管理者のみ
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserFromRequest(request);
     if (!currentUser || currentUser.max_role_level < ROLE_LEVELS.SUPER_ADMIN) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -42,7 +42,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     // 権限チェック：スーパー管理者のみ
-    const currentUser = await getCurrentUser();
+    const currentUser = await getCurrentUserFromRequest(request);
     if (!currentUser || currentUser.max_role_level < ROLE_LEVELS.SUPER_ADMIN) {
       return NextResponse.json(
         { error: 'Unauthorized' },
