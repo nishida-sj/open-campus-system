@@ -34,9 +34,17 @@ export async function getCurrentUser(): Promise<UserWithRoles | null> {
     // Supabase Authからセッションを取得
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    if (sessionError || !session) {
+    if (sessionError) {
+      console.error('[Auth] Session error:', sessionError);
       return null;
     }
+
+    if (!session) {
+      console.log('[Auth] No session found');
+      return null;
+    }
+
+    console.log('[Auth] Session found for:', session.user.email);
 
     // データベースからユーザー情報とロールを取得
     const { data: user, error: userError } = await supabaseAdmin
@@ -45,19 +53,31 @@ export async function getCurrentUser(): Promise<UserWithRoles | null> {
       .eq('email', session.user.email)
       .single();
 
-    if (userError || !user) {
-      console.error('User fetch error:', userError);
+    if (userError) {
+      console.error('[Auth] User fetch error:', userError);
       return null;
     }
 
+    if (!user) {
+      console.error('[Auth] User not found for email:', session.user.email);
+      return null;
+    }
+
+    console.log('[Auth] User found:', {
+      email: user.email,
+      max_role_level: user.max_role_level,
+      roles: user.roles
+    });
+
     // アクティブでないユーザーは拒否
     if (!user.is_active) {
+      console.warn('[Auth] User is not active:', user.email);
       return null;
     }
 
     return user as UserWithRoles;
   } catch (error) {
-    console.error('getCurrentUser error:', error);
+    console.error('[Auth] getCurrentUser error:', error);
     return null;
   }
 }

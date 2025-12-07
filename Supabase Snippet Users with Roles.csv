@@ -1,0 +1,3 @@
+id,email,full_name,is_active,must_change_password,last_login_at,created_at,updated_at,roles,max_role_level
+093ebfb2-2dfb-4318-abd4-0ab2e6a83e1e,m-nishida@nishida-sj.com,m-nishida,true,true,null,2025-12-07 01:57:16.58855+00,2025-12-07 01:57:16.58855+00,"[{""role_id"":""a78ae36e-7af3-471c-b985-207bb71d8762"",""role_name"":""super_admin"",""display_name"":""スーパー管理者"",""level"":100,""assigned_at"":""2025-12-07T01:57:16.58855+00:00""}]",100
+ffde4af0-c90b-481e-a8eb-673ec9085bdc,admin@example.com,初期管理者,true,true,null,2025-12-05 07:51:52.908438+00,2025-12-05 07:51:52.908438+00,"[{""role_id"":""a78ae36e-7af3-471c-b985-207bb71d8762"",""role_name"":""super_admin"",""display_name"":""スーパー管理者"",""level"":100,""assigned_at"":""2025-12-05T07:51:52.908438+00:00""}]",100
