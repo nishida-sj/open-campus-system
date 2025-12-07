@@ -193,15 +193,6 @@ export default function AdminDashboard() {
   const selectedEventDates = dates.filter((d) => d.event_id === selectedEventId);
   const selectedEventDateIds = selectedEventDates.map((d) => d.id);
 
-  // デバッグ用
-  console.log('Filter Debug:', {
-    selectedEventId,
-    totalDates: dates.length,
-    selectedEventDates: selectedEventDates.length,
-    selectedEventDateIds,
-    totalApplicants: applicants.length,
-  });
-
   // 選択されたイベントの申込者のみフィルタリング
   const filteredApplicants = selectedEventId
     ? applicants.filter((a) => selectedEventDateIds.includes(a.visit_date_id))

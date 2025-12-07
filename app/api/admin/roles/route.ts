@@ -3,10 +3,10 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { getCurrentUserFromRequest, ROLE_LEVELS } from '@/lib/auth';
 
 // ロール一覧取得
-export async function GET(request: Request) {
+export async function GET() {
   try {
     // 権限チェック：スーパー管理者のみ
-    const currentUser = await getCurrentUserFromRequest(request);
+    const currentUser = await getCurrentUserFromRequest();
     if (!currentUser || currentUser.max_role_level < ROLE_LEVELS.SUPER_ADMIN) {
       return NextResponse.json(
         { error: 'Unauthorized' },

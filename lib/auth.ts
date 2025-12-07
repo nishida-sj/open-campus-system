@@ -3,7 +3,7 @@
  * サーバーサイドでの認証チェックとユーザー情報取得
  */
 
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerComponentClient, createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from './supabase';
 
@@ -84,48 +84,33 @@ export async function getCurrentUser(): Promise<UserWithRoles | null> {
 }
 
 /**
- * API Route用: Requestオブジェクトから認証情報を取得
+ * API Route用: Route Handlerから認証情報を取得
  */
-export async function getCurrentUserFromRequest(request: Request): Promise<UserWithRoles | null> {
+export async function getCurrentUserFromRequest(): Promise<UserWithRoles | null> {
   try {
-    // Requestからcookieヘッダーを取得
-    const cookieHeader = request.headers.get('cookie') || '';
+    // Route Handler用のSupabaseクライアントを作成
+    const supabase = createRouteHandlerClient({ cookies });
 
-    console.log('[Auth API] Cookie header present:', !!cookieHeader);
+    // セッションを取得
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    // supabase-auth-tokenを抽出
-    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split('=');
-      acc[key] = value;
-      return acc;
-    }, {} as Record<string, string>);
-
-    const accessToken = cookies['sb-access-token'] ||
-                       cookies['sb-localhost-auth-token'] ||
-                       cookies['supabase-auth-token'];
-
-    if (!accessToken) {
-      console.log('[Auth API] No access token found in cookies');
+    if (sessionError) {
+      console.error('[Auth API] Session error:', sessionError);
       return null;
     }
 
-    console.log('[Auth API] Access token found');
-
-    // アクセストークンからユーザー情報を取得
-    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(accessToken);
-
-    if (authError || !authUser) {
-      console.error('[Auth API] Auth error:', authError);
+    if (!session) {
+      console.log('[Auth API] No session found');
       return null;
     }
 
-    console.log('[Auth API] Auth user found:', authUser.email);
+    console.log('[Auth API] Session found for:', session.user.email);
 
     // データベースからユーザー情報とロールを取得
     const { data: user, error: userError } = await supabaseAdmin
       .from('users_with_roles')
       .select('*')
-      .eq('email', authUser.email)
+      .eq('email', session.user.email)
       .single();
 
     if (userError) {
@@ -134,7 +119,7 @@ export async function getCurrentUserFromRequest(request: Request): Promise<UserW
     }
 
     if (!user) {
-      console.error('[Auth API] User not found for email:', authUser.email);
+      console.error('[Auth API] User not found for email:', session.user.email);
       return null;
     }
 
