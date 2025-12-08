@@ -49,6 +49,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log('受信したbody:', body);
+    console.log('max_date_selections:', body.max_date_selections);
     const { name, description, overview, confirmation_message, display_end_date, max_date_selections, is_active, allow_multiple_dates, allow_multiple_candidates, dates, courses } = body;
 
     // バリデーション
@@ -104,10 +106,10 @@ export async function POST(request: Request) {
         overview: overview || null,
         confirmation_message: confirmation_message || null,
         display_end_date: display_end_date || null,
-        max_date_selections: max_date_selections || 1,
+        max_date_selections: max_date_selections ?? 1,
         is_active: is_active !== undefined ? is_active : true,
-        allow_multiple_dates: allow_multiple_dates || false,
-        allow_multiple_candidates: allow_multiple_candidates || false,
+        allow_multiple_dates: allow_multiple_dates ?? false,
+        allow_multiple_candidates: allow_multiple_candidates ?? false,
       })
       .select()
       .single();

@@ -122,6 +122,9 @@ export default function AdminEventsPage() {
     setSubmitting(true);
 
     try {
+      console.log('送信するformData:', formData);
+      console.log('max_date_selections:', formData.max_date_selections);
+
       const response = await fetch('/api/admin/events', {
         method: 'POST',
         headers: {
