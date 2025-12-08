@@ -249,6 +249,16 @@ export async function POST(request: Request) {
       try {
         if (alreadyConfirmed) {
           // 既に確定済みの場合はコース情報のみ更新
+          // 古いコース情報を取得
+          const { data: oldConfirmation } = await supabaseAdmin
+            .from('confirmed_participations')
+            .select('confirmed_course_id')
+            .eq('id', alreadyConfirmed.id)
+            .single();
+
+          const oldCourseId = oldConfirmation?.confirmed_course_id;
+
+          // コース情報を更新
           const { error: updateError } = await supabaseAdmin
             .from('confirmed_participations')
             .update({
@@ -259,6 +269,23 @@ export async function POST(request: Request) {
 
           if (updateError) {
             throw updateError;
+          }
+
+          // コース別カウントを更新
+          if (oldCourseId && oldCourseId !== confirmedCourseId) {
+            // 古いコースのカウントを減らす
+            await supabaseAdmin.rpc('decrement_course_date_count', {
+              p_date_id: confirmedDateId,
+              p_course_id: oldCourseId,
+            });
+          }
+
+          if (confirmedCourseId && oldCourseId !== confirmedCourseId) {
+            // 新しいコースのカウントを増やす
+            await supabaseAdmin.rpc('increment_course_date_count', {
+              p_date_id: confirmedDateId,
+              p_course_id: confirmedCourseId,
+            });
           }
 
           successResults.push({
@@ -288,10 +315,19 @@ export async function POST(request: Request) {
             .update({ status: 'confirmed' })
             .eq('id', row.applicant_id);
 
-          // 日程のカウントを増加
-          await supabaseAdmin.rpc('increment_visit_count', {
-            date_id: confirmedDateId,
-          });
+          // カウントを増加
+          if (confirmedCourseId) {
+            // コースIDがある場合はコース別カウントを増やす（日程のカウントも自動更新される）
+            await supabaseAdmin.rpc('increment_course_date_count', {
+              p_date_id: confirmedDateId,
+              p_course_id: confirmedCourseId,
+            });
+          } else {
+            // コースIDがない場合は日程のカウントのみ増やす
+            await supabaseAdmin.rpc('increment_visit_count', {
+              date_id: confirmedDateId,
+            });
+          }
 
           successResults.push({
             row: rowNumber,

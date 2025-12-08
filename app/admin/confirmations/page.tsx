@@ -408,7 +408,7 @@ export default function ConfirmationsPage() {
           body: JSON.stringify({
             applicant_id: applicantId,
             confirmed_date_id: dateId,
-            confirmed_course_id: row?.course_name ? null : null, // course_idが必要な場合は適切に設定
+            confirmed_course_id: row?.course_id || null,
           }),
         });
 
