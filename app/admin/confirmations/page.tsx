@@ -80,6 +80,14 @@ export default function ConfirmationsPage() {
   // チェックボックス選択状態（applicant_id + date_id をキーとする）
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
+  // ソート関連
+  type SortField = 'name' | 'kana_name' | 'school_name' | 'grade' | 'date' | 'course_name' | 'status';
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // 検索
+  const [searchQuery, setSearchQuery] = useState('');
+
   // CSV一括確定関連
   const [showCSVDialog, setShowCSVDialog] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -205,10 +213,97 @@ export default function ConfirmationsPage() {
       filtered = filtered.filter((row) => row.is_confirmed);
     }
 
+    // 検索フィルター
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((row) => {
+        return (
+          row.name.toLowerCase().includes(query) ||
+          (row.kana_name && row.kana_name.toLowerCase().includes(query)) ||
+          row.school_name.toLowerCase().includes(query) ||
+          row.grade.toLowerCase().includes(query) ||
+          (row.course_name && row.course_name.toLowerCase().includes(query))
+        );
+      });
+    }
+
     return filtered;
   };
 
-  const tableRows = filterTableRows(generateTableRows());
+  // ソート適用
+  const sortTableRows = (rows: TableRow[]): TableRow[] => {
+    return [...rows].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name;
+          bValue = b.name;
+          break;
+        case 'kana_name':
+          aValue = a.kana_name || '';
+          bValue = b.kana_name || '';
+          break;
+        case 'school_name':
+          aValue = a.school_name;
+          bValue = b.school_name;
+          break;
+        case 'grade':
+          aValue = a.grade;
+          bValue = b.grade;
+          break;
+        case 'date':
+          aValue = new Date(a.date).getTime();
+          bValue = new Date(b.date).getTime();
+          break;
+        case 'course_name':
+          aValue = a.course_name || '';
+          bValue = b.course_name || '';
+          break;
+        case 'status':
+          aValue = a.is_confirmed ? 1 : 0;
+          bValue = b.is_confirmed ? 1 : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        const comparison = aValue.localeCompare(bValue, 'ja');
+        return sortOrder === 'asc' ? comparison : -comparison;
+      } else {
+        const comparison = aValue - bValue;
+        return sortOrder === 'asc' ? comparison : -comparison;
+      }
+    });
+  };
+
+  const tableRows = sortTableRows(filterTableRows(generateTableRows()));
+
+  // ソート変更ハンドラー
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // 同じフィールドをクリックした場合は昇順/降順を切り替え
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // 別のフィールドをクリックした場合は昇順でソート
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  // ソートアイコン表示
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return <span className="text-gray-400 ml-1">⇅</span>;
+    }
+    return sortOrder === 'asc' ? (
+      <span className="text-blue-600 ml-1">▲</span>
+    ) : (
+      <span className="text-blue-600 ml-1">▼</span>
+    );
+  };
 
   // チェックボックスのトグル
   const toggleRowSelection = (applicantId: string, dateId: string) => {
@@ -557,6 +652,33 @@ export default function ConfirmationsPage() {
           </div>
         </div>
 
+        {/* 検索ボックス */}
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+                検索
+              </label>
+              <input
+                type="text"
+                id="search"
+                placeholder="氏名、ふりがな、学校名、学年、コースで検索..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="mt-7 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm transition duration-200"
+              >
+                クリア
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* CSV一括確定 */}
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between">
@@ -632,26 +754,68 @@ export default function ConfirmationsPage() {
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    氏名
+                  <th
+                    onClick={() => handleSort('name')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  >
+                    <div className="flex items-center">
+                      氏名
+                      <SortIcon field="name" />
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ふりがな
+                  <th
+                    onClick={() => handleSort('kana_name')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  >
+                    <div className="flex items-center">
+                      ふりがな
+                      <SortIcon field="kana_name" />
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    学校名
+                  <th
+                    onClick={() => handleSort('school_name')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  >
+                    <div className="flex items-center">
+                      学校名
+                      <SortIcon field="school_name" />
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    学年
+                  <th
+                    onClick={() => handleSort('grade')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  >
+                    <div className="flex items-center">
+                      学年
+                      <SortIcon field="grade" />
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    希望日程
+                  <th
+                    onClick={() => handleSort('date')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  >
+                    <div className="flex items-center">
+                      希望日程
+                      <SortIcon field="date" />
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    コース
+                  <th
+                    onClick={() => handleSort('course_name')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  >
+                    <div className="flex items-center">
+                      コース
+                      <SortIcon field="course_name" />
+                    </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ステータス
+                  <th
+                    onClick={() => handleSort('status')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  >
+                    <div className="flex items-center">
+                      ステータス
+                      <SortIcon field="status" />
+                    </div>
                   </th>
                 </tr>
               </thead>
