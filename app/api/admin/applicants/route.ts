@@ -45,3 +45,53 @@ export async function GET() {
     );
   }
 }
+
+// 申込者の一括削除
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json();
+    const { applicant_ids } = body;
+
+    if (!applicant_ids || !Array.isArray(applicant_ids) || applicant_ids.length === 0) {
+      return NextResponse.json(
+        { error: '削除する申込者IDが必要です' },
+        { status: 400 }
+      );
+    }
+
+    // 削除ログを記録
+    const ipAddress = request.headers.get('x-forwarded-for') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || '';
+
+    for (const applicantId of applicant_ids) {
+      await supabaseAdmin.from('application_logs').insert({
+        applicant_id: applicantId,
+        action: 'deleted',
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      });
+    }
+
+    // 申込者を削除（関連データはカスケード削除される）
+    const { error: deleteError } = await supabaseAdmin
+      .from('applicants')
+      .delete()
+      .in('id', applicant_ids);
+
+    if (deleteError) {
+      console.error('削除エラー:', deleteError);
+      return NextResponse.json(
+        { error: '削除に失敗しました' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      deleted_count: applicant_ids.length
+    });
+  } catch (error) {
+    console.error('サーバーエラー:', error);
+    return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
+  }
+}

@@ -85,6 +85,7 @@ export async function GET(request: Request) {
           ...applicant,
           selected_dates: [],
           confirmed_dates: [],
+          is_modified: false,
         });
       }
 
@@ -99,6 +100,24 @@ export async function GET(request: Request) {
         course_name: course?.name || null,
         priority: visit.priority,
       });
+    }
+
+    // 編集されたかチェック
+    if (applicantIds.length > 0) {
+      const { data: modifiedLogs } = await supabaseAdmin
+        .from('application_logs')
+        .select('applicant_id')
+        .in('applicant_id', applicantIds)
+        .eq('action', 'modified');
+
+      if (modifiedLogs && modifiedLogs.length > 0) {
+        const modifiedSet = new Set(modifiedLogs.map((log: any) => log.applicant_id));
+        for (const [applicantId, applicantData] of applicantMap.entries()) {
+          if (modifiedSet.has(applicantId)) {
+            (applicantData as any).is_modified = true;
+          }
+        }
+      }
     }
 
     // 確定情報を追加

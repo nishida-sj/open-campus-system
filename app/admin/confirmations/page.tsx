@@ -17,6 +17,7 @@ interface Applicant {
   guardian_phone: string | null;
   status: string;
   created_at: string;
+  is_modified: boolean;
   selected_dates: {
     date_id: string;
     date: string;
@@ -66,8 +67,10 @@ interface TableRow {
   date_id: string;
   date: string;
   course_name: string | null;
+  course_id: string | null;
   priority: number;
   is_confirmed: boolean;
+  is_modified: boolean;
   confirmed_at?: string;
 }
 
@@ -103,6 +106,12 @@ export default function ConfirmationsPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvResults, setCsvResults] = useState<any>(null);
   const [isProcessingCSV, setIsProcessingCSV] = useState(false);
+
+  // 編集ダイアログ関連
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingApplicant, setEditingApplicant] = useState<TableRow | null>(null);
+  const [editDateId, setEditDateId] = useState<string>('');
+  const [editCourseId, setEditCourseId] = useState<string>('');
 
   // イベント一覧取得
   useEffect(() => {
@@ -178,8 +187,10 @@ export default function ConfirmationsPage() {
           date_id: selectedDate.date_id,
           date: selectedDate.date,
           course_name: selectedDate.course_name,
+          course_id: selectedDate.course_id,
           priority: selectedDate.priority,
           is_confirmed: isConfirmed,
+          is_modified: applicant.is_modified || false,
           confirmed_at: confirmedDate?.confirmed_at,
         });
       });
@@ -203,8 +214,10 @@ export default function ConfirmationsPage() {
           date_id: selectedDate.date_id,
           date: selectedDate.date,
           course_name: selectedDate.course_name,
+          course_id: selectedDate.course_id,
           priority: selectedDate.priority,
           is_confirmed: isConfirmed,
+          is_modified: applicant.is_modified || false,
           confirmed_at: confirmedDate?.confirmed_at,
         });
       });
@@ -454,6 +467,95 @@ export default function ConfirmationsPage() {
       setSelectedRows(new Set());
     } catch (error) {
       console.error('一括解除エラー:', error);
+      alert('エラーが発生しました');
+    } finally {
+      setIsProcessing(false);
+      setProcessingMessage('');
+    }
+  };
+
+  // 申込者の一括削除
+  const handleBulkDelete = async () => {
+    if (selectedRows.size === 0) {
+      alert('削除する申込を選択してください');
+      return;
+    }
+
+    // 選択された申込者IDを取得（重複を除く）
+    const selectedApplicantIds = Array.from(new Set(
+      Array.from(selectedRows).map((key) => key.split('_')[0])
+    ));
+
+    const confirmationMessage = `選択した${selectedApplicantIds.length}名の申込者を完全に削除しますか？\n\n※この操作は取り消せません`;
+    if (!confirm(confirmationMessage)) return;
+
+    setIsProcessing(true);
+    setProcessingMessage(`${selectedApplicantIds.length}名の申込者を削除しています...`);
+
+    try {
+      const response = await fetch('/api/admin/applicants', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicant_ids: selectedApplicantIds,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`削除に失敗しました: ${error.error || '不明なエラー'}`);
+      } else {
+        const result = await response.json();
+        alert(`${result.deleted_count}名の申込者を削除しました`);
+      }
+
+      setProcessingMessage('データを更新しています...');
+      await fetchData();
+      setSelectedRows(new Set());
+    } catch (error) {
+      console.error('削除エラー:', error);
+      alert('エラーが発生しました');
+    } finally {
+      setIsProcessing(false);
+      setProcessingMessage('');
+    }
+  };
+
+  // 編集ダイアログを開く
+  const handleOpenEditDialog = (row: TableRow) => {
+    setEditingApplicant(row);
+    setEditDateId(row.date_id);
+    setEditCourseId(row.course_id || '');
+    setShowEditDialog(true);
+  };
+
+  // 編集を保存
+  const handleSaveEdit = async () => {
+    if (!editingApplicant) return;
+
+    setIsProcessing(true);
+    setProcessingMessage('変更を保存しています...');
+
+    try {
+      const response = await fetch(`/api/admin/applicants/${editingApplicant.applicant_id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visit_date_id: editDateId,
+          selected_course_id: editCourseId || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`更新に失敗しました: ${error.error || '不明なエラー'}`);
+      } else {
+        alert('申込者情報を更新しました');
+        setShowEditDialog(false);
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('更新エラー:', error);
       alert('エラーが発生しました');
     } finally {
       setIsProcessing(false);
@@ -783,6 +885,13 @@ export default function ConfirmationsPage() {
                 選択を解除
               </button>
               <button
+                onClick={handleBulkDelete}
+                disabled={selectedRows.size === 0 || isProcessing}
+                className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition duration-200"
+              >
+                選択を削除
+              </button>
+              <button
                 onClick={() => setSelectedRows(new Set())}
                 disabled={selectedRows.size === 0 || isProcessing}
                 className="px-4 py-2 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-700 rounded-lg transition duration-200"
@@ -873,12 +982,15 @@ export default function ConfirmationsPage() {
                       <SortIcon field="status" />
                     </div>
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    操作
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {tableRows.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
                       該当する申込はありません
                     </td>
                   </tr>
@@ -886,11 +998,12 @@ export default function ConfirmationsPage() {
                   tableRows.map((row) => {
                     const key = `${row.applicant_id}_${row.date_id}`;
                     const isSelected = selectedRows.has(key);
+                    const rowBgColor = row.is_modified ? 'bg-yellow-50' : '';
 
                     return (
                       <tr
                         key={key}
-                        className={`${isSelected ? 'bg-blue-50' : ''} hover:bg-gray-50 transition`}
+                        className={`${isSelected ? 'bg-blue-50' : rowBgColor} hover:bg-gray-50 transition`}
                       >
                         <td className="px-3 py-4 whitespace-nowrap">
                           <input
@@ -962,6 +1075,17 @@ export default function ConfirmationsPage() {
                             </span>
                           )}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button
+                            onClick={() => handleOpenEditDialog(row)}
+                            className="text-blue-600 hover:text-blue-800 font-medium"
+                            title="編集"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        </td>
                       </tr>
                     );
                   })
@@ -971,6 +1095,87 @@ export default function ConfirmationsPage() {
           </div>
         </div>
       </main>
+
+      {/* 編集ダイアログ */}
+      {showEditDialog && editingApplicant && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">申込者情報の編集</h2>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-sm font-semibold text-blue-900 mb-2">申込者情報</p>
+              <p className="text-sm text-blue-800">
+                氏名: {editingApplicant.name}
+                {editingApplicant.kana_name && ` (${editingApplicant.kana_name})`}
+              </p>
+              <p className="text-sm text-blue-800">
+                学校: {editingApplicant.school_name} / {editingApplicant.grade}
+              </p>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  参加日程 <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={editDateId}
+                  onChange={(e) => setEditDateId(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {availableDates.map((date) => (
+                    <option key={date.id} value={date.id}>
+                      {new Date(date.date).toLocaleDateString('ja-JP', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'long',
+                      })} - 定員{date.capacity}名 (現在{date.current_count}名)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  コース
+                </label>
+                <select
+                  value={editCourseId}
+                  onChange={(e) => setEditCourseId(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">コースを選択しない</option>
+                  {availableDates
+                    .find((d) => d.id === editDateId)
+                    ?.course_capacities?.map((course) => (
+                      <option key={course.course_id} value={course.course_id}>
+                        {course.course_name}
+                        {course.capacity && ` (定員: ${course.capacity}名)`}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowEditDialog(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition duration-200"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={!editDateId}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition duration-200"
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CSVアップロードダイアログ */}
       {showCSVDialog && (
