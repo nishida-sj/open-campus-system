@@ -85,6 +85,14 @@ export async function PATCH(
     }
 
     // 確定情報も更新
+    // まず既存の確定情報を取得
+    const { data: existingConfirmation } = await supabaseAdmin
+      .from('confirmed_participations')
+      .select('confirmed_date_id, confirmed_course_id')
+      .eq('applicant_id', applicantId)
+      .eq('confirmed_date_id', applicant.visit_date_id)
+      .single();
+
     const { error: updateConfirmationError } = await supabaseAdmin
       .from('confirmed_participations')
       .update({
@@ -96,6 +104,36 @@ export async function PATCH(
 
     if (updateConfirmationError) {
       console.error('確定情報更新エラー:', updateConfirmationError);
+    }
+
+    // コース別カウントを更新（確定情報が存在する場合のみ）
+    if (existingConfirmation) {
+      const oldDateId = existingConfirmation.confirmed_date_id;
+      const oldCourseId = existingConfirmation.confirmed_course_id;
+
+      // 古い日程・コースのカウントを減らす
+      if (oldCourseId) {
+        await supabaseAdmin.rpc('decrement_course_date_count', {
+          p_date_id: oldDateId,
+          p_course_id: oldCourseId,
+        });
+      } else {
+        await supabaseAdmin.rpc('decrement_visit_count', {
+          date_id: oldDateId,
+        });
+      }
+
+      // 新しい日程・コースのカウントを増やす
+      if (selected_course_id) {
+        await supabaseAdmin.rpc('increment_course_date_count', {
+          p_date_id: visit_date_id,
+          p_course_id: selected_course_id,
+        });
+      } else {
+        await supabaseAdmin.rpc('increment_visit_count', {
+          date_id: visit_date_id,
+        });
+      }
     }
 
     // 編集ログを記録

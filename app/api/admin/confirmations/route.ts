@@ -309,6 +309,16 @@ export async function POST(request: Request) {
 
     if (alreadyConfirmed) {
       // 既に確定済みの場合はコース情報のみ更新
+      // 古いコース情報を取得
+      const { data: oldConfirmation } = await supabaseAdmin
+        .from('confirmed_participations')
+        .select('confirmed_course_id')
+        .eq('id', alreadyConfirmed.id)
+        .single();
+
+      const oldCourseId = oldConfirmation?.confirmed_course_id;
+
+      // コース情報を更新
       const { error: updateError } = await supabaseAdmin
         .from('confirmed_participations')
         .update({
@@ -323,6 +333,23 @@ export async function POST(request: Request) {
           { error: 'コース情報の更新に失敗しました' },
           { status: 500 }
         );
+      }
+
+      // コース別カウントを更新
+      if (oldCourseId && oldCourseId !== confirmed_course_id) {
+        // 古いコースのカウントを減らす
+        await supabaseAdmin.rpc('decrement_course_date_count', {
+          p_date_id: confirmed_date_id,
+          p_course_id: oldCourseId,
+        });
+      }
+
+      if (confirmed_course_id && oldCourseId !== confirmed_course_id) {
+        // 新しいコースのカウントを増やす
+        await supabaseAdmin.rpc('increment_course_date_count', {
+          p_date_id: confirmed_date_id,
+          p_course_id: confirmed_course_id,
+        });
       }
 
       return NextResponse.json({ success: true, updated: true });
@@ -358,13 +385,26 @@ export async function POST(request: Request) {
       console.error('ステータス更新エラー:', statusUpdateError);
     }
 
-    // 日程のカウントを増加
-    const { error: countError } = await supabaseAdmin.rpc('increment_visit_count', {
-      date_id: confirmed_date_id,
-    });
+    // カウントを増加
+    if (confirmed_course_id) {
+      // コースIDがある場合はコース別カウントを増やす（日程のカウントも自動更新される）
+      const { error: countError } = await supabaseAdmin.rpc('increment_course_date_count', {
+        p_date_id: confirmed_date_id,
+        p_course_id: confirmed_course_id,
+      });
 
-    if (countError) {
-      console.error('カウント更新エラー:', countError);
+      if (countError) {
+        console.error('コース別カウント更新エラー:', countError);
+      }
+    } else {
+      // コースIDがない場合は日程のカウントのみ増やす
+      const { error: countError } = await supabaseAdmin.rpc('increment_visit_count', {
+        date_id: confirmed_date_id,
+      });
+
+      if (countError) {
+        console.error('カウント更新エラー:', countError);
+      }
     }
 
     return NextResponse.json({ success: true, created: true });
@@ -391,7 +431,7 @@ export async function DELETE(request: Request) {
     // 指定されていない場合は全ての確定を解除
     let query = supabaseAdmin
       .from('confirmed_participations')
-      .select('id, confirmed_date_id')
+      .select('id, confirmed_date_id, confirmed_course_id')
       .eq('applicant_id', applicant_id);
 
     if (confirmed_date_id) {
@@ -432,12 +472,25 @@ export async function DELETE(request: Request) {
 
     // 各日程のカウントを減少
     for (const confirmation of confirmations) {
-      const { error: countError } = await supabaseAdmin.rpc('decrement_visit_count', {
-        date_id: confirmation.confirmed_date_id,
-      });
+      if (confirmation.confirmed_course_id) {
+        // コースIDがある場合はコース別カウントを減らす（日程のカウントも自動更新される）
+        const { error: countError } = await supabaseAdmin.rpc('decrement_course_date_count', {
+          p_date_id: confirmation.confirmed_date_id,
+          p_course_id: confirmation.confirmed_course_id,
+        });
 
-      if (countError) {
-        console.error('カウント減少エラー:', countError);
+        if (countError) {
+          console.error('コース別カウント減少エラー:', countError);
+        }
+      } else {
+        // コースIDがない場合は日程のカウントのみ減らす
+        const { error: countError } = await supabaseAdmin.rpc('decrement_visit_count', {
+          date_id: confirmation.confirmed_date_id,
+        });
+
+        if (countError) {
+          console.error('カウント減少エラー:', countError);
+        }
       }
     }
 
