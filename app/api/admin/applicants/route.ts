@@ -59,6 +59,33 @@ export async function DELETE(request: Request) {
       );
     }
 
+    // 削除前に確定情報を取得してカウントを減らす
+    for (const applicantId of applicant_ids) {
+      // 確定情報を取得
+      const { data: confirmations } = await supabaseAdmin
+        .from('confirmed_participations')
+        .select('confirmed_date_id, confirmed_course_id')
+        .eq('applicant_id', applicantId);
+
+      // 各確定日程のカウントを減らす
+      if (confirmations && confirmations.length > 0) {
+        for (const confirmation of confirmations) {
+          if (confirmation.confirmed_course_id) {
+            // コースIDがある場合はコース別カウントを減らす
+            await supabaseAdmin.rpc('decrement_course_date_count', {
+              p_date_id: confirmation.confirmed_date_id,
+              p_course_id: confirmation.confirmed_course_id,
+            });
+          } else {
+            // コースIDがない場合は日程のカウントのみ減らす
+            await supabaseAdmin.rpc('decrement_visit_count', {
+              date_id: confirmation.confirmed_date_id,
+            });
+          }
+        }
+      }
+    }
+
     // 削除ログを記録
     const ipAddress = request.headers.get('x-forwarded-for') || 'unknown';
     const userAgent = request.headers.get('user-agent') || '';
