@@ -88,6 +88,10 @@ export default function ConfirmationsPage() {
   // 検索
   const [searchQuery, setSearchQuery] = useState('');
 
+  // 処理中状態
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState('');
+
   // CSV一括確定関連
   const [showCSVDialog, setShowCSVDialog] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -353,7 +357,11 @@ export default function ConfirmationsPage() {
     const confirmationMessage = `選択した${selectedRows.size}件を確定しますか？`;
     if (!confirm(confirmationMessage)) return;
 
+    setIsProcessing(true);
+    setProcessingMessage(`${selectedRows.size}件の申込を確定しています...`);
+
     try {
+      let processed = 0;
       for (const key of Array.from(selectedRows)) {
         const [applicantId, dateId] = key.split('_');
 
@@ -373,16 +381,24 @@ export default function ConfirmationsPage() {
 
         if (!response.ok) {
           const error = await response.json();
+          setIsProcessing(false);
           alert(`確定に失敗しました: ${error.error || '不明なエラー'}`);
           break;
         }
+
+        processed++;
+        setProcessingMessage(`${processed}/${selectedRows.size}件を処理中...`);
       }
 
+      setProcessingMessage('データを更新しています...');
       await fetchData();
       setSelectedRows(new Set());
     } catch (error) {
       console.error('一括確定エラー:', error);
       alert('エラーが発生しました');
+    } finally {
+      setIsProcessing(false);
+      setProcessingMessage('');
     }
   };
 
@@ -396,7 +412,11 @@ export default function ConfirmationsPage() {
     const confirmationMessage = `選択した${selectedRows.size}件の確定を解除しますか？`;
     if (!confirm(confirmationMessage)) return;
 
+    setIsProcessing(true);
+    setProcessingMessage(`${selectedRows.size}件の確定を解除しています...`);
+
     try {
+      let processed = 0;
       for (const key of Array.from(selectedRows)) {
         const [applicantId, dateId] = key.split('_');
 
@@ -412,13 +432,20 @@ export default function ConfirmationsPage() {
         if (!response.ok) {
           console.error('解除失敗');
         }
+
+        processed++;
+        setProcessingMessage(`${processed}/${selectedRows.size}件を処理中...`);
       }
 
+      setProcessingMessage('データを更新しています...');
       await fetchData();
       setSelectedRows(new Set());
     } catch (error) {
       console.error('一括解除エラー:', error);
       alert('エラーが発生しました');
+    } finally {
+      setIsProcessing(false);
+      setProcessingMessage('');
     }
   };
 
@@ -731,21 +758,21 @@ export default function ConfirmationsPage() {
             <div className="flex gap-2">
               <button
                 onClick={handleBulkConfirm}
-                disabled={selectedRows.size === 0}
+                disabled={selectedRows.size === 0 || isProcessing}
                 className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition duration-200"
               >
                 選択を確定
               </button>
               <button
                 onClick={handleBulkUnconfirm}
-                disabled={selectedRows.size === 0}
+                disabled={selectedRows.size === 0 || isProcessing}
                 className="px-6 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition duration-200"
               >
                 選択を解除
               </button>
               <button
                 onClick={() => setSelectedRows(new Set())}
-                disabled={selectedRows.size === 0}
+                disabled={selectedRows.size === 0 || isProcessing}
                 className="px-4 py-2 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 text-gray-700 rounded-lg transition duration-200"
               >
                 選択クリア
@@ -1011,6 +1038,29 @@ export default function ConfirmationsPage() {
                   {isProcessingCSV ? '処理中...' : 'アップロードして確定'}
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ローディングオーバーレイ */}
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+            <div className="flex flex-col items-center">
+              {/* スピナー */}
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
+
+              {/* メッセージ */}
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">処理中</h3>
+              <p className="text-sm text-gray-600 text-center">{processingMessage}</p>
+
+              {/* 注意書き */}
+              <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-xs text-yellow-800 text-center">
+                  画面を閉じずにお待ちください
+                </p>
+              </div>
             </div>
           </div>
         </div>
