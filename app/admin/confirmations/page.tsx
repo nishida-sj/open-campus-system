@@ -531,6 +531,12 @@ export default function ConfirmationsPage() {
 
   // 編集ダイアログを開く
   const handleOpenEditDialog = (row: TableRow) => {
+    // 確定済みの申込者は編集できない
+    if (row.is_confirmed) {
+      alert('確定済みの申込者は編集できません。先に確定を解除してください。');
+      return;
+    }
+
     setEditingApplicant(row);
     setEditDateId(row.date_id);
     setEditCourseId(row.course_id || '');
@@ -1151,15 +1157,27 @@ export default function ConfirmationsPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button
-                            onClick={() => handleOpenEditDialog(row)}
-                            className="text-blue-600 hover:text-blue-800 font-medium"
-                            title="編集"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
+                          {row.is_confirmed ? (
+                            <button
+                              disabled
+                              className="text-gray-400 cursor-not-allowed font-medium"
+                              title="確定済みは編集不可"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleOpenEditDialog(row)}
+                              className="text-blue-600 hover:text-blue-800 font-medium"
+                              title="編集"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
