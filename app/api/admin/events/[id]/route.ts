@@ -68,7 +68,7 @@ export async function GET(
       );
     }
 
-    // 各コースの適用日程を取得
+    // 各コースの適用日程と日程別定員を取得
     const coursesWithDates = await Promise.all(
       (courses || []).map(async (course) => {
         const { data: associations } = await supabaseAdmin
@@ -78,9 +78,22 @@ export async function GET(
 
         const applicableDateIds = (associations || []).map((a) => a.date_id);
 
+        // コース×日程別定員を取得
+        const { data: dateCapacities } = await supabaseAdmin
+          .from('course_date_capacities')
+          .select('date_id, capacity')
+          .eq('course_id', course.id);
+
+        // date_id → capacity のマップを作成
+        const dateCapacitiesMap: { [dateId: string]: number | null } = {};
+        (dateCapacities || []).forEach((dc) => {
+          dateCapacitiesMap[dc.date_id] = dc.capacity;
+        });
+
         return {
           ...course,
           applicable_date_ids: applicableDateIds,
+          date_capacities: dateCapacitiesMap,
         };
       })
     );
@@ -289,7 +302,7 @@ export async function PUT(
               event_id: eventId,
               name: course.name,
               description: course.description || null,
-              capacity: course.capacity,
+              capacity: null, // 廃止：グローバル定員は使用しない
               display_order: course.display_order,
             })
             .select()
@@ -300,7 +313,7 @@ export async function PUT(
             throw new Error('コースの作成に失敗しました');
           }
 
-          // コースと日程の関連を作成
+          // コースと日程の関連を作成 + 日程別定員を設定
           if (course.applicable_date_indices && course.applicable_date_indices.length > 0) {
             const associations = course.applicable_date_indices.map((dateIndex: number) => ({
               course_id: newCourse.id,
@@ -315,7 +328,47 @@ export async function PUT(
               console.error('関連作成エラー:', assocError);
               throw new Error('コースと日程の関連付けに失敗しました');
             }
+
+            // 日程別定員を course_date_capacities に保存
+            if (course.date_capacities) {
+              const capacityRecords = course.applicable_date_indices.map((dateIndex: number) => {
+                const capacity = course.date_capacities[dateIndex];
+                return {
+                  course_id: newCourse.id,
+                  date_id: createdDates[dateIndex].id,
+                  capacity: capacity !== null && capacity !== undefined ? capacity : 0,
+                  current_count: 0,
+                };
+              });
+
+              const { error: capacityError } = await supabaseAdmin
+                .from('course_date_capacities')
+                .insert(capacityRecords);
+
+              if (capacityError) {
+                console.error('定員設定エラー:', capacityError);
+                throw new Error('コース定員の設定に失敗しました');
+              }
+            }
           }
+        }
+
+        // 日程の定員を各コースの定員合計で再計算
+        for (const date of createdDates) {
+          const { data: courseCapacities } = await supabaseAdmin
+            .from('course_date_capacities')
+            .select('capacity')
+            .eq('date_id', date.id);
+
+          const totalCapacity = (courseCapacities || []).reduce(
+            (sum, cc) => sum + (cc.capacity || 0),
+            0
+          );
+
+          await supabaseAdmin
+            .from('open_campus_dates')
+            .update({ capacity: totalCapacity })
+            .eq('id', date.id);
         }
       } catch (datesCourseError) {
         console.error('日程・コース更新エラー:', datesCourseError);

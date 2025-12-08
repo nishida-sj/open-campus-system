@@ -1,0 +1,17 @@
+function_name,is_security_definer,config_settings
+check_event_flags,false,null
+check_event_flags,true,"[""search_path=public, pg_temp""]"
+decrement_course_date_count,true,"[""search_path=public, pg_temp""]"
+decrement_course_date_count,false,null
+decrement_visit_count,true,"[""search_path=public, pg_temp""]"
+decrement_visit_count,false,null
+delete_old_conversations,true,"[""search_path=public, pg_temp""]"
+get_user_max_level,true,"[""search_path=public, pg_temp""]"
+increment_course_date_count,true,"[""search_path=public, pg_temp""]"
+increment_course_date_count,false,null
+increment_visit_count,true,"[""search_path=public, pg_temp""]"
+increment_visit_count,false,null
+increment_visit_count,true,null
+update_updated_at_column,true,"[""search_path=public, pg_temp""]"
+user_has_role,true,"[""search_path=public, pg_temp""]"
+user_has_role,true,null

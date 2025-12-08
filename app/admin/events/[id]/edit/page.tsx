@@ -29,9 +29,9 @@ interface Course {
   id: string;
   name: string;
   description: string | null;
-  capacity: number | null;
   display_order: number;
   applicable_date_ids: string[];
+  date_capacities?: { [dateId: string]: number | null }; // Per-date capacities
 }
 
 export default function EventEditPage() {
@@ -51,9 +51,9 @@ export default function EventEditPage() {
   const [editableCourses, setEditableCourses] = useState<Array<{
     name: string;
     description: string;
-    capacity: number | null;
     display_order: number;
     applicable_date_indices: number[];
+    date_capacities: { [dateIndex: number]: number | null };
   }>>([]);
 
   // フォーム状態
@@ -91,15 +91,30 @@ export default function EventEditPage() {
             date: d.date,
             capacity: d.capacity,
           })));
-          setEditableCourses((eventData.courses || []).map((c: Course) => ({
-            name: c.name,
-            description: c.description || '',
-            capacity: c.capacity,
-            display_order: c.display_order,
-            applicable_date_indices: c.applicable_date_ids.map((dateId: string) =>
+          setEditableCourses((eventData.courses || []).map((c: Course) => {
+            const applicableDateIndices = c.applicable_date_ids.map((dateId: string) =>
               (eventData.dates || []).findIndex((d: DateInfo) => d.id === dateId)
-            ),
-          })));
+            );
+
+            // date_capacities を dateId → capacity から dateIndex → capacity に変換
+            const dateCapacitiesMap: { [dateIndex: number]: number | null } = {};
+            if (c.date_capacities) {
+              Object.entries(c.date_capacities).forEach(([dateId, capacity]) => {
+                const dateIndex = (eventData.dates || []).findIndex((d: DateInfo) => d.id === dateId);
+                if (dateIndex !== -1) {
+                  dateCapacitiesMap[dateIndex] = capacity;
+                }
+              });
+            }
+
+            return {
+              name: c.name,
+              description: c.description || '',
+              display_order: c.display_order,
+              applicable_date_indices: applicableDateIndices,
+              date_capacities: dateCapacitiesMap,
+            };
+          }));
         }
 
         // フォームに初期値をセット
@@ -159,9 +174,9 @@ export default function EventEditPage() {
       {
         name: '',
         description: '',
-        capacity: null,
         display_order: editableCourses.length,
         applicable_date_indices: [],
+        date_capacities: {},
       },
     ]);
   };
@@ -173,6 +188,41 @@ export default function EventEditPage() {
   const updateCourse = (index: number, field: string, value: any) => {
     setEditableCourses(
       editableCourses.map((c, i) => (i === index ? { ...c, [field]: value } : c))
+    );
+  };
+
+  // コース×日程の定員を更新
+  const updateCourseCapacityForDate = (courseIndex: number, dateIndex: number, capacity: number | null) => {
+    setEditableCourses(
+      editableCourses.map((c, i) => {
+        if (i !== courseIndex) return c;
+        return {
+          ...c,
+          date_capacities: {
+            ...c.date_capacities,
+            [dateIndex]: capacity,
+          },
+        };
+      })
+    );
+
+    // 日程の定員を自動計算
+    autoCalculateDateCapacity(dateIndex);
+  };
+
+  // 日程定員を自動計算（すべてのコースの合計）
+  const autoCalculateDateCapacity = (dateIndex: number) => {
+    let total = 0;
+    editableCourses.forEach((course) => {
+      const capacity = course.date_capacities[dateIndex];
+      if (capacity !== null && capacity !== undefined && capacity > 0) {
+        total += capacity;
+      }
+    });
+
+    // 日程の定員を更新
+    setEditableDates(
+      editableDates.map((d, i) => (i === dateIndex ? { ...d, capacity: total } : d))
     );
   };
 
@@ -579,10 +629,23 @@ export default function EventEditPage() {
                   {course.description && (
                     <p className="text-sm text-gray-600 mb-2">{course.description}</p>
                   )}
-                  <div className="text-xs text-gray-500">
-                    定員: {course.capacity ? `${course.capacity}名` : '無制限'} | 適用日程:{' '}
-                    {course.applicable_date_ids.length}日程
+                  <div className="text-xs text-gray-500 mb-2">
+                    適用日程: {course.applicable_date_ids.length}日程
                   </div>
+                  {course.date_capacities && Object.keys(course.date_capacities).length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs font-semibold text-gray-700">日程別定員:</p>
+                      {dates.map((date) => {
+                        if (!course.applicable_date_ids.includes(date.id)) return null;
+                        const capacity = course.date_capacities?.[date.id];
+                        return (
+                          <div key={date.id} className="text-xs text-gray-600 ml-2">
+                            • {new Date(date.date).toLocaleDateString('ja-JP')}: {capacity !== null && capacity !== undefined ? `${capacity}名` : '設定なし'}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -614,18 +677,18 @@ export default function EventEditPage() {
                           required
                         />
                       </div>
-                      <div className="w-32">
+                      <div className="w-40">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          定員
+                          定員（自動計算）
                         </label>
                         <input
                           type="number"
                           value={date.capacity}
-                          onChange={(e) => updateDate(index, 'capacity', parseInt(e.target.value))}
-                          min="1"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          required
+                          readOnly
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
+                          title="コースの定員合計から自動計算されます"
                         />
+                        <p className="text-xs text-gray-500 mt-1">コース定員の合計</p>
                       </div>
                       <div className="flex items-end">
                         <button
@@ -682,25 +745,6 @@ export default function EventEditPage() {
                             required
                           />
                         </div>
-                        <div className="w-32">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            定員
-                          </label>
-                          <input
-                            type="number"
-                            value={course.capacity || ''}
-                            onChange={(e) =>
-                              updateCourse(
-                                courseIndex,
-                                'capacity',
-                                e.target.value ? parseInt(e.target.value) : null
-                              )
-                            }
-                            min="1"
-                            placeholder="無制限"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                          />
-                        </div>
                         <div className="flex items-end">
                           <button
                             type="button"
@@ -726,21 +770,13 @@ export default function EventEditPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          適用日程
+                          日程別定員設定
                         </label>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="space-y-2">
                           {editableDates.map((date, dateIndex) => (
-                            <label
+                            <div
                               key={dateIndex}
-                              className="inline-flex items-center px-3 py-2 border-2 rounded-md cursor-pointer transition-colors duration-200"
-                              style={{
-                                borderColor: course.applicable_date_indices.includes(dateIndex)
-                                  ? '#10b981'
-                                  : '#d1d5db',
-                                backgroundColor: course.applicable_date_indices.includes(dateIndex)
-                                  ? '#d1fae5'
-                                  : '#ffffff',
-                              }}
+                              className="flex items-center gap-3 p-2 border rounded-md bg-white"
                             >
                               <input
                                 type="checkbox"
@@ -748,9 +784,9 @@ export default function EventEditPage() {
                                 onChange={() =>
                                   toggleCourseDateApplicability(courseIndex, dateIndex)
                                 }
-                                className="mr-2"
+                                className="w-4 h-4"
                               />
-                              <span className="text-sm">
+                              <span className="text-sm font-medium min-w-[100px]">
                                 {date.date
                                   ? new Date(date.date).toLocaleDateString('ja-JP', {
                                       month: 'short',
@@ -758,9 +794,31 @@ export default function EventEditPage() {
                                     })
                                   : '日程未設定'}
                               </span>
-                            </label>
+                              <div className="flex items-center gap-2">
+                                <label className="text-sm text-gray-600">定員:</label>
+                                <input
+                                  type="number"
+                                  value={course.date_capacities[dateIndex] || ''}
+                                  onChange={(e) =>
+                                    updateCourseCapacityForDate(
+                                      courseIndex,
+                                      dateIndex,
+                                      e.target.value ? parseInt(e.target.value) : null
+                                    )
+                                  }
+                                  min="0"
+                                  placeholder="0"
+                                  disabled={!course.applicable_date_indices.includes(dateIndex)}
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:text-gray-400"
+                                />
+                                <span className="text-sm text-gray-500">名</span>
+                              </div>
+                            </div>
                           ))}
                         </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          ✓ チェックした日程のみこのコースが適用されます。各日程の定員を個別に設定してください。
+                        </p>
                       </div>
                     </div>
                   </div>

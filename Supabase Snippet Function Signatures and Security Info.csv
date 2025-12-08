@@ -1,0 +1,14 @@
+function_name,arguments,oid,security_definer,config
+check_event_flags,,18816,false,null
+check_event_flags,p_event_id uuid,30057,true,"[""search_path=public, pg_temp""]"
+decrement_course_date_count,,30056,true,"[""search_path=public, pg_temp""]"
+decrement_course_date_count,"p_course_id uuid, p_date_id uuid",18815,false,null
+decrement_visit_count,,30054,true,"[""search_path=public, pg_temp""]"
+decrement_visit_count,date_id uuid,18610,false,null
+increment_course_date_count,,30055,true,"[""search_path=public, pg_temp""]"
+increment_course_date_count,"p_course_id uuid, p_date_id uuid",18814,false,null
+increment_visit_count,,30053,true,"[""search_path=public, pg_temp""]"
+increment_visit_count,date_id uuid,17592,true,null
+increment_visit_count,visit_date date,17517,false,null
+user_has_role,"p_user_id uuid, p_role_name character varying",29544,true,null
+user_has_role,"p_user_id uuid, p_role_name text",30052,true,"[""search_path=public, pg_temp""]"

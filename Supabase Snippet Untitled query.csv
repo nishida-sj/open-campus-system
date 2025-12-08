@@ -1,0 +1,2 @@
+trigger_definition
+CREATE TRIGGER check_event_flags_trigger BEFORE INSERT OR UPDATE ON public.open_campus_events FOR EACH ROW EXECUTE FUNCTION check_event_flags()
