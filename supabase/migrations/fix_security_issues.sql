@@ -52,7 +52,7 @@ WITH (security_invoker = true)
 AS
 SELECT
   u.id,
-  u.username,
+  u.full_name,
   u.email,
   u.is_active,
   u.created_at,
@@ -62,7 +62,7 @@ SELECT
 FROM users u
 LEFT JOIN user_roles ur ON u.id = ur.user_id
 LEFT JOIN roles r ON ur.role_id = r.id
-GROUP BY u.id, u.username, u.email, u.is_active, u.created_at, u.updated_at;
+GROUP BY u.id, u.full_name, u.email, u.is_active, u.created_at, u.updated_at;
 
 -- =====================================================
 -- PART 2: Fix Function search_path

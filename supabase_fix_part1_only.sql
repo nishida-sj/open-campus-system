@@ -38,14 +38,14 @@ SELECT
 FROM ai_usage_logs
 GROUP BY DATE_TRUNC('month', created_at), line_user_id;
 
--- 3. users_with_roles view (修正: ARRAY_AGGにFILTER句を追加)
+-- 3. users_with_roles view (修正: username → full_name, ARRAY_AGGにFILTER句を追加)
 DROP VIEW IF EXISTS public.users_with_roles;
 CREATE OR REPLACE VIEW public.users_with_roles
 WITH (security_invoker = true)
 AS
 SELECT
   u.id,
-  u.username,
+  u.full_name,
   u.email,
   u.is_active,
   u.created_at,
@@ -55,7 +55,7 @@ SELECT
 FROM users u
 LEFT JOIN user_roles ur ON u.id = ur.user_id
 LEFT JOIN roles r ON ur.role_id = r.id
-GROUP BY u.id, u.username, u.email, u.is_active, u.created_at, u.updated_at;
+GROUP BY u.id, u.full_name, u.email, u.is_active, u.created_at, u.updated_at;
 
 -- =====================================================
 -- 修正内容:
