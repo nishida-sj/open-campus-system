@@ -785,6 +785,9 @@ export default function AdminEventsPage() {
                               }
                               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
+                            <p className="text-xs text-gray-500 mt-1">
+                              コースを作成すると、対象日のコース定員の合計が自動登録されます
+                            </p>
                           </div>
                         </div>
                         <button
