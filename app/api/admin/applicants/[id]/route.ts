@@ -4,9 +4,10 @@ import { supabaseAdmin } from '@/lib/supabase';
 // 申込者の編集（日程・コース変更）
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await props.params;
     const applicantId = params.id;
     const body = await request.json();
     const { visit_date_id, selected_course_id } = body;
