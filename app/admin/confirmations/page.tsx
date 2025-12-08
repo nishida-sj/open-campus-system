@@ -1045,8 +1045,8 @@ export default function ConfirmationsPage() {
 
       {/* ローディングオーバーレイ */}
       {isProcessing && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl border-2 border-gray-200 p-8 max-w-md w-full mx-4">
             <div className="flex flex-col items-center">
               {/* スピナー */}
               <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
