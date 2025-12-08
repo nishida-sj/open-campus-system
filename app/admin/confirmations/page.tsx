@@ -798,75 +798,67 @@ export default function ConfirmationsPage() {
 
           {/* 定員統計情報 */}
           {overallStats && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <h3 className="text-lg font-semibold text-green-900 mb-3">定員情報</h3>
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <h3 className="text-sm font-semibold text-green-900 mb-2">定員情報</h3>
 
-              {/* 全体統計 */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="bg-white p-3 rounded shadow-sm">
-                  <div className="text-xs text-gray-500 mb-1">全体定員</div>
-                  <div className="text-2xl font-bold text-gray-900">{overallStats.total_capacity}名</div>
-                </div>
-                <div className="bg-white p-3 rounded shadow-sm">
-                  <div className="text-xs text-gray-500 mb-1">申込数</div>
-                  <div className="text-2xl font-bold text-blue-600">{overallStats.total_applicants}名</div>
-                </div>
-                <div className="bg-white p-3 rounded shadow-sm">
-                  <div className="text-xs text-gray-500 mb-1">確定数</div>
-                  <div className="text-2xl font-bold text-green-600">{overallStats.total_confirmed}名</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    残席: {overallStats.total_capacity - overallStats.total_confirmed}名
+              {/* 全体統計（日程フィルター=allの場合のみ） */}
+              {selectedDateId === 'all' && (
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="bg-white p-2 rounded text-center">
+                    <div className="text-xs text-gray-500">全体定員</div>
+                    <div className="text-lg font-bold text-gray-900">{overallStats.total_capacity}</div>
+                  </div>
+                  <div className="bg-white p-2 rounded text-center">
+                    <div className="text-xs text-gray-500">申込数</div>
+                    <div className="text-lg font-bold text-blue-600">{overallStats.total_applicants}</div>
+                  </div>
+                  <div className="bg-white p-2 rounded text-center">
+                    <div className="text-xs text-gray-500">確定数</div>
+                    <div className="text-lg font-bold text-green-600">{overallStats.total_confirmed}</div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* 日程別統計 */}
-              <div className="mt-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">日程別</h4>
-                <div className="space-y-2">
-                  {availableDates.map((dateInfo) => (
-                    <div key={dateInfo.id} className="bg-white p-3 rounded shadow-sm">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium text-gray-900">
+              {/* 日程別統計（フィルタリング対応） */}
+              <div className="space-y-2">
+                {availableDates
+                  .filter((dateInfo) => selectedDateId === 'all' || dateInfo.id === selectedDateId)
+                  .map((dateInfo) => (
+                    <div key={dateInfo.id} className="bg-white p-2 rounded">
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm font-medium text-gray-900">
                           {new Date(dateInfo.date).toLocaleDateString('ja-JP', {
-                            year: 'numeric',
-                            month: 'long',
+                            month: 'short',
                             day: 'numeric',
-                            weekday: 'long',
+                            weekday: 'short',
                           })}
                         </div>
-                        <div className="text-right">
-                          <div className="text-xs text-gray-500">定員: {dateInfo.capacity}名</div>
-                          <div className="text-xs text-blue-600">申込: {dateInfo.applicant_count}名</div>
-                          <div className="text-xs text-green-600">確定: {dateInfo.confirmed_count}名</div>
-                          <div className="text-xs text-orange-600">
-                            残席: {dateInfo.capacity - dateInfo.confirmed_count}名
-                          </div>
+                        <div className="flex gap-3 text-xs">
+                          <span className="text-gray-600">定員:{dateInfo.capacity}</span>
+                          <span className="text-blue-600">申込:{dateInfo.applicant_count}</span>
+                          <span className="text-green-600">確定:{dateInfo.confirmed_count}</span>
+                          <span className="text-orange-600">残:{dateInfo.capacity - dateInfo.confirmed_count}</span>
                         </div>
                       </div>
 
-                      {/* コース別統計 */}
+                      {/* コース別統計（コンパクト表示） */}
                       {dateInfo.course_capacities && dateInfo.course_capacities.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-gray-200">
-                          <div className="text-xs text-gray-600 mb-1">コース別:</div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {dateInfo.course_capacities.map((course: any) => (
-                              <div key={course.course_id} className="bg-gray-50 p-2 rounded">
-                                <div className="text-xs font-medium text-gray-700">{course.course_name}</div>
-                                <div className="text-xs text-gray-600 mt-1">
-                                  定員: {course.capacity}名 /
-                                  申込: {course.applicant_count}名 /
-                                  確定: {course.confirmed_count}名 /
-                                  残席: {course.capacity - course.confirmed_count}名
-                                </div>
+                        <div className="mt-1 pl-2 border-l-2 border-gray-200">
+                          {dateInfo.course_capacities.map((course: any) => (
+                            <div key={course.course_id} className="flex justify-between items-center py-1">
+                              <div className="text-xs text-gray-700">{course.course_name}</div>
+                              <div className="flex gap-2 text-xs">
+                                <span className="text-gray-500">定員:{course.capacity}</span>
+                                <span className="text-blue-500">申込:{course.applicant_count}</span>
+                                <span className="text-green-500">確定:{course.confirmed_count}</span>
+                                <span className="text-orange-500">残:{course.capacity - course.confirmed_count}</span>
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
                   ))}
-                </div>
               </div>
             </div>
           )}
