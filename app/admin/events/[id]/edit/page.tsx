@@ -13,6 +13,7 @@ interface Event {
   is_active: boolean;
   allow_multiple_dates: boolean;
   allow_multiple_candidates: boolean;
+  allow_multiple_courses_same_date: boolean;
   created_at: string;
 }
 
@@ -66,6 +67,7 @@ export default function EventEditPage() {
     is_active: true,
     allow_multiple_dates: false,
     allow_multiple_candidates: false,
+    allow_multiple_courses_same_date: false,
     max_date_selections: 1,
   });
 
@@ -127,6 +129,7 @@ export default function EventEditPage() {
           is_active: eventData.event.is_active,
           allow_multiple_dates: eventData.event.allow_multiple_dates,
           allow_multiple_candidates: eventData.event.allow_multiple_candidates || false,
+          allow_multiple_courses_same_date: eventData.event.allow_multiple_courses_same_date || false,
           max_date_selections: eventData.event.max_date_selections,
         });
       } catch (error) {
@@ -574,6 +577,36 @@ export default function EventEditPage() {
                 </p>
               </div>
 
+              {/* 同日複数コース申込 */}
+              <div className="mt-4">
+                <div className="flex items-center mb-2">
+                  <input
+                    type="checkbox"
+                    id="allow_multiple_courses_same_date_edit"
+                    checked={formData.allow_multiple_courses_same_date}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        allow_multiple_courses_same_date: e.target.checked,
+                      })
+                    }
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label
+                    htmlFor="allow_multiple_courses_same_date_edit"
+                    className="ml-2 text-sm font-medium text-gray-900"
+                  >
+                    同日の複数コース申込を許可する
+                  </label>
+                </div>
+
+                <p className="text-xs text-gray-600 mt-2 ml-6">
+                  {formData.allow_multiple_courses_same_date
+                    ? '参加者は同じ日程で複数のコースに申し込めます（複数日・複数候補と併用可）'
+                    : ''}
+                </p>
+              </div>
+
               <p className="text-xs text-blue-600 mt-4">
                 ✓ 申込者が0件のため、これらの設定を変更できます
               </p>
@@ -591,6 +624,12 @@ export default function EventEditPage() {
                 <span className="text-gray-600">複数候補入力:</span>
                 <span className="font-medium">
                   {event.allow_multiple_candidates ? '許可する' : '許可しない'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-gray-600">同日複数コース申込:</span>
+                <span className="font-medium">
+                  {event.allow_multiple_courses_same_date ? '許可する' : '許可しない'}
                 </span>
               </div>
               <div className="flex items-center justify-between py-2 border-b">

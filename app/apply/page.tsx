@@ -11,6 +11,7 @@ interface EventData {
   max_date_selections: number;
   allow_multiple_dates: boolean;
   allow_multiple_candidates: boolean;
+  allow_multiple_courses_same_date: boolean;
   is_active: boolean;
 }
 
@@ -34,7 +35,8 @@ interface CourseData {
 
 interface DateSelection {
   date_id: string;
-  course_id: string | null;
+  course_id: string | null; // 後方互換性のため残す（単一コース選択時）
+  course_ids?: string[]; // 同日複数コース選択時に使用
   priority?: number; // 複数候補入力時の優先順位（1=第一候補, 2=第二候補...）
 }
 
@@ -155,12 +157,28 @@ function ApplyPageContent() {
     }
   };
 
-  // コース選択の変更
+  // コース選択の変更（単一コース）
   const handleCourseSelection = (dateId: string, courseId: string | null) => {
     setSelectedDates(
       selectedDates.map((s) =>
         s.date_id === dateId ? { ...s, course_id: courseId } : s
       )
+    );
+  };
+
+  // 複数コース選択の変更（同日複数コース許可時）
+  const handleMultipleCourseSelection = (dateId: string, courseId: string, checked: boolean) => {
+    setSelectedDates(
+      selectedDates.map((s) => {
+        if (s.date_id !== dateId) return s;
+
+        const currentCourseIds = s.course_ids || [];
+        const newCourseIds = checked
+          ? [...currentCourseIds, courseId]
+          : currentCourseIds.filter((id) => id !== courseId);
+
+        return { ...s, course_id: null, course_ids: newCourseIds };
+      })
     );
   };
 
@@ -185,7 +203,7 @@ function ApplyPageContent() {
     // コース選択必須チェック（コースがある日程の場合）
     for (const selection of selectedDates) {
       const availableCourses = getCoursesForDate(selection.date_id);
-      if (availableCourses.length > 0 && !selection.course_id) {
+      if (availableCourses.length > 0) {
         const date = dates.find((d) => d.id === selection.date_id);
         const dateStr = date
           ? new Date(date.date).toLocaleDateString('ja-JP', {
@@ -193,9 +211,22 @@ function ApplyPageContent() {
               day: 'numeric',
             })
           : '選択した日程';
-        setErrors({ general: `${dateStr}のコースを選択してください` });
-        setSubmitting(false);
-        return;
+
+        // 同日複数コース選択の場合
+        if (event?.allow_multiple_courses_same_date) {
+          if (!selection.course_ids || selection.course_ids.length === 0) {
+            setErrors({ general: `${dateStr}で少なくとも1つのコースを選択してください` });
+            setSubmitting(false);
+            return;
+          }
+        } else {
+          // 単一コース選択の場合
+          if (!selection.course_id) {
+            setErrors({ general: `${dateStr}のコースを選択してください` });
+            setSubmitting(false);
+            return;
+          }
+        }
       }
     }
 
@@ -407,25 +438,69 @@ function ApplyPageContent() {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                   コース選択 <span className="text-red-500">*</span>
                                 </label>
-                                <select
-                                  value={selectedCourse || ''}
-                                  onChange={(e) =>
-                                    handleCourseSelection(
-                                      date.id,
-                                      e.target.value || null
-                                    )
-                                  }
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                                >
-                                  <option value="">コースを選択してください</option>
-                                  {availableCourses.map((course) => (
-                                    <option key={course.id} value={course.id}>
-                                      {course.name}
-                                      {course.description && ` - ${course.description}`}
-                                      {course.capacity && ` (定員: ${course.capacity}名)`}
-                                    </option>
-                                  ))}
-                                </select>
+
+                                {/* 同日複数コース許可の場合はチェックボックス */}
+                                {event.allow_multiple_courses_same_date ? (
+                                  <div className="space-y-2">
+                                    <p className="text-xs text-gray-600 mb-2">
+                                      複数のコースを選択できます
+                                    </p>
+                                    {availableCourses.map((course) => {
+                                      const selection = selectedDates.find((s) => s.date_id === date.id);
+                                      const isChecked = selection?.course_ids?.includes(course.id) || false;
+
+                                      return (
+                                        <label
+                                          key={course.id}
+                                          className="flex items-start gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={(e) =>
+                                              handleMultipleCourseSelection(
+                                                date.id,
+                                                course.id,
+                                                e.target.checked
+                                              )
+                                            }
+                                            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                          />
+                                          <div className="flex-1">
+                                            <div className="font-medium text-gray-900">{course.name}</div>
+                                            {course.description && (
+                                              <div className="text-sm text-gray-600">{course.description}</div>
+                                            )}
+                                            {course.capacity && (
+                                              <div className="text-xs text-gray-500 mt-1">定員: {course.capacity}名</div>
+                                            )}
+                                          </div>
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  /* 単一コース選択の場合はselect */
+                                  <select
+                                    value={selectedCourse || ''}
+                                    onChange={(e) =>
+                                      handleCourseSelection(
+                                        date.id,
+                                        e.target.value || null
+                                      )
+                                    }
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                                  >
+                                    <option value="">コースを選択してください</option>
+                                    {availableCourses.map((course) => (
+                                      <option key={course.id} value={course.id}>
+                                        {course.name}
+                                        {course.description && ` - ${course.description}`}
+                                        {course.capacity && ` (定員: ${course.capacity}名)`}
+                                      </option>
+                                    ))}
+                                  </select>
+                                )}
                               </div>
                             )}
                           </div>

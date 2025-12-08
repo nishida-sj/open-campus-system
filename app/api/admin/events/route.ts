@@ -49,9 +49,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    console.log('受信したbody:', body);
-    console.log('max_date_selections:', body.max_date_selections);
-    const { name, description, overview, confirmation_message, display_end_date, max_date_selections, is_active, allow_multiple_dates, allow_multiple_candidates, dates, courses } = body;
+    const { name, description, overview, confirmation_message, display_end_date, max_date_selections, is_active, allow_multiple_dates, allow_multiple_candidates, allow_multiple_courses_same_date, dates, courses } = body;
 
     // バリデーション
     if (!name || !dates || dates.length === 0) {
@@ -62,6 +60,7 @@ export async function POST(request: Request) {
     }
 
     // allow_multiple_datesとallow_multiple_candidatesの排他チェック
+    // allow_multiple_courses_same_dateは他と併用可能
     if (allow_multiple_dates && allow_multiple_candidates) {
       return NextResponse.json(
         { error: '複数日参加と複数候補入力は同時に許可できません' },
@@ -110,6 +109,7 @@ export async function POST(request: Request) {
         is_active: is_active !== undefined ? is_active : true,
         allow_multiple_dates: allow_multiple_dates ?? false,
         allow_multiple_candidates: allow_multiple_candidates ?? false,
+        allow_multiple_courses_same_date: allow_multiple_courses_same_date ?? false,
       })
       .select()
       .single();

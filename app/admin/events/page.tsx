@@ -13,6 +13,7 @@ interface Event {
   is_active: boolean;
   allow_multiple_dates: boolean;
   allow_multiple_candidates: boolean;
+  allow_multiple_courses_same_date: boolean;
   created_at: string;
   total_applicants: number;
 }
@@ -51,6 +52,7 @@ export default function AdminEventsPage() {
     is_active: true,
     allow_multiple_dates: false,
     allow_multiple_candidates: false,
+    allow_multiple_courses_same_date: false,
     dates: [] as DateOption[],
     courses: [] as Course[],
   });
@@ -89,11 +91,12 @@ export default function AdminEventsPage() {
       return;
     }
 
-    // 排他チェック
+    // 排他チェック（複数日と複数候補のみ）
     if (formData.allow_multiple_dates && formData.allow_multiple_candidates) {
       alert('複数日参加と複数候補入力は同時に許可できません');
       return;
     }
+    // 同日複数コースは他の設定と併用可能なのでチェック不要
 
     // コースの検証（コースがある場合）
     if (formData.courses.length > 0) {
@@ -122,9 +125,6 @@ export default function AdminEventsPage() {
     setSubmitting(true);
 
     try {
-      console.log('送信するformData:', formData);
-      console.log('max_date_selections:', formData.max_date_selections);
-
       const response = await fetch('/api/admin/events', {
         method: 'POST',
         headers: {
@@ -146,6 +146,7 @@ export default function AdminEventsPage() {
           is_active: true,
           allow_multiple_dates: false,
           allow_multiple_candidates: false,
+          allow_multiple_courses_same_date: false,
           dates: [],
           courses: [],
         });
@@ -571,6 +572,36 @@ export default function AdminEventsPage() {
                 <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mt-3">
                   <p className="text-xs text-yellow-800">
                     <strong>注意:</strong> 「複数日参加」と「複数候補入力」は同時に選択できません
+                  </p>
+                </div>
+
+                {/* 同日複数コース申込 */}
+                <div className="mt-4">
+                  <div className="flex items-center mb-2">
+                    <input
+                      type="checkbox"
+                      id="allow_multiple_courses_same_date"
+                      checked={formData.allow_multiple_courses_same_date}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          allow_multiple_courses_same_date: e.target.checked,
+                        })
+                      }
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label
+                      htmlFor="allow_multiple_courses_same_date"
+                      className="ml-2 text-sm font-medium text-gray-900"
+                    >
+                      同日の複数コース申込を許可する
+                    </label>
+                  </div>
+
+                  <p className="text-xs text-gray-600 mt-2 ml-6">
+                    {formData.allow_multiple_courses_same_date
+                      ? '参加者は同じ日程で複数のコースに申し込めます（複数日・複数候補と併用可）'
+                      : ''}
                   </p>
                 </div>
               </div>

@@ -5,6 +5,7 @@ import { randomBytes } from 'crypto';
 interface DateSelection {
   date_id: string;
   course_id: string | null;
+  course_ids?: string[]; // 同日複数コース選択時に使用
   priority?: number;
 }
 
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     // イベント情報を取得
     const { data: event, error: eventError } = await supabaseAdmin
       .from('open_campus_events')
-      .select('allow_multiple_dates, allow_multiple_candidates, max_date_selections')
+      .select('allow_multiple_dates, allow_multiple_candidates, allow_multiple_courses_same_date, max_date_selections')
       .eq('id', event_id)
       .eq('is_active', true)
       .single();
@@ -161,12 +162,30 @@ export async function POST(request: Request) {
     }
 
     // applicant_visit_datesに複数日程を登録
-    const visitDateEntries = selected_dates.map((selection: DateSelection, index: number) => ({
-      applicant_id: applicant.id,
-      visit_date_id: selection.date_id,
-      selected_course_id: selection.course_id,
-      priority: selection.priority || (index + 1), // フロントエンドから送られたpriorityを使用、なければindex+1
-    }));
+    // 同日複数コース選択の場合は、course_idsを展開して複数レコードを作成
+    const visitDateEntries: any[] = [];
+
+    selected_dates.forEach((selection: DateSelection, index: number) => {
+      // 同日複数コース選択の場合
+      if (event.allow_multiple_courses_same_date && selection.course_ids && selection.course_ids.length > 0) {
+        selection.course_ids.forEach((courseId) => {
+          visitDateEntries.push({
+            applicant_id: applicant.id,
+            visit_date_id: selection.date_id,
+            selected_course_id: courseId,
+            priority: selection.priority || (index + 1),
+          });
+        });
+      } else {
+        // 通常の単一コース選択の場合
+        visitDateEntries.push({
+          applicant_id: applicant.id,
+          visit_date_id: selection.date_id,
+          selected_course_id: selection.course_id,
+          priority: selection.priority || (index + 1),
+        });
+      }
+    });
 
     const { error: visitDatesError } = await supabaseAdmin
       .from('applicant_visit_dates')
