@@ -12,6 +12,9 @@ interface Applicant {
   school_name: string;
   school_type: string | null;
   grade: string;
+  guardian_attendance: boolean;
+  guardian_name: string | null;
+  guardian_phone: string | null;
   status: string;
   created_at: string;
   selected_dates: {
@@ -57,6 +60,9 @@ interface TableRow {
   kana_name: string | null;
   school_name: string;
   grade: string;
+  guardian_attendance: boolean;
+  guardian_name: string | null;
+  guardian_phone: string | null;
   date_id: string;
   date: string;
   course_name: string | null;
@@ -166,6 +172,9 @@ export default function ConfirmationsPage() {
           kana_name: applicant.kana_name,
           school_name: applicant.school_name,
           grade: applicant.grade,
+          guardian_attendance: applicant.guardian_attendance,
+          guardian_name: applicant.guardian_name,
+          guardian_phone: applicant.guardian_phone,
           date_id: selectedDate.date_id,
           date: selectedDate.date,
           course_name: selectedDate.course_name,
@@ -188,6 +197,9 @@ export default function ConfirmationsPage() {
           kana_name: applicant.kana_name,
           school_name: applicant.school_name,
           grade: applicant.grade,
+          guardian_attendance: applicant.guardian_attendance,
+          guardian_name: applicant.guardian_name,
+          guardian_phone: applicant.guardian_phone,
           date_id: selectedDate.date_id,
           date: selectedDate.date,
           course_name: selectedDate.course_name,
@@ -831,6 +843,9 @@ export default function ConfirmationsPage() {
                       <SortIcon field="grade" />
                     </div>
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    保護者同伴
+                  </th>
                   <th
                     onClick={() => handleSort('date')}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
@@ -863,7 +878,7 @@ export default function ConfirmationsPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {tableRows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                       該当する申込はありません
                     </td>
                   </tr>
@@ -896,6 +911,29 @@ export default function ConfirmationsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {row.grade}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {row.guardian_attendance ? (
+                            <div>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                あり
+                              </span>
+                              {row.guardian_name && (
+                                <div className="text-xs text-gray-600 mt-1">
+                                  {row.guardian_name}
+                                </div>
+                              )}
+                              {row.guardian_phone && (
+                                <div className="text-xs text-gray-600">
+                                  {row.guardian_phone}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                              なし
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(row.date).toLocaleDateString('ja-JP', {

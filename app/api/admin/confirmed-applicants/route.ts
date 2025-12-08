@@ -46,6 +46,9 @@ export async function GET(request: Request) {
           school_type,
           grade,
           line_user_id,
+          guardian_attendance,
+          guardian_name,
+          guardian_phone,
           created_at
         )
       `)

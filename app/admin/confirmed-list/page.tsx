@@ -13,6 +13,9 @@ interface ConfirmedApplicant {
   school_type: string | null;
   grade: string;
   line_user_id: string | null;
+  guardian_attendance: boolean;
+  guardian_name: string | null;
+  guardian_phone: string | null;
   confirmed_dates: {
     date_id: string;
     date: string;
@@ -226,6 +229,9 @@ export default function ConfirmedListPage() {
       'コース',
       'メールアドレス',
       '電話番号',
+      '保護者同伴',
+      '保護者氏名',
+      '保護者電話番号',
       '確定日時',
     ];
 
@@ -248,6 +254,9 @@ export default function ConfirmedListPage() {
           cd.course_name || 'なし',
           a.email,
           a.phone,
+          a.guardian_attendance ? 'あり' : 'なし',
+          a.guardian_name || '',
+          a.guardian_phone || '',
           new Date(cd.confirmed_at).toLocaleString('ja-JP'),
         ]);
       });
@@ -430,6 +439,9 @@ export default function ConfirmedListPage() {
                     学年
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    保護者同伴
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     参加日
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -446,7 +458,7 @@ export default function ConfirmedListPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredApplicants.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={11} className="px-6 py-8 text-center text-gray-500">
                       該当する確定者はいません
                     </td>
                   </tr>
@@ -478,6 +490,29 @@ export default function ConfirmedListPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {applicant.grade}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {applicant.guardian_attendance ? (
+                          <div>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              あり
+                            </span>
+                            {applicant.guardian_name && (
+                              <div className="text-xs text-gray-600 mt-1">
+                                {applicant.guardian_name}
+                              </div>
+                            )}
+                            {applicant.guardian_phone && (
+                              <div className="text-xs text-gray-600">
+                                {applicant.guardian_phone}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                            なし
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {applicant.confirmed_dates.map((cd, index) => (

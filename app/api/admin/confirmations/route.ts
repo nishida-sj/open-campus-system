@@ -52,6 +52,9 @@ export async function GET(request: Request) {
           school_name,
           school_type,
           grade,
+          guardian_attendance,
+          guardian_name,
+          guardian_phone,
           status,
           created_at
         )
