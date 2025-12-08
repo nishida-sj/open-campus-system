@@ -34,15 +34,15 @@ CREATE OR REPLACE VIEW public.ai_usage_monthly_summary
 WITH (security_invoker = true)
 AS
 SELECT
-  DATE_TRUNC('month', timestamp) as month,
-  user_id,
+  DATE_TRUNC('month', created_at) as month,
+  line_user_id as user_id,
   COUNT(*) as request_count,
   SUM(prompt_tokens) as total_prompt_tokens,
   SUM(completion_tokens) as total_completion_tokens,
   SUM(total_tokens) as total_tokens,
   SUM(estimated_cost) as total_cost
 FROM ai_usage_logs
-GROUP BY DATE_TRUNC('month', timestamp), user_id;
+GROUP BY DATE_TRUNC('month', created_at), line_user_id;
 
 -- 3. users_with_roles view
 DROP VIEW IF EXISTS public.users_with_roles;
@@ -56,8 +56,8 @@ SELECT
   u.is_active,
   u.created_at,
   u.updated_at,
-  ARRAY_AGG(r.name) as roles,
-  MAX(r.level) as max_role_level
+  COALESCE(ARRAY_AGG(r.name) FILTER (WHERE r.name IS NOT NULL), ARRAY[]::text[]) as roles,
+  COALESCE(MAX(r.level), 0) as max_role_level
 FROM users u
 LEFT JOIN user_roles ur ON u.id = ur.user_id
 LEFT JOIN roles r ON ur.role_id = r.id
