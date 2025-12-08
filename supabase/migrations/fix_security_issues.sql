@@ -40,7 +40,8 @@ SELECT
   SUM(prompt_tokens) as total_prompt_tokens,
   SUM(completion_tokens) as total_completion_tokens,
   SUM(total_tokens) as total_tokens,
-  SUM(estimated_cost) as total_cost
+  SUM(cost_jpy) as total_cost_jpy,
+  SUM(cost_usd) as total_cost_usd
 FROM ai_usage_logs
 GROUP BY DATE_TRUNC('month', created_at), line_user_id;
 
