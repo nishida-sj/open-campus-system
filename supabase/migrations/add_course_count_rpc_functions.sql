@@ -1,5 +1,9 @@
+-- 既存のTRIGGER関数を削除
+DROP FUNCTION IF EXISTS public.increment_course_date_count() CASCADE;
+DROP FUNCTION IF EXISTS public.decrement_course_date_count() CASCADE;
+
 -- RPC関数: コース×日程の確定数を増やす
-CREATE OR REPLACE FUNCTION increment_course_date_count(
+CREATE OR REPLACE FUNCTION public.increment_course_date_count(
   p_date_id UUID,
   p_course_id UUID
 )
@@ -32,7 +36,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp;
 
 -- RPC関数: コース×日程の確定数を減らす
-CREATE OR REPLACE FUNCTION decrement_course_date_count(
+CREATE OR REPLACE FUNCTION public.decrement_course_date_count(
   p_date_id UUID,
   p_course_id UUID
 )
@@ -58,5 +62,5 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp;
 
-COMMENT ON FUNCTION increment_course_date_count IS 'コース×日程の確定数を1増やし、日程の合計も更新';
-COMMENT ON FUNCTION decrement_course_date_count IS 'コース×日程の確定数を1減らし、日程の合計も更新';
+COMMENT ON FUNCTION public.increment_course_date_count(UUID, UUID) IS 'コース×日程の確定数を1増やし、日程の合計も更新';
+COMMENT ON FUNCTION public.decrement_course_date_count(UUID, UUID) IS 'コース×日程の確定数を1減らし、日程の合計も更新';
