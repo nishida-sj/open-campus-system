@@ -494,8 +494,26 @@ export default function ConfirmationsPage() {
       Array.from(selectedRows).map((key) => key.split('_')[0])
     ));
 
-    const confirmationMessage = `選択した${selectedApplicantIds.length}名の申込者を完全に削除しますか？\n\n※この操作は取り消せません`;
-    if (!confirm(confirmationMessage)) return;
+    // 確定済み申込者が含まれているかチェック
+    const selectedRowsData = Array.from(selectedRows).map((key) => {
+      const [applicantId, dateId] = key.split('_');
+      return tableRows.find((r) => r.applicant_id === applicantId && r.date_id === dateId);
+    });
+
+    const hasConfirmedApplicants = selectedRowsData.some((row) => row?.is_confirmed);
+
+    if (hasConfirmedApplicants) {
+      alert('確定済みの申込者が含まれているため削除できません。\n先に確定を解除してください。');
+      return;
+    }
+
+    // 1回目の確認
+    const firstConfirmation = `選択した${selectedApplicantIds.length}名の申込者を削除しようとしています。\n\n本当に削除しますか？`;
+    if (!confirm(firstConfirmation)) return;
+
+    // 2回目の確認
+    const secondConfirmation = `【最終確認】\n\n${selectedApplicantIds.length}名の申込者を完全に削除します。\nこの操作は取り消せません。\n\n本当によろしいですか？`;
+    if (!confirm(secondConfirmation)) return;
 
     setIsProcessing(true);
     setProcessingMessage(`${selectedApplicantIds.length}名の申込者を削除しています...`);
