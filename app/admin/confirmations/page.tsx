@@ -45,12 +45,16 @@ interface DateInfo {
   date: string;
   capacity: number;
   current_count: number;
-  event_id: string;
+  confirmed_count: number;
+  applicant_count: number;
+  event_id?: string;
   course_capacities?: {
     course_id: string;
     course_name: string;
     capacity: number;
     current_count: number;
+    applicant_count: number;
+    confirmed_count: number;
   }[];
 }
 
@@ -85,6 +89,13 @@ export default function ConfirmationsPage() {
   const [selectedDateId, setSelectedDateId] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
+
+  // 定員統計情報
+  const [overallStats, setOverallStats] = useState<{
+    total_capacity: number;
+    total_applicants: number;
+    total_confirmed: number;
+  } | null>(null);
 
   // チェックボックス選択状態（applicant_id + date_id をキーとする）
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -148,13 +159,10 @@ export default function ConfirmationsPage() {
         const data = await applicantsRes.json();
         setAllPendingApplicants(data.pending || []);
         setAllConfirmedApplicants(data.confirmed || []);
-      }
 
-      const datesRes = await fetch('/api/admin/dates');
-      if (datesRes.ok) {
-        const allDates = await datesRes.json();
-        const eventDates = allDates.filter((d: any) => d.event_id === selectedEventId);
-        setAvailableDates(eventDates);
+        // 定員統計情報を設定
+        setAvailableDates(data.dates || []);
+        setOverallStats(data.overall_stats || null);
       }
     } catch (error) {
       console.error('データ取得エラー:', error);
@@ -785,6 +793,81 @@ export default function ConfirmationsPage() {
                   ? ' 複数候補入力モードです。1つの日程のみ確定できます。'
                   : ''}
               </p>
+            </div>
+          )}
+
+          {/* 定員統計情報 */}
+          {overallStats && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <h3 className="text-lg font-semibold text-green-900 mb-3">定員情報</h3>
+
+              {/* 全体統計 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="bg-white p-3 rounded shadow-sm">
+                  <div className="text-xs text-gray-500 mb-1">全体定員</div>
+                  <div className="text-2xl font-bold text-gray-900">{overallStats.total_capacity}名</div>
+                </div>
+                <div className="bg-white p-3 rounded shadow-sm">
+                  <div className="text-xs text-gray-500 mb-1">申込数</div>
+                  <div className="text-2xl font-bold text-blue-600">{overallStats.total_applicants}名</div>
+                </div>
+                <div className="bg-white p-3 rounded shadow-sm">
+                  <div className="text-xs text-gray-500 mb-1">確定数</div>
+                  <div className="text-2xl font-bold text-green-600">{overallStats.total_confirmed}名</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    残席: {overallStats.total_capacity - overallStats.total_confirmed}名
+                  </div>
+                </div>
+              </div>
+
+              {/* 日程別統計 */}
+              <div className="mt-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">日程別</h4>
+                <div className="space-y-2">
+                  {availableDates.map((dateInfo) => (
+                    <div key={dateInfo.id} className="bg-white p-3 rounded shadow-sm">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="font-medium text-gray-900">
+                          {new Date(dateInfo.date).toLocaleDateString('ja-JP', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            weekday: 'long',
+                          })}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-gray-500">定員: {dateInfo.capacity}名</div>
+                          <div className="text-xs text-blue-600">申込: {dateInfo.applicant_count}名</div>
+                          <div className="text-xs text-green-600">確定: {dateInfo.confirmed_count}名</div>
+                          <div className="text-xs text-orange-600">
+                            残席: {dateInfo.capacity - dateInfo.confirmed_count}名
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* コース別統計 */}
+                      {dateInfo.course_capacities && dateInfo.course_capacities.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <div className="text-xs text-gray-600 mb-1">コース別:</div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {dateInfo.course_capacities.map((course: any) => (
+                              <div key={course.course_id} className="bg-gray-50 p-2 rounded">
+                                <div className="text-xs font-medium text-gray-700">{course.course_name}</div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  定員: {course.capacity}名 /
+                                  申込: {course.applicant_count}名 /
+                                  確定: {course.confirmed_count}名 /
+                                  残席: {course.capacity - course.confirmed_count}名
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>

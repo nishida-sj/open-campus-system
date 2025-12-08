@@ -14,14 +14,21 @@ export async function GET(request: Request) {
       );
     }
 
-    // イベントに紐づく日程IDを取得
+    // イベントに紐づく日程情報を取得（定員情報含む）
     const { data: dates } = await supabaseAdmin
       .from('open_campus_dates')
-      .select('id')
-      .eq('event_id', eventId);
+      .select('id, date, capacity, current_count')
+      .eq('event_id', eventId)
+      .order('date', { ascending: true });
 
     if (!dates || dates.length === 0) {
-      return NextResponse.json({ pending: [], confirmed: [] });
+      return NextResponse.json({
+        pending: [],
+        confirmed: [],
+        dates: [],
+        courses: [],
+        overall_stats: { total_capacity: 0, total_applicants: 0, total_confirmed: 0 }
+      });
     }
 
     const dateIds = dates.map((d) => d.id);
@@ -146,7 +153,80 @@ export async function GET(request: Request) {
     const pending = allApplicants.filter((a: any) => a.confirmed_dates.length === 0);
     const confirmed = allApplicants.filter((a: any) => a.confirmed_dates.length > 0);
 
-    return NextResponse.json({ pending, confirmed });
+    // 定員統計情報を計算
+    const datesWithStats = await Promise.all(
+      dates.map(async (date) => {
+        // 各日程の申込数をカウント
+        const { count: applicantCount } = await supabaseAdmin
+          .from('applicant_visit_dates')
+          .select('applicant_id', { count: 'exact', head: true })
+          .eq('visit_date_id', date.id);
+
+        // コース×日程別定員を取得
+        const { data: courseCapacities } = await supabaseAdmin
+          .from('course_date_capacities')
+          .select('capacity, current_count, course_id')
+          .eq('date_id', date.id);
+
+        // コース名を取得
+        const courseCapacitiesWithNames = await Promise.all(
+          (courseCapacities || []).map(async (cc: any) => {
+            const { data: courseData } = await supabaseAdmin
+              .from('event_courses')
+              .select('name')
+              .eq('id', cc.course_id)
+              .single();
+
+            // このコースの申込数をカウント
+            const { count: courseApplicantCount } = await supabaseAdmin
+              .from('applicant_visit_dates')
+              .select('applicant_id', { count: 'exact', head: true })
+              .eq('visit_date_id', date.id)
+              .eq('selected_course_id', cc.course_id);
+
+            return {
+              course_id: cc.course_id,
+              course_name: courseData?.name || '不明',
+              capacity: cc.capacity,
+              applicant_count: courseApplicantCount || 0,
+              confirmed_count: cc.current_count,
+            };
+          })
+        );
+
+        return {
+          id: date.id,
+          date: date.date,
+          capacity: date.capacity,
+          applicant_count: applicantCount || 0,
+          confirmed_count: date.current_count,
+          course_capacities: courseCapacitiesWithNames,
+        };
+      })
+    );
+
+    // イベント全体のコース情報を取得
+    const { data: eventCourses } = await supabaseAdmin
+      .from('event_courses')
+      .select('id, name')
+      .eq('event_id', eventId)
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    // 全体統計を計算
+    const overallStats = {
+      total_capacity: datesWithStats.reduce((sum, d) => sum + d.capacity, 0),
+      total_applicants: datesWithStats.reduce((sum, d) => sum + d.applicant_count, 0),
+      total_confirmed: datesWithStats.reduce((sum, d) => sum + d.confirmed_count, 0),
+    };
+
+    return NextResponse.json({
+      pending,
+      confirmed,
+      dates: datesWithStats,
+      courses: eventCourses || [],
+      overall_stats: overallStats,
+    });
   } catch (error) {
     console.error('サーバーエラー:', error);
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
