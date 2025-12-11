@@ -12,6 +12,8 @@ interface Applicant {
   grade: string;
   visit_date_id: string;
   courses: string[];
+  event_name?: string;
+  event_fiscal_year?: number;
   selected_dates?: {
     date: string;
   }[];
@@ -21,11 +23,23 @@ interface Event {
   id: string;
   name: string;
   is_active: boolean;
+  earliest_date?: string;
+  fiscal_year?: number;
 }
 
 type MessageType = 'email' | 'line';
 type SortField = 'name' | 'school_name' | 'grade';
 type SortOrder = 'asc' | 'desc';
+
+// 年度計算関数（4月～3月が1年度）
+function getFiscalYear(dateString: string): number {
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1; // 0-11 → 1-12
+
+  // 1月～3月は前年度、4月～12月は当年度
+  return month >= 4 ? year : year - 1;
+}
 
 export default function BroadcastPage() {
   const router = useRouter();
@@ -42,6 +56,19 @@ export default function BroadcastPage() {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
+  // 同姓同名の検出
+  const duplicateNames = new Set<string>();
+  const nameCounts = applicants.reduce((acc, curr) => {
+    acc[curr.name] = (acc[curr.name] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  Object.entries(nameCounts).forEach(([name, count]) => {
+    if (count > 1) {
+      duplicateNames.add(name);
+    }
+  });
+
 
   // イベント一覧取得
   useEffect(() => {
@@ -50,7 +77,37 @@ export default function BroadcastPage() {
         const response = await fetch('/api/admin/events');
         if (response.ok) {
           const data = await response.json();
-          setEvents(data);
+
+          // 各イベントの最古の日程を取得して年度を計算
+          const eventsWithFiscalYear = await Promise.all(
+            data.map(async (event: Event) => {
+              try {
+                const datesRes = await fetch(`/api/admin/events/${event.id}`);
+                if (datesRes.ok) {
+                  const eventData = await datesRes.json();
+                  const dates = eventData.dates || [];
+
+                  if (dates.length > 0) {
+                    // 最も古い日程を取得
+                    const earliestDate = dates.sort((a: any, b: any) =>
+                      new Date(a.date).getTime() - new Date(b.date).getTime()
+                    )[0];
+
+                    return {
+                      ...event,
+                      earliest_date: earliestDate.date,
+                      fiscal_year: getFiscalYear(earliestDate.date),
+                    };
+                  }
+                }
+              } catch (error) {
+                console.error(`イベント${event.id}の日程取得エラー:`, error);
+              }
+              return event;
+            })
+          );
+
+          setEvents(eventsWithFiscalYear);
         }
       } catch (error) {
         console.error('イベント取得エラー:', error);
@@ -282,14 +339,19 @@ export default function BroadcastPage() {
                 }`}
                 onClick={() => toggleEventSelection(event.id)}
               >
-                <div className="flex items-center">
+                <div className="flex items-start">
                   <input
                     type="checkbox"
                     checked={selectedEventIds.includes(event.id)}
                     onChange={() => {}}
-                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"
                   />
-                  <div className="ml-3">
+                  <div className="ml-3 flex-1">
+                    {event.fiscal_year && (
+                      <div className="text-xs font-semibold text-blue-600 mb-1">
+                        {event.fiscal_year}年度
+                      </div>
+                    )}
                     <div className="font-medium text-gray-900">{event.name}</div>
                     {!event.is_active && (
                       <span className="text-xs text-gray-500">（非公開）</span>
@@ -364,6 +426,9 @@ export default function BroadcastPage() {
                         </div>
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        イベント
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         コース
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -394,13 +459,35 @@ export default function BroadcastPage() {
                           />
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {applicant.name}
+                          <div className="flex items-center gap-2">
+                            {applicant.name}
+                            {duplicateNames.has(applicant.name) && (
+                              <span
+                                className="inline-block px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded font-semibold"
+                                title="同姓同名の申込者がいます"
+                              >
+                                同姓同名
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                           {applicant.school_name}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                           {applicant.grade}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {applicant.event_fiscal_year && applicant.event_name ? (
+                            <div>
+                              <div className="text-xs font-semibold text-blue-600">
+                                {applicant.event_fiscal_year}年度
+                              </div>
+                              <div className="text-sm">{applicant.event_name}</div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
                           {applicant.courses && applicant.courses.length > 0 ? (

@@ -27,15 +27,33 @@ export async function POST(request: Request) {
       return NextResponse.json([]);
     }
 
-    // 申込者と選択コース情報を取得
+    // 年度計算関数
+    function getFiscalYear(dateString: string): number {
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      return month >= 4 ? year : year - 1;
+    }
+
+    // 申込者と選択コース、イベント情報を取得
     const { data: visitDates, error: visitDatesError } = await supabaseAdmin
       .from('applicant_visit_dates')
       .select(`
         applicant_id,
+        visit_date_id,
         selected_course_id,
         event_courses!applicant_visit_dates_selected_course_id_fkey (
           id,
           name
+        ),
+        open_campus_dates!applicant_visit_dates_visit_date_id_fkey (
+          id,
+          date,
+          event_id,
+          open_campus_events!open_campus_dates_event_id_fkey (
+            id,
+            name
+          )
         )
       `)
       .in('visit_date_id', dateIds);
@@ -48,14 +66,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // 申込者IDごとにコース情報を集約
+    // 申込者IDごとにコース情報とイベント情報を集約
     const applicantCoursesMap = new Map<string, Set<string>>();
+    const applicantEventsMap = new Map<string, { event_name: string; fiscal_year: number }>();
+
     (visitDates || []).forEach((vd: any) => {
+      // コース情報を集約
       if (!applicantCoursesMap.has(vd.applicant_id)) {
         applicantCoursesMap.set(vd.applicant_id, new Set());
       }
       if (vd.event_courses?.name) {
         applicantCoursesMap.get(vd.applicant_id)?.add(vd.event_courses.name);
+      }
+
+      // イベント情報を保存（最初のイベント情報を使用）
+      if (!applicantEventsMap.has(vd.applicant_id) && vd.open_campus_dates?.open_campus_events) {
+        const eventName = vd.open_campus_dates.open_campus_events.name;
+        const fiscalYear = getFiscalYear(vd.open_campus_dates.date);
+        applicantEventsMap.set(vd.applicant_id, { event_name: eventName, fiscal_year: fiscalYear });
       }
     });
 
@@ -82,16 +110,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // 申込者にコース情報を追加
-    const applicantsWithCourses = (applicants || []).map((applicant: any) => {
+    // 申込者にコース情報とイベント情報を追加
+    const applicantsWithDetails = (applicants || []).map((applicant: any) => {
       const courses = applicantCoursesMap.get(applicant.id);
+      const eventInfo = applicantEventsMap.get(applicant.id);
+
       return {
         ...applicant,
         courses: courses ? Array.from(courses) : [],
+        event_name: eventInfo?.event_name || '',
+        event_fiscal_year: eventInfo?.fiscal_year || 0,
       };
     });
 
-    return NextResponse.json(applicantsWithCourses);
+    return NextResponse.json(applicantsWithDetails);
   } catch (error) {
     console.error('サーバーエラー:', error);
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
