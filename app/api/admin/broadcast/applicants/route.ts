@@ -90,21 +90,7 @@ export async function POST(request: Request) {
     // 確定済み申込者のみを取得（statusがconfirmedまたはcompleted）
     const { data: applicants, error: applicantsError } = await supabaseAdmin
       .from('applicants')
-      .select(`
-        id,
-        name,
-        email,
-        line_user_id,
-        school_name,
-        grade,
-        status,
-        confirmed_date_id,
-        confirmed_course_id,
-        event_courses!applicants_confirmed_course_id_fkey (
-          id,
-          name
-        )
-      `)
+      .select('id, name, email, line_user_id, school_name, grade, status, confirmed_date_id, confirmed_course_id')
       .in('id', applicantIds)
       .in('status', ['confirmed', 'completed'])
       .order('name', { ascending: true });
@@ -117,10 +103,32 @@ export async function POST(request: Request) {
       );
     }
 
+    // 確定コースIDを収集
+    const confirmedCourseIds = (applicants || [])
+      .map((a: any) => a.confirmed_course_id)
+      .filter((id: any) => id !== null);
+
+    // 確定コース情報を取得
+    let coursesMap = new Map<string, string>();
+    if (confirmedCourseIds.length > 0) {
+      const { data: courses } = await supabaseAdmin
+        .from('event_courses')
+        .select('id, name')
+        .in('id', confirmedCourseIds);
+
+      if (courses) {
+        courses.forEach((course: any) => {
+          coursesMap.set(course.id, course.name);
+        });
+      }
+    }
+
     // 申込者に確定コース情報とイベント情報を追加
     const applicantsWithDetails = (applicants || []).map((applicant: any) => {
       const eventInfo = applicantEventsMap.get(applicant.id);
-      const confirmedCourse = applicant.event_courses?.name;
+      const confirmedCourseName = applicant.confirmed_course_id
+        ? coursesMap.get(applicant.confirmed_course_id)
+        : null;
 
       return {
         id: applicant.id,
@@ -129,7 +137,7 @@ export async function POST(request: Request) {
         line_user_id: applicant.line_user_id,
         school_name: applicant.school_name,
         grade: applicant.grade,
-        courses: confirmedCourse ? [confirmedCourse] : [],
+        courses: confirmedCourseName ? [confirmedCourseName] : [],
         event_name: eventInfo?.event_name || '',
         event_fiscal_year: eventInfo?.fiscal_year || 0,
       };
