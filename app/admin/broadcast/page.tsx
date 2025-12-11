@@ -11,6 +11,7 @@ interface Applicant {
   school_name: string;
   grade: string;
   visit_date_id: string;
+  courses: string[];
   selected_dates?: {
     date: string;
   }[];
@@ -363,6 +364,9 @@ export default function BroadcastPage() {
                         </div>
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        コース
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         メール
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -397,6 +401,22 @@ export default function BroadcastPage() {
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                           {applicant.grade}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {applicant.courses && applicant.courses.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {applicant.courses.map((course, index) => (
+                                <span
+                                  key={index}
+                                  className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded"
+                                >
+                                  {course}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">
                           {applicant.email ? (

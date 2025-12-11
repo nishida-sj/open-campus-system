@@ -27,10 +27,17 @@ export async function POST(request: Request) {
       return NextResponse.json([]);
     }
 
-    // 申込者を取得（重複を除外）
+    // 申込者と選択コース情報を取得
     const { data: visitDates, error: visitDatesError } = await supabaseAdmin
       .from('applicant_visit_dates')
-      .select('applicant_id')
+      .select(`
+        applicant_id,
+        selected_course_id,
+        event_courses!applicant_visit_dates_selected_course_id_fkey (
+          id,
+          name
+        )
+      `)
       .in('visit_date_id', dateIds);
 
     if (visitDatesError) {
@@ -41,8 +48,19 @@ export async function POST(request: Request) {
       );
     }
 
+    // 申込者IDごとにコース情報を集約
+    const applicantCoursesMap = new Map<string, Set<string>>();
+    (visitDates || []).forEach((vd: any) => {
+      if (!applicantCoursesMap.has(vd.applicant_id)) {
+        applicantCoursesMap.set(vd.applicant_id, new Set());
+      }
+      if (vd.event_courses?.name) {
+        applicantCoursesMap.get(vd.applicant_id)?.add(vd.event_courses.name);
+      }
+    });
+
     const applicantIds = Array.from(
-      new Set((visitDates || []).map((vd) => vd.applicant_id))
+      new Set((visitDates || []).map((vd: any) => vd.applicant_id))
     );
 
     if (applicantIds.length === 0) {
@@ -64,7 +82,16 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json(applicants || []);
+    // 申込者にコース情報を追加
+    const applicantsWithCourses = (applicants || []).map((applicant: any) => {
+      const courses = applicantCoursesMap.get(applicant.id);
+      return {
+        ...applicant,
+        courses: courses ? Array.from(courses) : [],
+      };
+    });
+
+    return NextResponse.json(applicantsWithCourses);
   } catch (error) {
     console.error('サーバーエラー:', error);
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 });
