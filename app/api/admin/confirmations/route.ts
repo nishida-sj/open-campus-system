@@ -373,11 +373,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // 申込者のステータスを確定に更新
+    // 申込者のステータスと確定情報を更新
     const { error: statusUpdateError } = await supabaseAdmin
       .from('applicants')
       .update({
         status: 'confirmed',
+        confirmed_date_id: confirmed_date_id,
+        confirmed_course_id: confirmed_course_id || null,
+        confirmed_at: new Date().toISOString(),
+        confirmed_by: 'admin',
       })
       .eq('id', applicant_id);
 
