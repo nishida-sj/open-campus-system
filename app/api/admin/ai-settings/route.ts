@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { clearPromptCache } from '@/lib/ai-response';
 
 // GET: AI設定を取得
 export async function GET() {
@@ -83,6 +84,10 @@ export async function POST(request: NextRequest) {
       console.error('Error details:', errors.map((e) => e.error));
       throw new Error('Failed to update settings');
     }
+
+    // プロンプトキャッシュをクリア（設定変更を即座に反映）
+    clearPromptCache();
+    console.log('AI prompt cache cleared after settings update');
 
     return NextResponse.json({
       success: true,

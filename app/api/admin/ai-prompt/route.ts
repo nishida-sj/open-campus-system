@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { clearPromptCache } from '@/lib/ai-response';
 
 /**
  * プロンプト生成API
@@ -363,6 +364,10 @@ export async function POST(request: Request) {
     }
 
     console.log(`[AI Prompt POST] Successfully updated: ${setting_key}`);
+
+    // プロンプトキャッシュをクリア（設定変更を即座に反映）
+    clearPromptCache();
+    console.log('[AI Prompt POST] AI prompt cache cleared after settings update');
 
     return NextResponse.json({ success: true });
   } catch (error) {
