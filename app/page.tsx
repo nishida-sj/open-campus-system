@@ -20,27 +20,52 @@ interface Event {
   dates: EventDate[];
 }
 
+interface SiteSettings {
+  school_name: string;
+  header_text: string;
+  footer_text: string;
+  primary_color: string;
+}
+
+const defaultSettings: SiteSettings = {
+  school_name: 'オープンキャンパス',
+  header_text: 'オープンキャンパス',
+  footer_text: '',
+  primary_color: '#1a365d',
+};
+
 export default function EventListPage() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
+  const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/events/public');
-        if (response.ok) {
-          const data = await response.json();
-          setEvents(data);
+        // イベントとサイト設定を並列取得
+        const [eventsRes, settingsRes] = await Promise.all([
+          fetch('/api/events/public'),
+          fetch('/api/site-settings'),
+        ]);
+
+        if (eventsRes.ok) {
+          const eventsData = await eventsRes.json();
+          setEvents(eventsData);
+        }
+
+        if (settingsRes.ok) {
+          const settingsData = await settingsRes.json();
+          setSettings({ ...defaultSettings, ...settingsData });
         }
       } catch (error) {
-        console.error('イベント取得エラー:', error);
+        console.error('データ取得エラー:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchEvents();
+    fetchData();
   }, []);
 
   const handleEventClick = (eventId: string) => {
@@ -51,7 +76,10 @@ export default function EventListPage() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block w-8 h-8 border-4 border-[#1a365d] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div
+            className="inline-block w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mb-4"
+            style={{ borderColor: `${settings.primary_color} transparent transparent transparent` }}
+          ></div>
           <p className="text-gray-600">読み込み中...</p>
         </div>
       </div>
@@ -61,9 +89,9 @@ export default function EventListPage() {
   return (
     <div className="min-h-screen bg-[#f8f9fa]">
       {/* ヘッダーバー */}
-      <div className="bg-[#1a365d] text-white py-3">
+      <div className="text-white py-3" style={{ backgroundColor: settings.primary_color }}>
         <div className="max-w-6xl mx-auto px-4">
-          <p className="text-sm">伊勢学園高等学校 オープンキャンパス</p>
+          <p className="text-sm">{settings.header_text}</p>
         </div>
       </div>
 
@@ -71,7 +99,10 @@ export default function EventListPage() {
         <div className="max-w-6xl mx-auto">
           {/* ヘッダー */}
           <div className="mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#1a365d] border-b-2 border-[#1a365d] pb-3">
+            <h1
+              className="text-2xl sm:text-3xl font-bold border-b-2 pb-3"
+              style={{ color: settings.primary_color, borderColor: settings.primary_color }}
+            >
               オープンキャンパス イベント一覧
             </h1>
             <p className="text-gray-600 mt-3">
@@ -99,11 +130,14 @@ export default function EventListPage() {
               {events.map((event) => (
                 <div
                   key={event.id}
-                  className="bg-white border border-gray-200 hover:border-[#1a365d] transition-colors duration-200 cursor-pointer"
+                  className="bg-white border border-gray-200 hover:border-current transition-colors duration-200 cursor-pointer"
+                  style={{ ['--tw-border-opacity' as string]: 1 }}
                   onClick={() => handleEventClick(event.id)}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = settings.primary_color)}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
                 >
                   {/* イベントカードヘッダー */}
-                  <div className="bg-[#1a365d] text-white px-5 py-3">
+                  <div className="text-white px-5 py-3" style={{ backgroundColor: settings.primary_color }}>
                     <h2 className="text-lg font-bold">
                       {event.name}
                     </h2>
@@ -120,7 +154,10 @@ export default function EventListPage() {
 
                     {/* 概要 */}
                     {event.overview && (
-                      <div className="bg-[#f8f9fa] border-l-2 border-[#1a365d] p-3 mb-4">
+                      <div
+                        className="bg-[#f8f9fa] border-l-2 p-3 mb-4"
+                        style={{ borderColor: settings.primary_color }}
+                      >
                         <p className="text-sm text-gray-700 line-clamp-3">
                           {event.overview}
                         </p>
@@ -131,7 +168,10 @@ export default function EventListPage() {
                     <div className="space-y-3 mb-5">
                       {/* 開催日程一覧 */}
                       <div>
-                        <div className="flex items-center text-sm font-bold text-[#1a365d] mb-2">
+                        <div
+                          className="flex items-center text-sm font-bold mb-2"
+                          style={{ color: settings.primary_color }}
+                        >
                           <svg
                             className="w-4 h-4 mr-2"
                             fill="none"
@@ -166,7 +206,10 @@ export default function EventListPage() {
                       </div>
 
                       {event.allow_multiple_dates && (
-                        <div className="flex items-center text-sm text-[#1a365d] bg-[#f0f4f8] px-3 py-2">
+                        <div
+                          className="flex items-center text-sm px-3 py-2"
+                          style={{ backgroundColor: `${settings.primary_color}10`, color: settings.primary_color }}
+                        >
                           <svg
                             className="w-4 h-4 mr-2"
                             fill="none"
@@ -186,7 +229,12 @@ export default function EventListPage() {
                     </div>
 
                     {/* 申込ボタン */}
-                    <button className="w-full bg-[#1a365d] hover:bg-[#0f2442] text-white font-bold py-3 px-6 transition duration-200 flex items-center justify-center">
+                    <button
+                      className="w-full text-white font-bold py-3 px-6 transition duration-200 flex items-center justify-center"
+                      style={{ backgroundColor: settings.primary_color }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                    >
                       <span>このイベントに申し込む</span>
                       <svg
                         className="w-5 h-5 ml-2"
@@ -209,9 +257,11 @@ export default function EventListPage() {
           )}
 
           {/* フッター */}
-          <div className="mt-12 text-center text-xs text-gray-500">
-            <p>© 伊勢学園高等学校</p>
-          </div>
+          {settings.footer_text && (
+            <div className="mt-12 text-center text-xs text-gray-500">
+              <p>{settings.footer_text}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

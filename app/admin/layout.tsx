@@ -107,6 +107,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       requiredLevel: ROLE_LEVELS.LINE_ADMIN, // 50
     },
     {
+      name: 'サイト設定',
+      icon: '🏫',
+      path: '/admin/site-settings',
+      requiredLevel: ROLE_LEVELS.LINE_ADMIN, // 50
+    },
+    {
       name: 'ユーザー管理',
       icon: '👤',
       path: '/admin/users',

@@ -40,6 +40,20 @@ interface DateSelection {
   priority?: number;
 }
 
+interface SiteSettings {
+  school_name: string;
+  header_text: string;
+  footer_text: string;
+  primary_color: string;
+}
+
+const defaultSettings: SiteSettings = {
+  school_name: 'オープンキャンパス',
+  header_text: 'オープンキャンパス',
+  footer_text: '',
+  primary_color: '#1a365d',
+};
+
 function ApplyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -48,6 +62,7 @@ function ApplyPageContent() {
   const [event, setEvent] = useState<EventData | null>(null);
   const [dates, setDates] = useState<DateData[]>([]);
   const [courses, setCourses] = useState<CourseData[]>([]);
+  const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -83,17 +98,27 @@ function ApplyPageContent() {
       return;
     }
 
-    const fetchEventData = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`/api/events/${eventId}`);
-        if (!response.ok) {
+        // イベントデータとサイト設定を並列取得
+        const [eventResponse, settingsResponse] = await Promise.all([
+          fetch(`/api/events/${eventId}`),
+          fetch('/api/site-settings'),
+        ]);
+
+        if (!eventResponse.ok) {
           throw new Error('イベントの取得に失敗しました');
         }
 
-        const data = await response.json();
+        const data = await eventResponse.json();
         setEvent(data.event);
         setDates(data.dates || []);
         setCourses(data.courses || []);
+
+        if (settingsResponse.ok) {
+          const settingsData = await settingsResponse.json();
+          setSettings({ ...defaultSettings, ...settingsData });
+        }
 
         if (!data.event.allow_multiple_dates && !data.event.allow_multiple_candidates && data.dates.length > 0) {
           const firstAvailableDate = data.dates.find((d: DateData) => d.remaining > 0);
@@ -109,7 +134,7 @@ function ApplyPageContent() {
       }
     };
 
-    fetchEventData();
+    fetchData();
   }, [eventId, router]);
 
   const handleDateSelection = (dateId: string, checked: boolean) => {
@@ -266,7 +291,10 @@ function ApplyPageContent() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block w-8 h-8 border-4 border-[#1a365d] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div
+            className="inline-block w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mb-4"
+            style={{ borderColor: `${settings.primary_color} transparent transparent transparent` }}
+          ></div>
           <p className="text-gray-600">読み込み中...</p>
         </div>
       </div>
@@ -280,7 +308,8 @@ function ApplyPageContent() {
           <p className="text-red-600 mb-4">イベントが見つかりません</p>
           <button
             onClick={() => router.push('/')}
-            className="text-[#1a365d] hover:text-[#2c5282] underline"
+            style={{ color: settings.primary_color }}
+            className="hover:opacity-80 underline"
           >
             イベント一覧に戻る
           </button>
@@ -292,9 +321,9 @@ function ApplyPageContent() {
   return (
     <div className="min-h-screen bg-[#f8f9fa]">
       {/* ヘッダーバー */}
-      <div className="bg-[#1a365d] text-white py-3">
+      <div className="text-white py-3" style={{ backgroundColor: settings.primary_color }}>
         <div className="max-w-4xl mx-auto px-4">
-          <p className="text-sm">伊勢学園高等学校 オープンキャンパス</p>
+          <p className="text-sm">{settings.header_text}</p>
         </div>
       </div>
 
@@ -303,7 +332,8 @@ function ApplyPageContent() {
           {/* 戻るリンク */}
           <button
             onClick={() => router.push('/')}
-            className="text-[#1a365d] hover:text-[#2c5282] text-sm mb-6 inline-flex items-center transition-colors"
+            className="text-sm mb-6 inline-flex items-center transition-colors hover:opacity-80"
+            style={{ color: settings.primary_color }}
           >
             <svg
               className="w-4 h-4 mr-1"
@@ -323,7 +353,10 @@ function ApplyPageContent() {
 
           {/* ページタイトル */}
           <div className="mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#1a365d] mb-2 border-b-2 border-[#1a365d] pb-3">
+            <h1
+              className="text-2xl sm:text-3xl font-bold mb-2 border-b-2 pb-3"
+              style={{ color: settings.primary_color, borderColor: settings.primary_color }}
+            >
               {event.name}
             </h1>
             <p className="text-gray-600 mt-3">必要事項を入力してお申し込みください</p>
@@ -333,7 +366,7 @@ function ApplyPageContent() {
           {event.overview && (
             <div className="bg-white border border-gray-200 p-6 mb-6">
               <h2 className="text-lg font-bold text-[#1a365d] mb-3 flex items-center">
-                <span className="w-1 h-5 bg-[#1a365d] mr-3"></span>
+                <span className="w-1 h-5 bg-primary mr-3"></span>
                 イベント概要
               </h2>
               <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{event.overview}</p>
@@ -353,7 +386,7 @@ function ApplyPageContent() {
               {/* 参加日程選択セクション */}
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-bold text-[#1a365d] mb-4 flex items-center">
-                  <span className="w-1 h-5 bg-[#1a365d] mr-3"></span>
+                  <span className="w-1 h-5 bg-primary mr-3"></span>
                   参加日程選択
                   <span className="text-red-500 ml-1 text-sm">*</span>
                 </h3>
@@ -421,7 +454,7 @@ function ApplyPageContent() {
                                   })}
                                 </div>
                                 {event.allow_multiple_candidates && priority && (
-                                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-bold bg-[#1a365d] text-white">
+                                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-bold bg-primary text-white">
                                     第{priority}候補
                                   </span>
                                 )}
@@ -515,7 +548,7 @@ function ApplyPageContent() {
               {/* 申込者情報セクション */}
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-bold text-[#1a365d] mb-4 flex items-center">
-                  <span className="w-1 h-5 bg-[#1a365d] mr-3"></span>
+                  <span className="w-1 h-5 bg-primary mr-3"></span>
                   申込者情報
                 </h3>
                 <div className="space-y-4">
@@ -712,7 +745,8 @@ function ApplyPageContent() {
                 <button
                   type="submit"
                   disabled={submitting || dates.length === 0 || selectedDates.length === 0}
-                  className="w-full bg-[#1a365d] hover:bg-[#0f2442] text-white font-bold py-4 px-6 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full text-white font-bold py-4 px-6 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+                  style={{ backgroundColor: settings.primary_color }}
                 >
                   {submitting ? '送信中...' : '申込を送信'}
                 </button>
@@ -727,9 +761,11 @@ function ApplyPageContent() {
           </div>
 
           {/* フッター */}
-          <div className="mt-8 text-center text-xs text-gray-500">
-            <p>© 伊勢学園高等学校</p>
-          </div>
+          {settings.footer_text && (
+            <div className="mt-8 text-center text-xs text-gray-500">
+              <p>{settings.footer_text}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
