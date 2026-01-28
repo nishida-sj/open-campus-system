@@ -682,7 +682,7 @@ export default function AISettingsPage() {
 
               {/* メンテナンスモード */}
               <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-center justify-between mb-4">
+                <label className="flex items-center justify-between cursor-pointer">
                   <div>
                     <p className="font-medium text-gray-900 flex items-center">
                       <span className="mr-2">🔧</span>
@@ -709,7 +709,7 @@ export default function AISettingsPage() {
                     <div className="w-16 h-8 bg-gray-300 peer-checked:bg-yellow-500 rounded-full transition-colors peer-focus:ring-2 peer-focus:ring-yellow-300"></div>
                     <div className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform peer-checked:translate-x-8"></div>
                   </div>
-                </div>
+                </label>
 
                 {basicSettings.maintenance_mode === 'true' && (
                   <div className="mt-4 pt-4 border-t border-yellow-300">
