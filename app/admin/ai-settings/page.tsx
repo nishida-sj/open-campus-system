@@ -862,6 +862,69 @@ export default function AISettingsPage() {
                     {inviteLoading ? '発行中...' : inviteCode ? '新しいコードを発行' : '招待コードを発行（10分間有効）'}
                   </button>
                 </div>
+
+                {/* テスターリスト管理 */}
+                <div className="mt-4 pt-4 border-t border-yellow-300">
+                  <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                    <span className="mr-2">👥</span>
+                    登録済みテスター一覧
+                  </h4>
+                  <p className="text-xs text-gray-600 mb-3">
+                    メンテナンスモード中にAI機能を使用できるユーザーの一覧です。
+                  </p>
+
+                  {(() => {
+                    let testerIds: string[] = [];
+                    try {
+                      testerIds = JSON.parse(basicSettings.maintenance_tester_ids || '[]');
+                    } catch {
+                      testerIds = [];
+                    }
+
+                    if (testerIds.length === 0) {
+                      return (
+                        <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500 text-sm">
+                          登録されているテスターはいません
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-2">
+                        {testerIds.map((id, index) => (
+                          <div
+                            key={id}
+                            className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-gray-400 text-sm">#{index + 1}</span>
+                              <code className="text-sm font-mono text-gray-700 bg-gray-50 px-2 py-1 rounded">
+                                {id.substring(0, 10)}...{id.substring(id.length - 6)}
+                              </code>
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (!confirm('このテスターを削除しますか？')) return;
+                                const newIds = testerIds.filter((_, i) => i !== index);
+                                setBasicSettings({
+                                  ...basicSettings,
+                                  maintenance_tester_ids: JSON.stringify(newIds),
+                                });
+                              }}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded transition-colors text-sm"
+                              title="削除"
+                            >
+                              🗑️ 削除
+                            </button>
+                          </div>
+                        ))}
+                        <p className="text-xs text-gray-500 mt-2">
+                          ※ 削除後は「基本設定を保存」ボタンを押して変更を反映してください
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* Temperature設定 */}
