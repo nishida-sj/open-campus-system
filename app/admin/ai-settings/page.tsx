@@ -808,63 +808,66 @@ export default function AISettingsPage() {
                   </div>
                 )}
 
-                {/* テスター招待コード発行 */}
-                <div className="mt-4 pt-4 border-t border-yellow-300">
-                  <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                    <span className="mr-2">🎫</span>
-                    テスター招待コード
-                  </h4>
-                  <p className="text-xs text-gray-600 mb-3">
-                    招待コードを発行し、テスター希望者にLINEで「テスター登録 [コード]」と送信してもらうと、自動的にテスターリストに追加されます。
-                  </p>
+                {/* テスター招待コード発行（メンテナンスモードON時のみ表示） */}
+                {basicSettings.maintenance_mode === 'true' && (
+                  <div className="mt-4 pt-4 border-t border-yellow-300">
+                    <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                      <span className="mr-2">🎫</span>
+                      テスター招待コード
+                    </h4>
+                    <p className="text-xs text-gray-600 mb-3">
+                      招待コードを発行し、テスター希望者にLINEで「テスター登録 [コード]」と送信してもらうと、自動的にテスターリストに追加されます。
+                    </p>
 
-                  {inviteCode && inviteExpiresAt && new Date(inviteExpiresAt) > new Date() ? (
-                    <div className="bg-white border-2 border-yellow-400 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">現在の招待コード:</span>
-                        <span className="text-xs text-gray-500">
-                          有効期限: {new Date(inviteExpiresAt).toLocaleTimeString('ja-JP')}
-                        </span>
+                    {inviteCode && inviteExpiresAt && new Date(inviteExpiresAt) > new Date() ? (
+                      <div className="bg-white border-2 border-yellow-400 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-600">現在の招待コード:</span>
+                          <span className="text-xs text-gray-500">
+                            有効期限: {new Date(inviteExpiresAt).toLocaleTimeString('ja-JP')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <code className="flex-1 bg-yellow-50 text-2xl font-bold text-center py-3 rounded tracking-widest">
+                            {inviteCode}
+                          </code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(`テスター登録 ${inviteCode}`);
+                              setMessage('コピーしました ✅');
+                              setTimeout(() => setMessage(''), 2000);
+                            }}
+                            className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+                            title="コピー"
+                          >
+                            📋
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                          LINEで「<strong>テスター登録 {inviteCode}</strong>」と送信してください
+                        </p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <code className="flex-1 bg-yellow-50 text-2xl font-bold text-center py-3 rounded tracking-widest">
-                          {inviteCode}
-                        </code>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(`テスター登録 ${inviteCode}`);
-                            setMessage('コピーしました ✅');
-                            setTimeout(() => setMessage(''), 2000);
-                          }}
-                          className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm"
-                          title="コピー"
-                        >
-                          📋
-                        </button>
+                    ) : (
+                      <div className="text-center">
+                        <p className="text-sm text-gray-500 mb-3">
+                          {inviteCode ? '招待コードの有効期限が切れました' : '招待コードが発行されていません'}
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-500 mt-2 text-center">
-                        LINEで「<strong>テスター登録 {inviteCode}</strong>」と送信してください
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <p className="text-sm text-gray-500 mb-3">
-                        {inviteCode ? '招待コードの有効期限が切れました' : '招待コードが発行されていません'}
-                      </p>
-                    </div>
-                  )}
+                    )}
 
-                  <button
-                    onClick={generateInviteCode}
-                    disabled={inviteLoading}
-                    className="mt-3 w-full bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:bg-gray-400"
-                  >
-                    {inviteLoading ? '発行中...' : inviteCode ? '新しいコードを発行' : '招待コードを発行（10分間有効）'}
-                  </button>
-                </div>
+                    <button
+                      onClick={generateInviteCode}
+                      disabled={inviteLoading}
+                      className="mt-3 w-full bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:bg-gray-400"
+                    >
+                      {inviteLoading ? '発行中...' : inviteCode ? '新しいコードを発行' : '招待コードを発行（10分間有効）'}
+                    </button>
+                  </div>
+                )}
 
-                {/* テスターリスト管理 */}
-                <div className="mt-4 pt-4 border-t border-yellow-300">
+                {/* テスターリスト管理（メンテナンスモードON時のみ表示） */}
+                {basicSettings.maintenance_mode === 'true' && (
+                  <div className="mt-4 pt-4 border-t border-yellow-300">
                   <h4 className="font-medium text-gray-900 mb-2 flex items-center">
                     <span className="mr-2">👥</span>
                     登録済みテスター一覧
@@ -924,7 +927,8 @@ export default function AISettingsPage() {
                       </div>
                     );
                   })()}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Temperature設定 */}
