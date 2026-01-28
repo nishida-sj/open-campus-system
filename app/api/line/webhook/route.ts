@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { generateAIResponse, isApplicationRelated, isUrgentQuestion } from '@/lib/ai-response';
 import { saveMessage, getConversationHistory, clearConversationHistory } from '@/lib/conversation-history';
 import { emergencyContact } from '@/lib/school-knowledge';
-import { canUseAIInMaintenanceMode } from '@/lib/usage-monitor';
+import { canUseAIInMaintenanceMode, verifyAndAddTester } from '@/lib/usage-monitor';
 
 // Next.js Route Handler設定
 export const runtime = 'nodejs'; // Node.js Runtimeを使用
@@ -380,6 +380,26 @@ async function handleAIResponse(
         type: 'text',
         text: '会話履歴をリセットしました。\n新しく質問をどうぞ！😊',
       });
+      return;
+    }
+
+    // 1.2. テスター登録コマンドの処理
+    const testerRegisterMatch = userMessage.match(/^テスター登録\s+([A-Za-z0-9]+)$/);
+    if (testerRegisterMatch) {
+      const code = testerRegisterMatch[1];
+      const result = await verifyAndAddTester(code, userId);
+
+      if (result.success) {
+        await client.replyMessage(event.replyToken, {
+          type: 'text',
+          text: `✅ ${result.message}\n\nメンテナンスモード中でもAI機能をご利用いただけます。`,
+        });
+      } else {
+        await client.replyMessage(event.replyToken, {
+          type: 'text',
+          text: `❌ ${result.message}\n\n正しい招待コードを入力してください。`,
+        });
+      }
       return;
     }
 

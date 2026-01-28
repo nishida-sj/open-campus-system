@@ -332,3 +332,160 @@ export async function updateAISetting(key: string, value: string): Promise<boole
     return false;
   }
 }
+
+// ========================================
+// テスター招待コード関連
+// ========================================
+
+/**
+ * テスター招待コードを生成
+ * @param expiresInMinutes 有効期限（分）
+ * @returns 生成されたコード
+ */
+export async function generateTesterInviteCode(expiresInMinutes: number = 10): Promise<string | null> {
+  try {
+    // 6桁のランダムコードを生成
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString();
+
+    // コードと有効期限を保存
+    const { error: codeError } = await supabaseAdmin
+      .from('ai_settings')
+      .upsert({ setting_key: 'maintenance_invite_code', setting_value: code, updated_at: new Date().toISOString() }, { onConflict: 'setting_key' });
+
+    const { error: expiresError } = await supabaseAdmin
+      .from('ai_settings')
+      .upsert({ setting_key: 'maintenance_invite_expires', setting_value: expiresAt, updated_at: new Date().toISOString() }, { onConflict: 'setting_key' });
+
+    if (codeError || expiresError) {
+      console.error('Error saving invite code:', codeError || expiresError);
+      return null;
+    }
+
+    return code;
+  } catch (error) {
+    console.error('Error in generateTesterInviteCode:', error);
+    return null;
+  }
+}
+
+/**
+ * テスター招待コードを検証し、有効ならテスターリストに追加
+ * @param code 入力されたコード
+ * @param lineUserId 追加するLINE User ID
+ * @returns 結果
+ */
+export async function verifyAndAddTester(code: string, lineUserId: string): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  try {
+    // 保存されているコードを取得
+    const { data: codeSetting } = await supabaseAdmin
+      .from('ai_settings')
+      .select('setting_value')
+      .eq('setting_key', 'maintenance_invite_code')
+      .single();
+
+    const { data: expiresSetting } = await supabaseAdmin
+      .from('ai_settings')
+      .select('setting_value')
+      .eq('setting_key', 'maintenance_invite_expires')
+      .single();
+
+    const savedCode = codeSetting?.setting_value;
+    const expiresAt = expiresSetting?.setting_value;
+
+    // コードが存在しない
+    if (!savedCode || savedCode === '') {
+      return { success: false, message: '招待コードが発行されていません' };
+    }
+
+    // コードが一致しない
+    if (savedCode.toUpperCase() !== code.toUpperCase()) {
+      return { success: false, message: '招待コードが正しくありません' };
+    }
+
+    // 有効期限チェック
+    if (expiresAt && new Date(expiresAt) < new Date()) {
+      return { success: false, message: '招待コードの有効期限が切れています' };
+    }
+
+    // 現在のテスターリストを取得
+    const { data: testerSetting } = await supabaseAdmin
+      .from('ai_settings')
+      .select('setting_value')
+      .eq('setting_key', 'maintenance_tester_ids')
+      .single();
+
+    let testerIds: string[] = [];
+    try {
+      testerIds = JSON.parse(testerSetting?.setting_value || '[]');
+    } catch {
+      testerIds = [];
+    }
+
+    // 既に登録済みかチェック
+    if (testerIds.includes(lineUserId)) {
+      return { success: true, message: '既にテスターとして登録されています' };
+    }
+
+    // テスターリストに追加
+    testerIds.push(lineUserId);
+    const { error: updateError } = await supabaseAdmin
+      .from('ai_settings')
+      .upsert({
+        setting_key: 'maintenance_tester_ids',
+        setting_value: JSON.stringify(testerIds),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'setting_key' });
+
+    if (updateError) {
+      console.error('Error updating tester list:', updateError);
+      return { success: false, message: 'テスター登録に失敗しました' };
+    }
+
+    // 使用済みコードをクリア（1回のみ有効）
+    await supabaseAdmin
+      .from('ai_settings')
+      .update({ setting_value: '', updated_at: new Date().toISOString() })
+      .eq('setting_key', 'maintenance_invite_code');
+
+    return { success: true, message: 'テスターとして登録されました' };
+  } catch (error) {
+    console.error('Error in verifyAndAddTester:', error);
+    return { success: false, message: 'エラーが発生しました' };
+  }
+}
+
+/**
+ * 現在の招待コード情報を取得
+ */
+export async function getInviteCodeInfo(): Promise<{
+  code: string | null;
+  expiresAt: string | null;
+  isValid: boolean;
+}> {
+  try {
+    const { data: codeSetting } = await supabaseAdmin
+      .from('ai_settings')
+      .select('setting_value')
+      .eq('setting_key', 'maintenance_invite_code')
+      .single();
+
+    const { data: expiresSetting } = await supabaseAdmin
+      .from('ai_settings')
+      .select('setting_value')
+      .eq('setting_key', 'maintenance_invite_expires')
+      .single();
+
+    const code = codeSetting?.setting_value || null;
+    const expiresAt = expiresSetting?.setting_value || null;
+    const isValid = !!(code && code !== '' && expiresAt && new Date(expiresAt) > new Date());
+
+    return { code: code || null, expiresAt, isValid };
+  } catch (error) {
+    console.error('Error in getInviteCodeInfo:', error);
+    return { code: null, expiresAt: null, isValid: false };
+  }
+}
