@@ -22,6 +22,12 @@ export interface UsageLimitCheck {
   allowed: boolean;
   reason?: string;
   usage: MonthlyUsage | null;
+  maintenanceMode?: boolean;
+}
+
+export interface MaintenanceModeStatus {
+  enabled: boolean;
+  testerIds: string[];
 }
 
 /**
@@ -83,6 +89,68 @@ export async function getMonthlyUsage(): Promise<MonthlyUsage> {
       percentageUsed: 0,
     };
   }
+}
+
+/**
+ * メンテナンスモードの状態を取得
+ * @returns メンテナンスモードの状態とテスターIDリスト
+ */
+export async function getMaintenanceStatus(): Promise<MaintenanceModeStatus> {
+  try {
+    // メンテナンスモード設定を取得
+    const { data: modeSetting } = await supabaseAdmin
+      .from('ai_settings')
+      .select('setting_value')
+      .eq('setting_key', 'maintenance_mode')
+      .single();
+
+    const enabled = modeSetting?.setting_value === 'true';
+
+    // テスターIDリストを取得
+    const { data: testerSetting } = await supabaseAdmin
+      .from('ai_settings')
+      .select('setting_value')
+      .eq('setting_key', 'maintenance_tester_ids')
+      .single();
+
+    let testerIds: string[] = [];
+    try {
+      testerIds = JSON.parse(testerSetting?.setting_value || '[]');
+    } catch {
+      testerIds = [];
+    }
+
+    return { enabled, testerIds };
+  } catch (error) {
+    console.error('Error in getMaintenanceStatus:', error);
+    return { enabled: false, testerIds: [] };
+  }
+}
+
+/**
+ * メンテナンスモード中にユーザーがAI機能を使用できるかチェック
+ * @param lineUserId LINE User ID
+ * @returns true: 使用可能、false: 使用不可
+ */
+export async function canUseAIInMaintenanceMode(lineUserId: string): Promise<{
+  allowed: boolean;
+  maintenanceMode: boolean;
+  isTester: boolean;
+}> {
+  const status = await getMaintenanceStatus();
+
+  if (!status.enabled) {
+    // メンテナンスモードが無効なら全員使用可能
+    return { allowed: true, maintenanceMode: false, isTester: false };
+  }
+
+  // メンテナンスモード中はテスターのみ使用可能
+  const isTester = status.testerIds.includes(lineUserId);
+  return {
+    allowed: isTester,
+    maintenanceMode: true,
+    isTester,
+  };
 }
 
 /**

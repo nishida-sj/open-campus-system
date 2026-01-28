@@ -38,6 +38,8 @@ interface AISettings {
   monthly_limit_jpy: string;
   enabled: string;
   usd_to_jpy_rate: string;
+  maintenance_mode: string;
+  maintenance_tester_ids: string;
 }
 
 interface UsageStats {
@@ -664,6 +666,87 @@ export default function AISettingsPage() {
                     <div className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform peer-checked:translate-x-8"></div>
                   </div>
                 </label>
+              </div>
+
+              {/* メンテナンスモード */}
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="font-medium text-gray-900 flex items-center">
+                      <span className="mr-2">🔧</span>
+                      メンテナンスモード
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {basicSettings.maintenance_mode === 'true'
+                        ? '有効 - テスター以外のユーザーにはAI応答を停止'
+                        : '無効 - 全ユーザーがAI機能を使用可能'}
+                    </p>
+                  </div>
+                  <div className="relative inline-block w-16 h-8">
+                    <input
+                      type="checkbox"
+                      checked={basicSettings.maintenance_mode === 'true'}
+                      onChange={(e) =>
+                        setBasicSettings({
+                          ...basicSettings,
+                          maintenance_mode: e.target.checked ? 'true' : 'false',
+                        })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-16 h-8 bg-gray-300 peer-checked:bg-yellow-500 rounded-full transition-colors peer-focus:ring-2 peer-focus:ring-yellow-300"></div>
+                    <div className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform peer-checked:translate-x-8"></div>
+                  </div>
+                </div>
+
+                {basicSettings.maintenance_mode === 'true' && (
+                  <div className="mt-4 pt-4 border-t border-yellow-300">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      テスター用LINE User ID
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      メンテナンスモード中でもAI機能を使用できるLINEユーザーのIDを入力してください。
+                      複数のIDを登録する場合は、カンマ区切りで入力してください。
+                    </p>
+                    <textarea
+                      value={(() => {
+                        try {
+                          const ids = JSON.parse(basicSettings.maintenance_tester_ids || '[]');
+                          return Array.isArray(ids) ? ids.join(', ') : '';
+                        } catch {
+                          return '';
+                        }
+                      })()}
+                      onChange={(e) => {
+                        const ids = e.target.value
+                          .split(',')
+                          .map((id) => id.trim())
+                          .filter((id) => id);
+                        setBasicSettings({
+                          ...basicSettings,
+                          maintenance_tester_ids: JSON.stringify(ids),
+                        });
+                      }}
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent font-mono text-sm"
+                      placeholder="例: Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx, Uyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                      💡 LINE User IDは、LINEボットにメッセージを送った際のログ、または LINE Developers Console で確認できます。
+                    </p>
+                  </div>
+                )}
+
+                {basicSettings.maintenance_mode === 'true' && (
+                  <div className="mt-4 p-3 bg-yellow-100 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      <strong>⚠️ メンテナンスモード有効中</strong>
+                      <br />
+                      テスター以外のユーザーには「メンテナンス中」のメッセージが表示されます。
+                      プロンプトの修正・テストが完了したら、メンテナンスモードをOFFにしてください。
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Temperature設定 */}

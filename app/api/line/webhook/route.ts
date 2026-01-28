@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { generateAIResponse, isApplicationRelated, isUrgentQuestion } from '@/lib/ai-response';
 import { saveMessage, getConversationHistory, clearConversationHistory } from '@/lib/conversation-history';
 import { emergencyContact } from '@/lib/school-knowledge';
+import { canUseAIInMaintenanceMode } from '@/lib/usage-monitor';
 
 // Next.js Route Handler設定
 export const runtime = 'nodejs'; // Node.js Runtimeを使用
@@ -378,6 +379,17 @@ async function handleAIResponse(
       await client.replyMessage(event.replyToken, {
         type: 'text',
         text: '会話履歴をリセットしました。\n新しく質問をどうぞ！😊',
+      });
+      return;
+    }
+
+    // 1.5. メンテナンスモードチェック
+    const maintenanceCheck = await canUseAIInMaintenanceMode(userId);
+    if (maintenanceCheck.maintenanceMode && !maintenanceCheck.allowed) {
+      // メンテナンスモード中で、テスターでないユーザーの場合
+      await client.replyMessage(event.replyToken, {
+        type: 'text',
+        text: `現在、AI自動応答機能はメンテナンス中です。\n\nお問い合わせは以下までお願いいたします。\n📞 TEL: ${emergencyContact.phone}\n⏰ 受付時間: ${emergencyContact.hours}`,
       });
       return;
     }
