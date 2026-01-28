@@ -108,7 +108,19 @@ export default function AISettingsPage() {
       const data = await res.json();
 
       if (data.success) {
-        setBasicSettings(data.settings);
+        // デフォルト値をマージ（DBに値がない場合に対応）
+        setBasicSettings({
+          system_prompt: '',
+          model: 'gpt-4o-mini',
+          temperature: '0.7',
+          max_tokens: '500',
+          monthly_limit_jpy: '500',
+          enabled: 'false',
+          usd_to_jpy_rate: '150',
+          maintenance_mode: 'false',
+          maintenance_tester_ids: '[]',
+          ...data.settings,
+        });
       }
     } catch (error) {
       console.error('Failed to fetch basic settings:', error);
