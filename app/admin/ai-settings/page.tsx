@@ -843,9 +843,17 @@ export default function AISettingsPage() {
                             📋
                           </button>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2 text-center">
-                          LINEで「<strong>テスター登録 {inviteCode}</strong>」と送信してください
-                        </p>
+                        <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-sm text-blue-800 text-center font-medium mb-1">
+                            📱 LINEボットに以下のメッセージを送信
+                          </p>
+                          <p className="text-xs text-blue-600 text-center mb-2">
+                            ⚠️「テスター登録」と「コード」の間に<span className="font-bold text-red-600 underline">半角スペース</span>が必要です
+                          </p>
+                          <div className="bg-white rounded px-3 py-2 text-center border border-gray-200">
+                            <code className="text-base font-mono">テスター登録<span className="bg-yellow-300 text-yellow-800 px-1 mx-0.5 rounded text-xs">␣</span>{inviteCode}</code>
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center">
