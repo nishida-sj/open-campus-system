@@ -69,7 +69,8 @@ ON CONFLICT (slug) DO NOTHING;
 -- PART 3: 既存テーブルにtenant_idカラムを追加
 -- =====================================================
 
--- デフォルトテナント（ise-hoken）のIDを取得
+-- デフォルトテナント（ise-hoken）のIDを取得し、各テーブルにtenant_id追加
+-- ※ 全テーブルにテーブル存在チェック付き（存在しないテーブルはスキップ）
 DO $$
 DECLARE
   default_tenant_id UUID;
@@ -77,171 +78,236 @@ BEGIN
   SELECT id INTO default_tenant_id FROM public.tenants WHERE slug = 'ise-hoken';
 
   -- 3-1. open_campus_events
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'open_campus_events' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.open_campus_events ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.open_campus_events SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.open_campus_events ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'open_campus_events') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'open_campus_events' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.open_campus_events ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.open_campus_events SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.open_campus_events ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to open_campus_events';
+    END IF;
   END IF;
 
   -- 3-2. open_campus_dates
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'open_campus_dates' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.open_campus_dates ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.open_campus_dates SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.open_campus_dates ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'open_campus_dates') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'open_campus_dates' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.open_campus_dates ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.open_campus_dates SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.open_campus_dates ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to open_campus_dates';
+    END IF;
   END IF;
 
   -- 3-3. event_courses
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'event_courses' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.event_courses ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.event_courses SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.event_courses ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'event_courses') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'event_courses' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.event_courses ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.event_courses SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.event_courses ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to event_courses';
+    END IF;
   END IF;
 
   -- 3-4. course_date_associations
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'course_date_associations' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.course_date_associations ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.course_date_associations SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.course_date_associations ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'course_date_associations') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'course_date_associations' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.course_date_associations ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.course_date_associations SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.course_date_associations ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to course_date_associations';
+    END IF;
   END IF;
 
   -- 3-5. course_date_capacities
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'course_date_capacities' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.course_date_capacities ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.course_date_capacities SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.course_date_capacities ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'course_date_capacities') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'course_date_capacities' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.course_date_capacities ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.course_date_capacities SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.course_date_capacities ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to course_date_capacities';
+    END IF;
   END IF;
 
   -- 3-6. applicants
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'applicants' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.applicants ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.applicants SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.applicants ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'applicants') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'applicants' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.applicants ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.applicants SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.applicants ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to applicants';
+    END IF;
   END IF;
 
   -- 3-7. applicant_visit_dates
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'applicant_visit_dates' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.applicant_visit_dates ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.applicant_visit_dates SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.applicant_visit_dates ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'applicant_visit_dates') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'applicant_visit_dates' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.applicant_visit_dates ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.applicant_visit_dates SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.applicant_visit_dates ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to applicant_visit_dates';
+    END IF;
   END IF;
 
   -- 3-8. confirmed_participations
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'confirmed_participations' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.confirmed_participations ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.confirmed_participations SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.confirmed_participations ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'confirmed_participations') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'confirmed_participations' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.confirmed_participations ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.confirmed_participations SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.confirmed_participations ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to confirmed_participations';
+    END IF;
   END IF;
 
   -- 3-9. email_settings
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'email_settings' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.email_settings ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.email_settings SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.email_settings ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'email_settings') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'email_settings' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.email_settings ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.email_settings SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.email_settings ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to email_settings';
+    END IF;
   END IF;
 
   -- 3-10. ai_settings
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ai_settings' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.ai_settings ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.ai_settings SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.ai_settings ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ai_settings') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ai_settings' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.ai_settings ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.ai_settings SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.ai_settings ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to ai_settings';
+    END IF;
   END IF;
 
   -- 3-11. ai_usage_logs
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ai_usage_logs' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.ai_usage_logs ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.ai_usage_logs SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.ai_usage_logs ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ai_usage_logs') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ai_usage_logs' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.ai_usage_logs ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.ai_usage_logs SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.ai_usage_logs ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to ai_usage_logs';
+    END IF;
   END IF;
 
   -- 3-12. conversation_history
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'conversation_history' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.conversation_history ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.conversation_history SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.conversation_history ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conversation_history') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'conversation_history' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.conversation_history ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.conversation_history SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.conversation_history ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to conversation_history';
+    END IF;
   END IF;
 
   -- 3-13. notification_logs
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'notification_logs' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.notification_logs ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.notification_logs SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.notification_logs ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'notification_logs') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'notification_logs' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.notification_logs ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.notification_logs SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.notification_logs ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to notification_logs';
+    END IF;
   END IF;
 
   -- 3-14. broadcast_history
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'broadcast_history' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.broadcast_history ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.broadcast_history SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.broadcast_history ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'broadcast_history') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'broadcast_history' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.broadcast_history ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.broadcast_history SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.broadcast_history ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to broadcast_history';
+    END IF;
   END IF;
 
   -- 3-15. application_logs
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'application_logs' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.application_logs ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.application_logs SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.application_logs ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'application_logs') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'application_logs' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.application_logs ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.application_logs SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.application_logs ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to application_logs';
+    END IF;
   END IF;
 
   -- 3-16. login_logs
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'login_logs' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.login_logs ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.login_logs SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.login_logs ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'login_logs') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'login_logs' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.login_logs ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.login_logs SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.login_logs ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to login_logs';
+    END IF;
   END IF;
 
   -- 3-17. users
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.users ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.users SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.users ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.users ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.users SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.users ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to users';
+    END IF;
   END IF;
 
   -- 3-18. user_roles
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_roles' AND column_name = 'tenant_id') THEN
-    ALTER TABLE public.user_roles ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
-    UPDATE public.user_roles SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-    ALTER TABLE public.user_roles ALTER COLUMN tenant_id SET NOT NULL;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'user_roles') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_roles' AND column_name = 'tenant_id') THEN
+      ALTER TABLE public.user_roles ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
+      UPDATE public.user_roles SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+      ALTER TABLE public.user_roles ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to user_roles';
+    END IF;
   END IF;
 
-  -- 3-19. site_settings（テーブルが存在する場合）
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'site_settings') THEN
+  -- 3-19. site_settings
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'site_settings') THEN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'site_settings' AND column_name = 'tenant_id') THEN
       ALTER TABLE public.site_settings ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
       UPDATE public.site_settings SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
       ALTER TABLE public.site_settings ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to site_settings';
     END IF;
   END IF;
 
-  -- 3-20. ai_prompts（テーブルが存在する場合）
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ai_prompts') THEN
+  -- 3-20. ai_prompts
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ai_prompts') THEN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ai_prompts' AND column_name = 'tenant_id') THEN
       ALTER TABLE public.ai_prompts ADD COLUMN tenant_id UUID REFERENCES public.tenants(id);
       UPDATE public.ai_prompts SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
       ALTER TABLE public.ai_prompts ALTER COLUMN tenant_id SET NOT NULL;
+      RAISE NOTICE 'Added tenant_id to ai_prompts';
     END IF;
   END IF;
 END $$;
 
 -- =====================================================
--- PART 4: インデックス追加
+-- PART 4: インデックス追加（テーブル存在チェック付き）
 -- =====================================================
-CREATE INDEX IF NOT EXISTS idx_open_campus_events_tenant_id ON public.open_campus_events(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_open_campus_dates_tenant_id ON public.open_campus_dates(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_event_courses_tenant_id ON public.event_courses(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_course_date_associations_tenant_id ON public.course_date_associations(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_course_date_capacities_tenant_id ON public.course_date_capacities(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_applicants_tenant_id ON public.applicants(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_applicant_visit_dates_tenant_id ON public.applicant_visit_dates(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_confirmed_participations_tenant_id ON public.confirmed_participations(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_email_settings_tenant_id ON public.email_settings(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_ai_settings_tenant_id ON public.ai_settings(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_ai_usage_logs_tenant_id ON public.ai_usage_logs(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_conversation_history_tenant_id ON public.conversation_history(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_notification_logs_tenant_id ON public.notification_logs(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_broadcast_history_tenant_id ON public.broadcast_history(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_application_logs_tenant_id ON public.application_logs(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_login_logs_tenant_id ON public.login_logs(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON public.users(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_user_roles_tenant_id ON public.user_roles(tenant_id);
+DO $$
+DECLARE
+  tbl RECORD;
+  idx_name TEXT;
+BEGIN
+  FOR tbl IN
+    SELECT unnest(ARRAY[
+      'open_campus_events', 'open_campus_dates', 'event_courses',
+      'course_date_associations', 'course_date_capacities',
+      'applicants', 'applicant_visit_dates', 'confirmed_participations',
+      'email_settings', 'ai_settings', 'ai_usage_logs',
+      'conversation_history', 'notification_logs', 'broadcast_history',
+      'application_logs', 'login_logs', 'users', 'user_roles'
+    ]) AS table_name
+  LOOP
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = tbl.table_name AND column_name = 'tenant_id'
+    ) THEN
+      idx_name := 'idx_' || tbl.table_name || '_tenant_id';
+      IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = idx_name) THEN
+        EXECUTE format('CREATE INDEX %I ON public.%I(tenant_id)', idx_name, tbl.table_name);
+        RAISE NOTICE 'Created index % on %', idx_name, tbl.table_name;
+      END IF;
+    END IF;
+  END LOOP;
+END $$;
 
 -- =====================================================
 -- PART 5: 一意制約の更新（テナントスコープ）
@@ -251,13 +317,25 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_tenant_id ON public.user_roles(tenant_
 -- 既存のユニーク制約を削除（名前は環境により異なるため、条件付き）
 DO $$
 BEGIN
-  -- ai_settings の setting_key ユニーク制約をテナントスコープに変更
-  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ai_settings_setting_key_key') THEN
-    ALTER TABLE public.ai_settings DROP CONSTRAINT ai_settings_setting_key_key;
-  END IF;
-  -- 新しいテナントスコープの一意制約
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ai_settings_tenant_setting_key_unique') THEN
-    ALTER TABLE public.ai_settings ADD CONSTRAINT ai_settings_tenant_setting_key_unique UNIQUE (tenant_id, setting_key);
+  -- ai_settings テーブルにtenant_idとsetting_keyが両方存在する場合のみ実行
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'ai_settings' AND column_name = 'tenant_id'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'ai_settings' AND column_name = 'setting_key'
+  ) THEN
+    -- 旧ユニーク制約を削除
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ai_settings_setting_key_key') THEN
+      ALTER TABLE public.ai_settings DROP CONSTRAINT ai_settings_setting_key_key;
+    END IF;
+    -- 新しいテナントスコープの一意制約
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ai_settings_tenant_setting_key_unique') THEN
+      ALTER TABLE public.ai_settings ADD CONSTRAINT ai_settings_tenant_setting_key_unique UNIQUE (tenant_id, setting_key);
+      RAISE NOTICE 'Created tenant-scoped unique constraint on ai_settings';
+    END IF;
+  ELSE
+    RAISE NOTICE 'Skipped ai_settings constraint: tenant_id or setting_key column missing';
   END IF;
 
   -- site_settings は直接カラム形式（school_name等）のためsetting_key制約は不要
