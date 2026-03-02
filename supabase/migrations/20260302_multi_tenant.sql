@@ -260,15 +260,7 @@ BEGIN
     ALTER TABLE public.ai_settings ADD CONSTRAINT ai_settings_tenant_setting_key_unique UNIQUE (tenant_id, setting_key);
   END IF;
 
-  -- site_settings のキー制約をテナントスコープに変更（テーブルが存在する場合）
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'site_settings') THEN
-    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'site_settings_setting_key_key') THEN
-      ALTER TABLE public.site_settings DROP CONSTRAINT site_settings_setting_key_key;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'site_settings_tenant_setting_key_unique') THEN
-      ALTER TABLE public.site_settings ADD CONSTRAINT site_settings_tenant_setting_key_unique UNIQUE (tenant_id, setting_key);
-    END IF;
-  END IF;
+  -- site_settings は直接カラム形式（school_name等）のためsetting_key制約は不要
 END $$;
 
 -- =====================================================
