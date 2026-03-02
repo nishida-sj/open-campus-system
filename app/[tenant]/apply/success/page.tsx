@@ -9,7 +9,23 @@ function SuccessContent() {
   const token = searchParams.get('token');
   const [timeLeft, setTimeLeft] = useState(30 * 60);
   const [isMobile, setIsMobile] = useState(false);
-  const lineBotId = process.env.NEXT_PUBLIC_LINE_BOT_BASIC_ID || '@471ktpxz';
+  const [lineBotId, setLineBotId] = useState('');
+
+  // テナントのBot Basic IDをAPIから取得
+  useEffect(() => {
+    const fetchBotId = async () => {
+      try {
+        const res = await fetch(`/api/${tenant}/site-settings`);
+        const data = await res.json();
+        if (data.line_bot_basic_id) {
+          setLineBotId(data.line_bot_basic_id);
+        }
+      } catch (error) {
+        console.error('Failed to fetch bot ID:', error);
+      }
+    };
+    fetchBotId();
+  }, [tenant]);
 
   useEffect(() => {
     const checkMobile = () => {

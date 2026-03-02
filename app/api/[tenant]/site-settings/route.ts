@@ -23,20 +23,27 @@ export async function GET(
       .limit(1)
       .single();
 
+    // テナントのline_bot_basic_idを含める（公開情報）
+    const lineBotBasicId = tenant.line_bot_basic_id || '';
+
     if (error && error.code !== 'PGRST116') {
       return NextResponse.json({
         school_name: tenant.display_name,
         header_text: tenant.display_name,
         footer_text: '',
         primary_color: '#1a365d',
+        line_bot_basic_id: lineBotBasicId,
       });
     }
 
-    return NextResponse.json(settings || {
-      school_name: tenant.display_name,
-      header_text: tenant.display_name,
-      footer_text: '',
-      primary_color: '#1a365d',
+    return NextResponse.json({
+      ...(settings || {
+        school_name: tenant.display_name,
+        header_text: tenant.display_name,
+        footer_text: '',
+        primary_color: '#1a365d',
+      }),
+      line_bot_basic_id: lineBotBasicId,
     });
   } catch (error) {
     console.error('サーバーエラー:', error);
