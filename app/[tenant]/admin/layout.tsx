@@ -130,6 +130,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       path: `/${tenant}/admin/login-logs`,
       requiredLevel: ROLE_LEVELS.SUPER_ADMIN, // 100
     },
+    {
+      name: 'テナント設定',
+      icon: '🔧',
+      path: `/${tenant}/admin/tenant-settings`,
+      requiredLevel: ROLE_LEVELS.SUPER_ADMIN, // 100
+    },
   ];
 
   // ユーザーの権限レベルに基づいてメニューをフィルタリング
