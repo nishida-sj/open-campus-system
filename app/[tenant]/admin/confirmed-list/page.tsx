@@ -1,0 +1,572 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+
+interface ConfirmedApplicant {
+  id: string;
+  name: string;
+  kana_name: string | null;
+  email: string;
+  phone: string;
+  school_name: string;
+  school_type: string | null;
+  grade: string;
+  line_user_id: string | null;
+  guardian_attendance: boolean;
+  guardian_name: string | null;
+  guardian_phone: string | null;
+  confirmed_dates: {
+    date_id: string;
+    date: string;
+    course_id: string | null;
+    course_name: string | null;
+    confirmed_at: string;
+  }[];
+  line_sent_at: string | null;
+  email_sent_at: string | null;
+}
+
+interface Event {
+  id: string;
+  name: string;
+}
+
+export default function ConfirmedListPage() {
+  const router = useRouter();
+  const { tenant } = useParams<{ tenant: string }>();
+  const [events, setEvents] = useState<Event[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [applicants, setApplicants] = useState<ConfirmedApplicant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedApplicants, setSelectedApplicants] = useState<string[]>([]);
+  const [sendingLine, setSendingLine] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [dateFilter, setDateFilter] = useState<string>('all');
+
+
+  // イベント一覧取得
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch(`/api/${tenant}/admin/events`);
+        if (response.ok) {
+          const data = await response.json();
+          setEvents(data);
+          if (data.length > 0) {
+            setSelectedEventId(data[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('イベント取得エラー:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, [tenant]);
+
+  // 確定者データ取得
+  useEffect(() => {
+    if (!selectedEventId) return;
+
+    const fetchApplicants = async () => {
+      try {
+        const response = await fetch(`/api/${tenant}/admin/confirmed-applicants?event_id=${selectedEventId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setApplicants(data);
+        }
+      } catch (error) {
+        console.error('確定者取得エラー:', error);
+      }
+    };
+
+    fetchApplicants();
+    setSelectedApplicants([]);
+  }, [selectedEventId, tenant]);
+
+  // 日程でフィルター
+  const filteredApplicants = dateFilter === 'all'
+    ? applicants
+    : applicants.filter((a) => a.confirmed_dates.some((cd) => cd.date === dateFilter));
+
+  // ユニークな日程リストを取得
+  const uniqueDates = Array.from(
+    new Set(applicants.flatMap((a) => a.confirmed_dates.map((cd) => cd.date)))
+  ).sort();
+
+  // チェックボックスのトグル
+  const toggleSelection = (applicantId: string) => {
+    setSelectedApplicants((prev) =>
+      prev.includes(applicantId)
+        ? prev.filter((id) => id !== applicantId)
+        : [...prev, applicantId]
+    );
+  };
+
+  // 全選択/全解除
+  const toggleSelectAll = () => {
+    if (selectedApplicants.length === filteredApplicants.length) {
+      setSelectedApplicants([]);
+    } else {
+      setSelectedApplicants(filteredApplicants.map((a) => a.id));
+    }
+  };
+
+  // LINE通知送信
+  const handleSendLineNotifications = async () => {
+    if (selectedApplicants.length === 0) {
+      alert('送信対象を選択してください');
+      return;
+    }
+
+    const selectedNames = applicants
+      .filter((a) => selectedApplicants.includes(a.id))
+      .map((a) => a.name)
+      .join('、');
+
+    if (!confirm(`以下の${selectedApplicants.length}名にLINE確定通知を送信しますか？\n\n${selectedNames}`)) {
+      return;
+    }
+
+    setSendingLine(true);
+
+    try {
+      const response = await fetch(`/api/${tenant}/admin/confirmed-applicants`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicant_ids: selectedApplicants }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const successCount = data.results.filter((r: any) => r.success).length;
+        const failCount = data.results.filter((r: any) => !r.success).length;
+
+        alert(`送信完了\n成功: ${successCount}件\n失敗: ${failCount}件`);
+        setSelectedApplicants([]);
+      } else {
+        const error = await response.json();
+        alert(`エラー: ${error.error || '送信に失敗しました'}`);
+      }
+    } catch (error) {
+      console.error('送信エラー:', error);
+      alert('エラーが発生しました');
+    } finally {
+      setSendingLine(false);
+    }
+  };
+
+  // メール通知送信
+  const handleSendEmailNotifications = async () => {
+    if (selectedApplicants.length === 0) {
+      alert('送信対象を選択してください');
+      return;
+    }
+
+    const selectedNames = applicants
+      .filter((a) => selectedApplicants.includes(a.id))
+      .map((a) => a.name)
+      .join('、');
+
+    if (!confirm(`以下の${selectedApplicants.length}名にメール確定通知を送信しますか？\n\n${selectedNames}`)) {
+      return;
+    }
+
+    setSendingEmail(true);
+
+    try {
+      const response = await fetch(`/api/${tenant}/admin/confirmed-applicants`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicant_ids: selectedApplicants }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const successCount = data.results.filter((r: any) => r.success).length;
+        const failCount = data.results.filter((r: any) => !r.success).length;
+
+        alert(`メール送信完了\n成功: ${successCount}件\n失敗: ${failCount}件`);
+        setSelectedApplicants([]);
+
+        // データを再取得
+        if (selectedEventId) {
+          const res = await fetch(`/api/${tenant}/admin/confirmed-applicants?event_id=${selectedEventId}`);
+          if (res.ok) {
+            const refreshedData = await res.json();
+            setApplicants(refreshedData);
+          }
+        }
+      } else {
+        const error = await response.json();
+        alert(`エラー: ${error.error || 'メール送信に失敗しました'}`);
+      }
+    } catch (error) {
+      console.error('送信エラー:', error);
+      alert('エラーが発生しました');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  // CSV出力
+  const handleExportCSV = () => {
+    if (filteredApplicants.length === 0) {
+      alert('出力するデータがありません');
+      return;
+    }
+
+    // CSV ヘッダー
+    const headers = [
+      '氏名',
+      'よみがな',
+      '学校名',
+      '学校種別',
+      '学年',
+      '参加日',
+      'コース',
+      'メールアドレス',
+      '電話番号',
+      '保護者同伴',
+      '保護者氏名',
+      '保護者電話番号',
+      '確定日時',
+    ];
+
+    // CSV データ（複数日対応：各日程を別行で出力）
+    const rows: string[][] = [];
+    filteredApplicants.forEach((a) => {
+      a.confirmed_dates.forEach((cd, index) => {
+        rows.push([
+          a.name,
+          a.kana_name || '',
+          a.school_name,
+          a.school_type || '',
+          a.grade,
+          new Date(cd.date).toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            weekday: 'long',
+          }),
+          cd.course_name || 'なし',
+          a.email,
+          a.phone,
+          a.guardian_attendance ? 'あり' : 'なし',
+          a.guardian_name || '',
+          a.guardian_phone || '',
+          new Date(cd.confirmed_at).toLocaleString('ja-JP'),
+        ]);
+      });
+    });
+
+    // CSV 文字列を作成
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+    ].join('\n');
+
+    // BOM付きUTF-8でエンコード
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+
+    // ダウンロード
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const eventName = events.find((e) => e.id === selectedEventId)?.name || 'event';
+    const dateStr = dateFilter === 'all' ? 'all' : new Date(dateFilter).toLocaleDateString('ja-JP').replace(/\//g, '-');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `確定者一覧_${eventName}_${dateStr}_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-gray-600">読み込み中...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      {/* ヘッダー */}
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-900">確定者管理</h1>
+            <button
+              onClick={() => router.push(`/${tenant}/admin/dashboard`)}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm transition duration-200"
+            >
+              ダッシュボードに戻る
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* フィルター */}
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* イベント選択 */}
+            <div>
+              <label htmlFor="event-select" className="block text-sm font-medium text-gray-700 mb-2">
+                イベント選択
+              </label>
+              <select
+                id="event-select"
+                value={selectedEventId || ''}
+                onChange={(e) => {
+                  setSelectedEventId(e.target.value);
+                  setDateFilter('all');
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {events.map((event) => (
+                  <option key={event.id} value={event.id}>
+                    {event.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 日程フィルター */}
+            <div>
+              <label htmlFor="date-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                日程フィルター
+              </label>
+              <select
+                id="date-filter"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">すべての日程</option>
+                {uniqueDates.map((date) => (
+                  <option key={date} value={date}>
+                    {new Date(date).toLocaleDateString('ja-JP', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      weekday: 'long',
+                    })}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* 統計情報とアクション */}
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex gap-6">
+              <div>
+                <p className="text-sm text-gray-600">確定者数</p>
+                <p className="text-2xl font-bold text-green-600">{filteredApplicants.length}名</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">選択中</p>
+                <p className="text-2xl font-bold text-blue-600">{selectedApplicants.length}名</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleExportCSV}
+                disabled={filteredApplicants.length === 0}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-lg font-semibold transition duration-200 flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                CSV出力
+              </button>
+              <button
+                onClick={handleSendLineNotifications}
+                disabled={selectedApplicants.length === 0 || sendingLine}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-lg font-semibold transition duration-200 flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                {sendingLine ? 'LINE送信中...' : 'LINE通知'}
+              </button>
+              <button
+                onClick={handleSendEmailNotifications}
+                disabled={selectedApplicants.length === 0 || sendingEmail}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-lg font-semibold transition duration-200 flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                {sendingEmail ? 'メール送信中...' : 'メール通知'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* テーブル */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={selectedApplicants.length === filteredApplicants.length && filteredApplicants.length > 0}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    氏名
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    メールアドレス
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    学校名
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    学年
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    保護者同伴
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    参加日
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    コース
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    LINE送信日
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    メール送信日
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredApplicants.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="px-6 py-8 text-center text-gray-500">
+                      該当する確定者はいません
+                    </td>
+                  </tr>
+                ) : (
+                  filteredApplicants.map((applicant) => (
+                    <tr key={applicant.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedApplicants.includes(applicant.id)}
+                          onChange={() => toggleSelection(applicant.id)}
+                          className="w-4 h-4"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{applicant.name}</div>
+                        {applicant.kana_name && (
+                          <div className="text-xs text-gray-500">{applicant.kana_name}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {applicant.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{applicant.school_name}</div>
+                        {applicant.school_type && (
+                          <div className="text-xs text-gray-500">{applicant.school_type}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {applicant.grade}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {applicant.guardian_attendance ? (
+                          <div>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              あり
+                            </span>
+                            {applicant.guardian_name && (
+                              <div className="text-xs text-gray-600 mt-1">
+                                {applicant.guardian_name}
+                              </div>
+                            )}
+                            {applicant.guardian_phone && (
+                              <div className="text-xs text-gray-600">
+                                {applicant.guardian_phone}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                            なし
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {applicant.confirmed_dates.map((cd, index) => (
+                          <div key={cd.date_id} className={index > 0 ? 'mt-1' : ''}>
+                            {new Date(cd.date).toLocaleDateString('ja-JP', {
+                              month: 'short',
+                              day: 'numeric',
+                              weekday: 'short',
+                            })}
+                          </div>
+                        ))}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {applicant.confirmed_dates.map((cd, index) => (
+                          <div key={cd.date_id} className={index > 0 ? 'mt-1' : ''}>
+                            {cd.course_name || '-'}
+                          </div>
+                        ))}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {applicant.line_sent_at ? (
+                          <div className="text-green-600">
+                            {new Date(applicant.line_sent_at).toLocaleDateString('ja-JP', {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </div>
+                        ) : applicant.line_user_id ? (
+                          <span className="text-gray-400">未送信</span>
+                        ) : (
+                          <span className="text-gray-400">連携なし</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {applicant.email_sent_at ? (
+                          <div className="text-blue-600">
+                            {new Date(applicant.email_sent_at).toLocaleDateString('ja-JP', {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">未送信</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

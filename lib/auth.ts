@@ -9,6 +9,7 @@ import { supabaseAdmin } from './supabase';
 
 export interface UserWithRoles {
   id: string;
+  tenant_id: string;
   email: string;
   full_name: string;
   is_active: boolean;
@@ -28,7 +29,7 @@ export interface UserWithRoles {
  * 現在ログイン中のユーザー情報を取得（ロール情報含む）
  * Server Component用
  */
-export async function getCurrentUser(): Promise<UserWithRoles | null> {
+export async function getCurrentUser(tenantId?: string): Promise<UserWithRoles | null> {
   try {
     const cookieStore = await cookies();
 
@@ -69,11 +70,17 @@ export async function getCurrentUser(): Promise<UserWithRoles | null> {
     console.log('[Auth] Authenticated user:', authUser.email);
 
     // データベースからユーザー情報とロールを取得
-    const { data: dbUser, error: dbError } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('users_with_roles')
       .select('*')
-      .eq('email', authUser.email)
-      .single();
+      .eq('email', authUser.email);
+
+    // テナントIDが指定されている場合はフィルタ
+    if (tenantId) {
+      query = query.eq('tenant_id', tenantId);
+    }
+
+    const { data: dbUser, error: dbError } = await query.single();
 
     if (dbError) {
       console.error('[Auth] User fetch error:', dbError);
@@ -87,6 +94,7 @@ export async function getCurrentUser(): Promise<UserWithRoles | null> {
 
     console.log('[Auth] User found:', {
       email: dbUser.email,
+      tenant_id: dbUser.tenant_id,
       max_role_level: dbUser.max_role_level,
       roles: dbUser.roles
     });
@@ -107,7 +115,7 @@ export async function getCurrentUser(): Promise<UserWithRoles | null> {
 /**
  * API Route用: Route Handlerから認証情報を取得
  */
-export async function getCurrentUserFromRequest(): Promise<UserWithRoles | null> {
+export async function getCurrentUserFromRequest(tenantId?: string): Promise<UserWithRoles | null> {
   try {
     const cookieStore = await cookies();
 
@@ -148,11 +156,17 @@ export async function getCurrentUserFromRequest(): Promise<UserWithRoles | null>
     console.log('[Auth API] Authenticated user:', authUser.email);
 
     // データベースからユーザー情報とロールを取得
-    const { data: dbUser, error: dbError } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('users_with_roles')
       .select('*')
-      .eq('email', authUser.email)
-      .single();
+      .eq('email', authUser.email);
+
+    // テナントIDが指定されている場合はフィルタ
+    if (tenantId) {
+      query = query.eq('tenant_id', tenantId);
+    }
+
+    const { data: dbUser, error: dbError } = await query.single();
 
     if (dbError) {
       console.error('[Auth API] User fetch error:', dbError);
@@ -166,6 +180,7 @@ export async function getCurrentUserFromRequest(): Promise<UserWithRoles | null>
 
     console.log('[Auth API] User found:', {
       email: dbUser.email,
+      tenant_id: dbUser.tenant_id,
       max_role_level: dbUser.max_role_level,
       roles: dbUser.roles
     });
@@ -186,8 +201,8 @@ export async function getCurrentUserFromRequest(): Promise<UserWithRoles | null>
 /**
  * ユーザーが指定したロールを持っているかチェック
  */
-export async function hasRole(roleName: string): Promise<boolean> {
-  const user = await getCurrentUser();
+export async function hasRole(roleName: string, tenantId?: string): Promise<boolean> {
+  const user = await getCurrentUser(tenantId);
   if (!user) return false;
 
   return user.roles.some(role => role.role_name === roleName);
@@ -196,8 +211,8 @@ export async function hasRole(roleName: string): Promise<boolean> {
 /**
  * ユーザーが最低限必要な権限レベルを持っているかチェック
  */
-export async function hasMinimumLevel(minimumLevel: number): Promise<boolean> {
-  const user = await getCurrentUser();
+export async function hasMinimumLevel(minimumLevel: number, tenantId?: string): Promise<boolean> {
+  const user = await getCurrentUser(tenantId);
   if (!user) return false;
 
   return user.max_role_level >= minimumLevel;
@@ -248,12 +263,15 @@ export const PAGE_PERMISSIONS = {
 /**
  * 指定したパスへのアクセス権限があるかチェック
  */
-export async function canAccessPath(path: string): Promise<boolean> {
-  const user = await getCurrentUser();
+export async function canAccessPath(path: string, tenantId?: string): Promise<boolean> {
+  const user = await getCurrentUser(tenantId);
   if (!user) return false;
 
+  // テナントslugを除去してパス比較
+  const normalizedPath = path.replace(/^\/[^/]+/, '');
+
   // パスに対応する必要権限レベルを取得
-  const requiredLevel = PAGE_PERMISSIONS[path as keyof typeof PAGE_PERMISSIONS];
+  const requiredLevel = PAGE_PERMISSIONS[normalizedPath as keyof typeof PAGE_PERMISSIONS];
 
   // 定義されていないパスはデフォルトで許可
   if (requiredLevel === undefined) {
@@ -270,22 +288,28 @@ export async function canAccessPath(path: string): Promise<boolean> {
 export async function logLogin(
   email: string,
   success: boolean,
+  tenantId?: string,
   ipAddress?: string,
   userAgent?: string,
   failureReason?: string,
   sessionId?: string
 ): Promise<void> {
   try {
-    console.log('[logLogin] Starting login logging:', { email, success });
+    console.log('[logLogin] Starting login logging:', { email, success, tenantId });
 
     // ユーザーIDを取得
     let userId: string | null = null;
     if (success) {
-      const { data, error: userError } = await supabaseAdmin
+      let userQuery = supabaseAdmin
         .from('users')
         .select('id')
-        .eq('email', email)
-        .single();
+        .eq('email', email);
+
+      if (tenantId) {
+        userQuery = userQuery.eq('tenant_id', tenantId);
+      }
+
+      const { data, error: userError } = await userQuery.single();
 
       if (userError) {
         console.error('[logLogin] Failed to fetch user ID:', userError);
@@ -310,7 +334,7 @@ export async function logLogin(
     }
 
     // ログイン履歴を記録
-    const logData = {
+    const logData: Record<string, unknown> = {
       user_id: userId,
       email,
       success,
@@ -319,6 +343,10 @@ export async function logLogin(
       failure_reason: failureReason ? failureReason.substring(0, 500) : undefined,
       session_id: sessionId ? sessionId.substring(0, 255) : undefined,
     };
+
+    if (tenantId) {
+      logData.tenant_id = tenantId;
+    }
 
     console.log('[logLogin] Inserting log entry:', logData);
 

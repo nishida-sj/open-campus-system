@@ -1,6 +1,6 @@
 /**
- * AI使用量監視ライブラリ
- * GPT-3.5 Turbo の使用量を追跡し、月間上限を管理
+ * AI使用量監視ライブラリ（テナント対応）
+ * GPT-4o-mini の使用量を追跡し、月間上限を管理
  */
 
 import { supabaseAdmin } from './supabase';
@@ -33,17 +33,16 @@ export interface MaintenanceModeStatus {
 /**
  * 今月の使用量を取得
  */
-export async function getMonthlyUsage(): Promise<MonthlyUsage> {
+export async function getMonthlyUsage(tenantId: string): Promise<MonthlyUsage> {
   try {
-    // 今月の開始日
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    // 使用量を集計
     const { data: logs, error: logsError } = await supabaseAdmin
       .from('ai_usage_logs')
       .select('cost_usd, cost_jpy')
+      .eq('tenant_id', tenantId)
       .gte('request_timestamp', startOfMonth.toISOString());
 
     if (logsError) {
@@ -54,10 +53,10 @@ export async function getMonthlyUsage(): Promise<MonthlyUsage> {
     const totalCostJPY = logs?.reduce((sum, log) => sum + parseFloat(log.cost_jpy), 0) || 0;
     const requestCount = logs?.length || 0;
 
-    // 月間上限を取得
     const { data: limitSetting, error: limitError } = await supabaseAdmin
       .from('ai_settings')
       .select('setting_value')
+      .eq('tenant_id', tenantId)
       .eq('setting_key', 'monthly_limit_jpy')
       .single();
 
@@ -69,47 +68,31 @@ export async function getMonthlyUsage(): Promise<MonthlyUsage> {
     const remainingJPY = Math.max(0, limitJPY - totalCostJPY);
     const percentageUsed = limitJPY > 0 ? (totalCostJPY / limitJPY) * 100 : 0;
 
-    return {
-      totalCostUSD,
-      totalCostJPY,
-      requestCount,
-      limitJPY,
-      remainingJPY,
-      percentageUsed,
-    };
+    return { totalCostUSD, totalCostJPY, requestCount, limitJPY, remainingJPY, percentageUsed };
   } catch (error) {
     console.error('Error in getMonthlyUsage:', error);
-    // デフォルト値を返す
-    return {
-      totalCostUSD: 0,
-      totalCostJPY: 0,
-      requestCount: 0,
-      limitJPY: 500,
-      remainingJPY: 500,
-      percentageUsed: 0,
-    };
+    return { totalCostUSD: 0, totalCostJPY: 0, requestCount: 0, limitJPY: 500, remainingJPY: 500, percentageUsed: 0 };
   }
 }
 
 /**
  * メンテナンスモードの状態を取得
- * @returns メンテナンスモードの状態とテスターIDリスト
  */
-export async function getMaintenanceStatus(): Promise<MaintenanceModeStatus> {
+export async function getMaintenanceStatus(tenantId: string): Promise<MaintenanceModeStatus> {
   try {
-    // メンテナンスモード設定を取得
     const { data: modeSetting } = await supabaseAdmin
       .from('ai_settings')
       .select('setting_value')
+      .eq('tenant_id', tenantId)
       .eq('setting_key', 'maintenance_mode')
       .single();
 
     const enabled = modeSetting?.setting_value === 'true';
 
-    // テスターIDリストを取得
     const { data: testerSetting } = await supabaseAdmin
       .from('ai_settings')
       .select('setting_value')
+      .eq('tenant_id', tenantId)
       .eq('setting_key', 'maintenance_tester_ids')
       .single();
 
@@ -129,40 +112,31 @@ export async function getMaintenanceStatus(): Promise<MaintenanceModeStatus> {
 
 /**
  * メンテナンスモード中にユーザーがAI機能を使用できるかチェック
- * @param lineUserId LINE User ID
- * @returns true: 使用可能、false: 使用不可
  */
-export async function canUseAIInMaintenanceMode(lineUserId: string): Promise<{
+export async function canUseAIInMaintenanceMode(tenantId: string, lineUserId: string): Promise<{
   allowed: boolean;
   maintenanceMode: boolean;
   isTester: boolean;
 }> {
-  const status = await getMaintenanceStatus();
+  const status = await getMaintenanceStatus(tenantId);
 
   if (!status.enabled) {
-    // メンテナンスモードが無効なら全員使用可能
     return { allowed: true, maintenanceMode: false, isTester: false };
   }
 
-  // メンテナンスモード中はテスターのみ使用可能
   const isTester = status.testerIds.includes(lineUserId);
-  return {
-    allowed: isTester,
-    maintenanceMode: true,
-    isTester,
-  };
+  return { allowed: isTester, maintenanceMode: true, isTester };
 }
 
 /**
  * 使用量制限チェック
- * @returns allowed: true なら使用可能、false なら制限超過
  */
-export async function checkUsageLimit(): Promise<UsageLimitCheck> {
+export async function checkUsageLimit(tenantId: string): Promise<UsageLimitCheck> {
   try {
-    // AI機能の有効/無効チェック
     const { data: enabledSetting, error: enabledError } = await supabaseAdmin
       .from('ai_settings')
       .select('setting_value')
+      .eq('tenant_id', tenantId)
       .eq('setting_key', 'enabled')
       .single();
 
@@ -171,54 +145,31 @@ export async function checkUsageLimit(): Promise<UsageLimitCheck> {
     }
 
     if (enabledSetting?.setting_value !== 'true') {
-      return {
-        allowed: false,
-        reason: 'AI機能が無効化されています',
-        usage: null,
-      };
+      return { allowed: false, reason: 'AI機能が無効化されています', usage: null };
     }
 
-    // 使用量チェック
-    const usage = await getMonthlyUsage();
+    const usage = await getMonthlyUsage(tenantId);
 
     if (usage.totalCostJPY >= usage.limitJPY) {
-      return {
-        allowed: false,
-        reason: `月間使用量上限（¥${usage.limitJPY}）に達しました`,
-        usage,
-      };
+      return { allowed: false, reason: `月間使用量上限（¥${usage.limitJPY}）に達しました`, usage };
     }
 
-    // 90%警告（ログのみ）
     if (usage.percentageUsed >= 90) {
       console.warn(`⚠️ AI使用量が${usage.percentageUsed.toFixed(1)}%に達しています`);
     }
 
-    return {
-      allowed: true,
-      usage,
-    };
+    return { allowed: true, usage };
   } catch (error) {
     console.error('Error in checkUsageLimit:', error);
-    // エラー時は安全のため使用を許可しない
-    return {
-      allowed: false,
-      reason: '使用量チェック中にエラーが発生しました',
-      usage: null,
-    };
+    return { allowed: false, reason: '使用量チェック中にエラーが発生しました', usage: null };
   }
 }
 
 /**
  * 使用量をログ記録
- * @param lineUserId LINE User ID
- * @param promptTokens 入力トークン数
- * @param completionTokens 出力トークン数
- * @param totalTokens 合計トークン数
- * @param success API呼び出し成功フラグ
- * @param errorMessage エラーメッセージ（失敗時）
  */
 export async function logUsage(
+  tenantId: string,
   lineUserId: string,
   promptTokens: number,
   completionTokens: number,
@@ -227,15 +178,14 @@ export async function logUsage(
   errorMessage?: string
 ): Promise<void> {
   try {
-    // コスト計算
     const costUSD =
       (promptTokens / 1000) * COST_PER_1K_INPUT +
       (completionTokens / 1000) * COST_PER_1K_OUTPUT;
 
-    // 換算レート取得
     const { data: rateSetting, error: rateError } = await supabaseAdmin
       .from('ai_settings')
       .select('setting_value')
+      .eq('tenant_id', tenantId)
       .eq('setting_key', 'usd_to_jpy_rate')
       .single();
 
@@ -246,8 +196,8 @@ export async function logUsage(
     const usdToJpyRate = parseFloat(rateSetting?.setting_value || '150');
     const costJPY = costUSD * usdToJpyRate;
 
-    // ログ記録
     const { error: insertError } = await supabaseAdmin.from('ai_usage_logs').insert({
+      tenant_id: tenantId,
       line_user_id: lineUserId,
       prompt_tokens: promptTokens,
       completion_tokens: completionTokens,
@@ -263,34 +213,31 @@ export async function logUsage(
       return;
     }
 
-    // 使用量チェック（次回のために）
-    const usage = await getMonthlyUsage();
+    const usage = await getMonthlyUsage(tenantId);
 
-    // 95%到達で自動無効化（安全策）
     if (usage.percentageUsed >= 95) {
       console.error('🚨 使用量が95%に達したため、AI機能を自動無効化しました');
 
       await supabaseAdmin
         .from('ai_settings')
         .update({ setting_value: 'false' })
+        .eq('tenant_id', tenantId)
         .eq('setting_key', 'enabled');
     }
   } catch (error) {
     console.error('Error in logUsage:', error);
-    // ログ記録失敗は致命的ではないので、エラーを投げない
   }
 }
 
 /**
  * AI設定を取得
- * @param key 設定キー
- * @returns 設定値（文字列）
  */
-export async function getAISetting(key: string): Promise<string | null> {
+export async function getAISetting(tenantId: string, key: string): Promise<string | null> {
   try {
     const { data, error } = await supabaseAdmin
       .from('ai_settings')
       .select('setting_value')
+      .eq('tenant_id', tenantId)
       .eq('setting_key', key)
       .single();
 
@@ -308,17 +255,13 @@ export async function getAISetting(key: string): Promise<string | null> {
 
 /**
  * AI設定を更新
- * @param key 設定キー
- * @param value 設定値
  */
-export async function updateAISetting(key: string, value: string): Promise<boolean> {
+export async function updateAISetting(tenantId: string, key: string, value: string): Promise<boolean> {
   try {
     const { error } = await supabaseAdmin
       .from('ai_settings')
-      .update({
-        setting_value: value,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ setting_value: value, updated_at: new Date().toISOString() })
+      .eq('tenant_id', tenantId)
       .eq('setting_key', key);
 
     if (error) {
@@ -339,23 +282,19 @@ export async function updateAISetting(key: string, value: string): Promise<boole
 
 /**
  * テスター招待コードを生成
- * @param expiresInMinutes 有効期限（分）
- * @returns 生成されたコード
  */
-export async function generateTesterInviteCode(expiresInMinutes: number = 10): Promise<string | null> {
+export async function generateTesterInviteCode(expiresInMinutes: number = 10, tenantId: string): Promise<string | null> {
   try {
-    // 6桁のランダムコードを生成
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString();
 
-    // コードと有効期限を保存
     const { error: codeError } = await supabaseAdmin
       .from('ai_settings')
-      .upsert({ setting_key: 'maintenance_invite_code', setting_value: code, updated_at: new Date().toISOString() }, { onConflict: 'setting_key' });
+      .upsert({ tenant_id: tenantId, setting_key: 'maintenance_invite_code', setting_value: code, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id,setting_key' });
 
     const { error: expiresError } = await supabaseAdmin
       .from('ai_settings')
-      .upsert({ setting_key: 'maintenance_invite_expires', setting_value: expiresAt, updated_at: new Date().toISOString() }, { onConflict: 'setting_key' });
+      .upsert({ tenant_id: tenantId, setting_key: 'maintenance_invite_expires', setting_value: expiresAt, updated_at: new Date().toISOString() }, { onConflict: 'tenant_id,setting_key' });
 
     if (codeError || expiresError) {
       console.error('Error saving invite code:', codeError || expiresError);
@@ -371,50 +310,45 @@ export async function generateTesterInviteCode(expiresInMinutes: number = 10): P
 
 /**
  * テスター招待コードを検証し、有効ならテスターリストに追加
- * @param code 入力されたコード
- * @param lineUserId 追加するLINE User ID
- * @returns 結果
  */
-export async function verifyAndAddTester(code: string, lineUserId: string): Promise<{
+export async function verifyAndAddTester(tenantId: string, code: string, lineUserId: string): Promise<{
   success: boolean;
   message: string;
 }> {
   try {
-    // 保存されているコードを取得
     const { data: codeSetting } = await supabaseAdmin
       .from('ai_settings')
       .select('setting_value')
+      .eq('tenant_id', tenantId)
       .eq('setting_key', 'maintenance_invite_code')
       .single();
 
     const { data: expiresSetting } = await supabaseAdmin
       .from('ai_settings')
       .select('setting_value')
+      .eq('tenant_id', tenantId)
       .eq('setting_key', 'maintenance_invite_expires')
       .single();
 
     const savedCode = codeSetting?.setting_value;
     const expiresAt = expiresSetting?.setting_value;
 
-    // コードが存在しない
     if (!savedCode || savedCode === '') {
       return { success: false, message: '招待コードが発行されていません' };
     }
 
-    // コードが一致しない
     if (savedCode.toUpperCase() !== code.toUpperCase()) {
       return { success: false, message: '招待コードが正しくありません' };
     }
 
-    // 有効期限チェック
     if (expiresAt && new Date(expiresAt) < new Date()) {
       return { success: false, message: '招待コードの有効期限が切れています' };
     }
 
-    // 現在のテスターリストを取得
     const { data: testerSetting } = await supabaseAdmin
       .from('ai_settings')
       .select('setting_value')
+      .eq('tenant_id', tenantId)
       .eq('setting_key', 'maintenance_tester_ids')
       .single();
 
@@ -425,30 +359,29 @@ export async function verifyAndAddTester(code: string, lineUserId: string): Prom
       testerIds = [];
     }
 
-    // 既に登録済みかチェック
     if (testerIds.includes(lineUserId)) {
       return { success: true, message: '既にテスターとして登録されています' };
     }
 
-    // テスターリストに追加
     testerIds.push(lineUserId);
     const { error: updateError } = await supabaseAdmin
       .from('ai_settings')
       .upsert({
+        tenant_id: tenantId,
         setting_key: 'maintenance_tester_ids',
         setting_value: JSON.stringify(testerIds),
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'setting_key' });
+      }, { onConflict: 'tenant_id,setting_key' });
 
     if (updateError) {
       console.error('Error updating tester list:', updateError);
       return { success: false, message: 'テスター登録に失敗しました' };
     }
 
-    // 使用済みコードをクリア（1回のみ有効）
     await supabaseAdmin
       .from('ai_settings')
       .update({ setting_value: '', updated_at: new Date().toISOString() })
+      .eq('tenant_id', tenantId)
       .eq('setting_key', 'maintenance_invite_code');
 
     return { success: true, message: 'テスターとして登録されました' };
@@ -461,7 +394,7 @@ export async function verifyAndAddTester(code: string, lineUserId: string): Prom
 /**
  * 現在の招待コード情報を取得
  */
-export async function getInviteCodeInfo(): Promise<{
+export async function getInviteCodeInfo(tenantId: string): Promise<{
   code: string | null;
   expiresAt: string | null;
   isValid: boolean;
@@ -470,12 +403,14 @@ export async function getInviteCodeInfo(): Promise<{
     const { data: codeSetting } = await supabaseAdmin
       .from('ai_settings')
       .select('setting_value')
+      .eq('tenant_id', tenantId)
       .eq('setting_key', 'maintenance_invite_code')
       .single();
 
     const { data: expiresSetting } = await supabaseAdmin
       .from('ai_settings')
       .select('setting_value')
+      .eq('tenant_id', tenantId)
       .eq('setting_key', 'maintenance_invite_expires')
       .single();
 

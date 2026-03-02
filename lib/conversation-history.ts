@@ -1,6 +1,6 @@
 /**
  * 会話履歴管理ライブラリ
- * LINE User IDごとの会話履歴をSupabaseに保存・取得
+ * LINE User IDごとの会話履歴をSupabaseに保存・取得（テナント対応）
  */
 
 import { supabaseAdmin } from './supabase';
@@ -13,17 +13,16 @@ export interface ConversationMessage {
 
 /**
  * 会話履歴を保存
- * @param lineUserId LINE User ID
- * @param role メッセージの役割 (user, assistant)
- * @param message メッセージ内容
  */
 export async function saveMessage(
+  tenantId: string,
   lineUserId: string,
   role: 'user' | 'assistant',
   message: string
 ): Promise<void> {
   try {
     const { error } = await supabaseAdmin.from('conversation_history').insert({
+      tenant_id: tenantId,
       line_user_id: lineUserId,
       role: role,
       message: message,
@@ -34,17 +33,14 @@ export async function saveMessage(
     }
   } catch (error) {
     console.error('Exception in saveMessage:', error);
-    // エラーでも処理は継続（会話履歴保存失敗は致命的ではない）
   }
 }
 
 /**
  * 会話履歴を取得
- * @param lineUserId LINE User ID
- * @param limit 取得件数（デフォルト: 10件）
- * @returns 会話履歴の配列（古い順）
  */
 export async function getConversationHistory(
+  tenantId: string,
   lineUserId: string,
   limit: number = 10
 ): Promise<ConversationMessage[]> {
@@ -52,6 +48,7 @@ export async function getConversationHistory(
     const { data, error } = await supabaseAdmin
       .from('conversation_history')
       .select('role, message, created_at')
+      .eq('tenant_id', tenantId)
       .eq('line_user_id', lineUserId)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -65,7 +62,6 @@ export async function getConversationHistory(
       return [];
     }
 
-    // 時系列順に並び替え（古い→新しい）
     return data
       .reverse()
       .map((msg) => ({
@@ -79,15 +75,14 @@ export async function getConversationHistory(
 }
 
 /**
- * 会話履歴を削除（ユーザーの要望時）
- * @param lineUserId LINE User ID
- * @returns 削除成功: true、失敗: false
+ * 会話履歴を削除
  */
-export async function clearConversationHistory(lineUserId: string): Promise<boolean> {
+export async function clearConversationHistory(tenantId: string, lineUserId: string): Promise<boolean> {
   try {
     const { error } = await supabaseAdmin
       .from('conversation_history')
       .delete()
+      .eq('tenant_id', tenantId)
       .eq('line_user_id', lineUserId);
 
     if (error) {
@@ -104,7 +99,6 @@ export async function clearConversationHistory(lineUserId: string): Promise<bool
 
 /**
  * 古い会話履歴を削除（メンテナンス用）
- * @param daysOld 何日以上前のデータを削除するか（デフォルト: 30日）
  */
 export async function cleanupOldHistory(daysOld: number = 30): Promise<void> {
   try {
@@ -128,10 +122,8 @@ export async function cleanupOldHistory(daysOld: number = 30): Promise<void> {
 
 /**
  * ユーザーの会話統計を取得
- * @param lineUserId LINE User ID
- * @returns 統計情報
  */
-export async function getUserConversationStats(lineUserId: string): Promise<{
+export async function getUserConversationStats(tenantId: string, lineUserId: string): Promise<{
   totalMessages: number;
   firstMessageDate: string | null;
   lastMessageDate: string | null;
@@ -140,24 +132,17 @@ export async function getUserConversationStats(lineUserId: string): Promise<{
     const { data, error } = await supabaseAdmin
       .from('conversation_history')
       .select('created_at')
+      .eq('tenant_id', tenantId)
       .eq('line_user_id', lineUserId)
       .order('created_at', { ascending: true });
 
     if (error) {
       console.error('Error getting conversation stats:', error);
-      return {
-        totalMessages: 0,
-        firstMessageDate: null,
-        lastMessageDate: null,
-      };
+      return { totalMessages: 0, firstMessageDate: null, lastMessageDate: null };
     }
 
     if (!data || data.length === 0) {
-      return {
-        totalMessages: 0,
-        firstMessageDate: null,
-        lastMessageDate: null,
-      };
+      return { totalMessages: 0, firstMessageDate: null, lastMessageDate: null };
     }
 
     return {
@@ -167,10 +152,6 @@ export async function getUserConversationStats(lineUserId: string): Promise<{
     };
   } catch (error) {
     console.error('Exception in getUserConversationStats:', error);
-    return {
-      totalMessages: 0,
-      firstMessageDate: null,
-      lastMessageDate: null,
-    };
+    return { totalMessages: 0, firstMessageDate: null, lastMessageDate: null };
   }
 }

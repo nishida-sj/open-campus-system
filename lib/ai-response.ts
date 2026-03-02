@@ -1,63 +1,100 @@
 /**
- * AI応答ロジック
- * OpenAI GPT-3.5 Turbo との統合
+ * AI応答ロジック（テナント対応）
+ * OpenAI GPT-4o-mini との統合
  */
 
 import OpenAI from 'openai';
-import { emergencyContact, isApplicationRelated, isUrgentQuestion } from './school-knowledge';
+import { isApplicationRelated, isUrgentQuestion } from './school-knowledge';
 import { checkUsageLimit, logUsage, getAISetting } from './usage-monitor';
+import { supabaseAdmin } from './supabase';
+import type { Tenant } from './tenant';
 
-// プロンプトキャッシュ（5分間有効）
-let cachedPrompt: string | null = null;
-let promptCacheTime: number = 0;
+// プロンプトキャッシュ（テナントごと・5分間有効）
+const promptCache = new Map<string, { prompt: string; cachedAt: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5分
 
-// OpenAI Client初期化
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+// OpenAIクライアントキャッシュ（テナントごと）
+const openaiClients = new Map<string, OpenAI>();
 
 /**
- * 動的プロンプトをAPIから取得（キャッシュ付き）
+ * テナント用のOpenAIクライアントを取得
  */
-async function fetchSystemPrompt(): Promise<string> {
+function getOpenAIClient(tenant: Tenant): OpenAI {
+  const apiKey = tenant.openai_api_key || process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OpenAI API key not configured');
+  }
+
+  // キーが同じならキャッシュを使用
+  const cached = openaiClients.get(tenant.id);
+  if (cached) {
+    return cached;
+  }
+
+  const client = new OpenAI({ apiKey });
+  openaiClients.set(tenant.id, client);
+  return client;
+}
+
+/**
+ * テナント別の緊急連絡先を取得
+ */
+export async function getEmergencyContact(tenantId: string): Promise<{
+  phone: string;
+  hours: string;
+  email: string;
+}> {
   try {
-    // キャッシュが有効な場合はキャッシュを返す
+    const { data: settings } = await supabaseAdmin
+      .from('site_settings')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    return {
+      phone: settings?.phone || '03-XXXX-XXXX',
+      hours: settings?.business_hours || '平日 9:00-17:00',
+      email: settings?.email || 'info@example.jp',
+    };
+  } catch {
+    return {
+      phone: '03-XXXX-XXXX',
+      hours: '平日 9:00-17:00',
+      email: 'info@example.jp',
+    };
+  }
+}
+
+/**
+ * 動的プロンプトをDBから取得（キャッシュ付き）
+ */
+async function fetchSystemPrompt(tenantId: string): Promise<string> {
+  try {
     const now = Date.now();
-    if (cachedPrompt && now - promptCacheTime < CACHE_DURATION) {
-      console.log('Using cached prompt');
-      return cachedPrompt;
+    const cached = promptCache.get(tenantId);
+    if (cached && now - cached.cachedAt < CACHE_DURATION) {
+      return cached.prompt;
     }
 
-    // APIからプロンプトを取得
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/admin/ai-prompt`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    // DB からプロンプト設定を直接取得
+    const { data: promptSetting } = await supabaseAdmin
+      .from('ai_settings')
+      .select('setting_value')
+      .eq('tenant_id', tenantId)
+      .eq('setting_key', 'system_prompt')
+      .single();
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch prompt: ${response.status}`);
+    if (promptSetting?.setting_value) {
+      promptCache.set(tenantId, { prompt: promptSetting.setting_value, cachedAt: now });
+      return promptSetting.setting_value;
     }
 
-    const data = await response.json();
-
-    if (!data.success || !data.prompt) {
-      throw new Error('Invalid prompt response');
-    }
-
-    // キャッシュを更新
-    cachedPrompt = data.prompt;
-    promptCacheTime = now;
-    console.log('Prompt fetched and cached successfully');
-
-    return data.prompt;
-  } catch (error) {
-    console.error('Error fetching system prompt:', error);
-    // フォールバックとして基本的なプロンプトを返す
-    return `あなたは学校の公式LINEアカウントのAIアシスタントです。
+    // フォールバック
+    const contact = await getEmergencyContact(tenantId);
+    const fallback = `あなたは学校の公式LINEアカウントのAIアシスタントです。
 以下のルールに従って回答してください：
 
 【回答ルール】
@@ -65,17 +102,19 @@ async function fetchSystemPrompt(): Promise<string> {
 - 絵文字を適度に使用（1-2個/メッセージ）
 - 長文は避け、簡潔に（200文字以内推奨）
 - 不確かな情報は提供しない
-- 質問の意図を理解して適切に回答
 
 【重要】回答できない場合の対応
-上記の情報に含まれていない質問や、確実に回答できない内容については、以下のメッセージを一字一句そのまま正確に返してください。
-内容を変更したり、言い換えたり、装飾したり、絵文字を追加したり、追加情報を加えたりしないでください：
-
 申し訳ございませんが、その質問にはお答えできません。
 お電話でお問い合わせください。
 
-📞 ${emergencyContact.phone}
-⏰ ${emergencyContact.hours}`;
+📞 ${contact.phone}
+⏰ ${contact.hours}`;
+
+    promptCache.set(tenantId, { prompt: fallback, cachedAt: now });
+    return fallback;
+  } catch (error) {
+    console.error('Error fetching system prompt:', error);
+    return 'あなたは学校の公式LINEアカウントのAIアシスタントです。丁寧に回答してください。';
   }
 }
 
@@ -87,20 +126,17 @@ export interface AIResponseResult {
 }
 
 /**
- * AI応答を生成（使用量制限対応版）
- * @param lineUserId LINE User ID
- * @param userMessage ユーザーからのメッセージ
- * @param conversationHistory 会話履歴（オプション）
- * @returns AI応答結果
+ * AI応答を生成（テナント対応版）
  */
 export async function generateAIResponse(
+  tenant: Tenant,
   lineUserId: string,
   userMessage: string,
   conversationHistory?: { role: 'user' | 'assistant'; content: string }[]
 ): Promise<AIResponseResult> {
   try {
     // 1. 使用量制限チェック
-    const limitCheck = await checkUsageLimit();
+    const limitCheck = await checkUsageLimit(tenant.id);
 
     if (!limitCheck.allowed) {
       return {
@@ -110,15 +146,14 @@ export async function generateAIResponse(
       };
     }
 
-    // 2. システムプロンプトを動的に取得（キャッシュ付き）
-    const systemPrompt = await fetchSystemPrompt();
+    // 2. システムプロンプトを動的に取得
+    const systemPrompt = await fetchSystemPrompt(tenant.id);
 
     // 3. メッセージ構築
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
     ];
 
-    // 会話履歴を追加（最新10件のみ）
     if (conversationHistory && conversationHistory.length > 0) {
       const recentHistory = conversationHistory.slice(-10);
       messages.push(
@@ -129,22 +164,19 @@ export async function generateAIResponse(
       );
     }
 
-    // 現在のユーザーメッセージを追加
     messages.push({ role: 'user', content: userMessage });
 
     // 4. パラメータ取得
-    const temperature = parseFloat((await getAISetting('temperature')) || '0.7');
-    const maxTokens = parseInt((await getAISetting('max_tokens')) || '500');
+    const temperature = parseFloat((await getAISetting(tenant.id, 'temperature')) || '0.7');
+    const maxTokens = parseInt((await getAISetting(tenant.id, 'max_tokens')) || '500');
 
     // 5. OpenAI API呼び出し
+    const openai = getOpenAIClient(tenant);
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // GPT-4o-mini を使用（高性能・低コスト）
+      model: 'gpt-4o-mini',
       messages: messages,
       temperature: temperature,
       max_tokens: maxTokens,
-      // データ学習について:
-      // OpenAI APIは2023年3月1日以降、デフォルトでAPIデータを学習に使用しません
-      // https://openai.com/policies/api-data-usage-policies
     });
 
     const response = completion.choices[0].message.content;
@@ -155,100 +187,49 @@ export async function generateAIResponse(
     }
 
     // 6. 使用量をログ記録
-    await logUsage(
-      lineUserId,
-      usage.prompt_tokens,
-      usage.completion_tokens,
-      usage.total_tokens,
-      true
-    );
+    await logUsage(tenant.id, lineUserId, usage.prompt_tokens, usage.completion_tokens, usage.total_tokens, true);
 
-    return {
-      success: true,
-      response,
-    };
+    return { success: true, response };
   } catch (error) {
     console.error('OpenAI API error:', error);
 
-    // エラーもログに記録
-    await logUsage(lineUserId, 0, 0, 0, false, error instanceof Error ? error.message : 'Unknown error');
+    await logUsage(tenant.id, lineUserId, 0, 0, 0, false, error instanceof Error ? error.message : 'Unknown error');
 
-    // エラーの種類に応じた応答
+    const contact = await getEmergencyContact(tenant.id);
+
     if (error instanceof Error) {
       if (error.message.includes('rate_limit')) {
         return {
           success: false,
-          error:
-            'ただいま多くのお問い合わせをいただいており、少々お時間をいただいております。しばらくしてからもう一度お試しください🙇',
-        };
-      } else if (error.message.includes('api_key') || error.message.includes('Incorrect API key')) {
-        console.error('OpenAI API key error');
-        return {
-          success: false,
-          error: getDefaultErrorMessage(),
+          error: 'ただいま多くのお問い合わせをいただいており、少々お時間をいただいております。しばらくしてからもう一度お試しください🙇',
         };
       }
     }
 
     return {
       success: false,
-      error: getDefaultErrorMessage(),
+      error: `申し訳ございません。一時的にシステムエラーが発生しております。\n\nお急ぎの場合は、お電話でお問い合わせください。\n📞 ${contact.phone}\n⏰ ${contact.hours}`,
     };
   }
 }
 
 /**
- * プロンプトキャッシュをクリア（テスト用・設定更新後に使用）
+ * プロンプトキャッシュをクリア
  */
-export function clearPromptCache(): void {
-  cachedPrompt = null;
-  promptCacheTime = 0;
+export function clearPromptCache(tenantId?: string): void {
+  if (tenantId) {
+    promptCache.delete(tenantId);
+  } else {
+    promptCache.clear();
+  }
   console.log('Prompt cache cleared');
 }
 
 /**
- * よくある質問かどうか判定
- */
-export function isFrequentQuestion(message: string): boolean {
-  const keywords = [
-    'アクセス',
-    '場所',
-    '行き方',
-    '日程',
-    'いつ',
-    '時間',
-    '学費',
-    '費用',
-    '入試',
-    '試験',
-    'コース',
-    '学科',
-  ];
-
-  return keywords.some((keyword) => message.includes(keyword));
-}
-
-/**
- * デフォルトエラーメッセージ
- */
-function getDefaultErrorMessage(): string {
-  return `申し訳ございません。一時的にシステムエラーが発生しております。
-
-お急ぎの場合は、お電話でお問い合わせください。
-📞 ${emergencyContact.phone}
-⏰ ${emergencyContact.hours}`;
-}
-
-/**
  * トークン使用量の概算計算
- * @param text テキスト
- * @returns 推定トークン数
  */
 export function estimateTokens(text: string): number {
-  // 日本語の場合、おおよそ1文字=2トークン
-  // 英語の場合、おおよそ1単語=1.3トークン
   return Math.ceil(text.length * 2);
 }
 
-// 便利な判定関数をエクスポート
 export { isApplicationRelated, isUrgentQuestion };
