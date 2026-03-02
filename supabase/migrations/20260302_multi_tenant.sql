@@ -34,7 +34,21 @@ CREATE POLICY "Service role only access"
   TO public
   USING ((select auth.role()) = 'service_role'::text);
 
+-- updated_at自動更新関数（存在しない場合のみ作成）
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
 -- updated_atトリガー
+DROP TRIGGER IF EXISTS update_tenants_updated_at ON public.tenants;
 CREATE TRIGGER update_tenants_updated_at
   BEFORE UPDATE ON public.tenants
   FOR EACH ROW
@@ -48,7 +62,8 @@ COMMENT ON COLUMN public.tenants.slug IS 'URL識別子（例: ise-hoken, ise-gak
 -- =====================================================
 INSERT INTO public.tenants (slug, name, display_name) VALUES
   ('ise-hoken', '伊勢保健衛生専門学校', '伊勢保健衛生専門学校'),
-  ('ise-gakuen', '伊勢学園高等学校', '伊勢学園高等学校');
+  ('ise-gakuen', '伊勢学園高等学校', '伊勢学園高等学校')
+ON CONFLICT (slug) DO NOTHING;
 
 -- =====================================================
 -- PART 3: 既存テーブルにtenant_idカラムを追加
