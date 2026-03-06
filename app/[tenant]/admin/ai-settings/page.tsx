@@ -20,13 +20,25 @@ interface AutoAppendRule {
   order: number;
 }
 
+interface PeriodRule {
+  id: string;
+  name: string;
+  message: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  order: number;
+}
+
 interface PromptParts {
   school_info: string;
   access: string;
   unable_response: string;
   closing_message: string;
+  additional_instructions: string;
   custom_items: CustomItem[];
   auto_append_rules: AutoAppendRule[];
+  period_rules: PeriodRule[];
   events: any[];
   event_prompts: string;
 }
@@ -69,6 +81,7 @@ export default function AISettingsPage() {
   const [access, setAccess] = useState('');
   const [unableResponse, setUnableResponse] = useState('');
   const [closingMessage, setClosingMessage] = useState('');
+  const [additionalInstructions, setAdditionalInstructions] = useState('');
 
   // カスタム項目
   const [customItems, setCustomItems] = useState<CustomItem[]>([]);
@@ -86,12 +99,21 @@ export default function AISettingsPage() {
   const [newRuleMessage, setNewRuleMessage] = useState('');
   const [newRulePosition, setNewRulePosition] = useState<'end' | 'start'>('end');
 
+  // 期間限定ルール
+  const [periodRules, setPeriodRules] = useState<PeriodRule[]>([]);
+  const [editingPeriodRule, setEditingPeriodRule] = useState<PeriodRule | null>(null);
+  const [showAddPeriodRuleForm, setShowAddPeriodRuleForm] = useState(false);
+  const [newPeriodRuleName, setNewPeriodRuleName] = useState('');
+  const [newPeriodRuleMessage, setNewPeriodRuleMessage] = useState('');
+  const [newPeriodRuleStartDate, setNewPeriodRuleStartDate] = useState('');
+  const [newPeriodRuleEndDate, setNewPeriodRuleEndDate] = useState('');
+
   // プレビュー
   const [finalPrompt, setFinalPrompt] = useState('');
   const [promptParts, setPromptParts] = useState<PromptParts | null>(null);
 
   // タブ管理
-  const [activeTab, setActiveTab] = useState<'basic' | 'fixed' | 'custom' | 'rules' | 'preview'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'fixed' | 'custom' | 'rules' | 'period' | 'preview'>('basic');
 
   // 状態管理
   const [loading, setLoading] = useState(true);
@@ -203,8 +225,10 @@ export default function AISettingsPage() {
         setAccess(data.parts.access || '');
         setUnableResponse(data.parts.unable_response || '');
         setClosingMessage(data.parts.closing_message || '');
+        setAdditionalInstructions(data.parts.additional_instructions || '');
         setCustomItems(data.parts.custom_items || []);
         setAutoAppendRules(data.parts.auto_append_rules || []);
+        setPeriodRules(data.parts.period_rules || []);
       }
     } catch (error) {
       console.error('Failed to fetch prompt settings:', error);
@@ -541,6 +565,165 @@ export default function AISettingsPage() {
     }
   };
 
+  // 期間限定ルールを追加
+  const addPeriodRule = async () => {
+    if (!newPeriodRuleName.trim() || !newPeriodRuleMessage.trim() || !newPeriodRuleStartDate || !newPeriodRuleEndDate) {
+      alert('ルール名、メッセージ、開始日、終了日をすべて入力してください');
+      return;
+    }
+
+    const newRule: PeriodRule = {
+      id: Date.now().toString(),
+      name: newPeriodRuleName.trim(),
+      message: newPeriodRuleMessage.trim(),
+      start_date: newPeriodRuleStartDate,
+      end_date: newPeriodRuleEndDate,
+      is_active: true,
+      order: periodRules.length,
+    };
+
+    const updatedRules = [...periodRules, newRule];
+    setPeriodRules(updatedRules);
+    setNewPeriodRuleName('');
+    setNewPeriodRuleMessage('');
+    setNewPeriodRuleStartDate('');
+    setNewPeriodRuleEndDate('');
+    setShowAddPeriodRuleForm(false);
+
+    setSaving(true);
+    setMessage('');
+    try {
+      const res = await fetch(`/api/${tenant}/admin/ai-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setting_key: 'prompt_period_rules',
+          setting_value: JSON.stringify(updatedRules),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage('期間限定ルールを追加して保存しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+        fetchPromptPreview();
+      } else {
+        setMessage(`保存に失敗しました: ${data.error || '不明なエラー'} ❌`);
+      }
+    } catch (error) {
+      setMessage(`保存中にエラーが発生しました ❌`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 期間限定ルールを更新
+  const updatePeriodRule = async () => {
+    if (!editingPeriodRule) return;
+
+    const updatedRules = periodRules.map((rule) =>
+      rule.id === editingPeriodRule.id ? editingPeriodRule : rule
+    );
+    setPeriodRules(updatedRules);
+    setEditingPeriodRule(null);
+
+    setSaving(true);
+    setMessage('');
+    try {
+      const res = await fetch(`/api/${tenant}/admin/ai-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setting_key: 'prompt_period_rules',
+          setting_value: JSON.stringify(updatedRules),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage('期間限定ルールを更新して保存しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+        fetchPromptPreview();
+      } else {
+        setMessage(`保存に失敗しました: ${data.error || '不明なエラー'} ❌`);
+      }
+    } catch (error) {
+      setMessage(`保存中にエラーが発生しました ❌`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 期間限定ルールを削除
+  const deletePeriodRule = async (id: string) => {
+    if (!confirm('このルールを削除しますか？')) return;
+
+    const updatedRules = periodRules.filter((rule) => rule.id !== id);
+    setPeriodRules(updatedRules);
+
+    setSaving(true);
+    setMessage('');
+    try {
+      const res = await fetch(`/api/${tenant}/admin/ai-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setting_key: 'prompt_period_rules',
+          setting_value: JSON.stringify(updatedRules),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage('期間限定ルールを削除して保存しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+        fetchPromptPreview();
+      } else {
+        setMessage(`保存に失敗しました: ${data.error || '不明なエラー'} ❌`);
+      }
+    } catch (error) {
+      setMessage(`保存中にエラーが発生しました ❌`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 期間限定ルールの有効/無効を切り替え
+  const togglePeriodRuleActive = async (id: string) => {
+    const updatedRules = periodRules.map((rule) =>
+      rule.id === id ? { ...rule, is_active: !rule.is_active } : rule
+    );
+    setPeriodRules(updatedRules);
+
+    setSaving(true);
+    setMessage('');
+    try {
+      const res = await fetch(`/api/${tenant}/admin/ai-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setting_key: 'prompt_period_rules',
+          setting_value: JSON.stringify(updatedRules),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage('ルールの状態を変更して保存しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+        fetchPromptPreview();
+      } else {
+        setMessage(`保存に失敗しました: ${data.error || '不明なエラー'} ❌`);
+      }
+    } catch (error) {
+      setMessage(`保存中にエラーが発生しました ❌`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 期間内かどうか判定するヘルパー
+  const isPeriodActive = (rule: PeriodRule): boolean => {
+    const today = new Date().toISOString().split('T')[0];
+    return rule.is_active && rule.start_date <= today && today <= rule.end_date;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -682,6 +865,16 @@ export default function AISettingsPage() {
                 }`}
               >
                 🎯 自動追記ルール
+              </button>
+              <button
+                onClick={() => setActiveTab('period')}
+                className={`px-6 py-4 text-sm font-medium border-b-2 ${
+                  activeTab === 'period'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+              >
+                📅 期間限定ルール
               </button>
               <button
                 onClick={() => {
@@ -1135,6 +1328,30 @@ export default function AISettingsPage() {
                   {saving ? '保存中...' : '保存'}
                 </button>
               </div>
+
+              {/* AI への追加指示 */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  AI への追加指示（自由記述）
+                </label>
+                <p className="text-sm text-gray-500 mb-2">
+                  AIに対する追加の指示を自然言語で自由に記述できます。自動追記ルールではカバーしきれない柔軟な指示に使えます。
+                </p>
+                <textarea
+                  value={additionalInstructions}
+                  onChange={(e) => setAdditionalInstructions(e.target.value)}
+                  rows={6}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder={`例：\n・キャンパスライフについて聞かれたら https://example.com を案内してください\n・Instagramアカウント @xxx も案内してください\n・学費について聞かれたら奨学金制度も紹介してください`}
+                />
+                <button
+                  onClick={() => saveFixedItem('prompt_additional_instructions', additionalInstructions)}
+                  disabled={saving}
+                  className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors disabled:bg-gray-400"
+                >
+                  {saving ? '保存中...' : '保存'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -1564,6 +1781,280 @@ export default function AISettingsPage() {
             </div>
           )}
 
+          {/* 期間限定ルールタブ */}
+          {activeTab === 'period' && (
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">期間限定ルールの管理</h2>
+                <button
+                  onClick={() => setShowAddPeriodRuleForm(true)}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  + 新しいルールを追加
+                </button>
+              </div>
+
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="font-semibold text-gray-900 mb-2">💡 期間限定ルールとは？</h3>
+                <p className="text-sm text-gray-700">
+                  指定した期間（開始日〜終了日）の間だけ、AIのすべての回答に自動的にメッセージを追記する機能です。
+                </p>
+                <p className="text-sm text-gray-700 mt-2">
+                  例：オープンキャンパス開催前の1ヶ月間だけ、申込案内を全回答に追加する
+                </p>
+              </div>
+
+              {/* 新規追加フォーム */}
+              {showAddPeriodRuleForm && (
+                <div className="mb-6 p-6 bg-white border-2 border-green-500 rounded-lg shadow-lg">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">新しい期間限定ルールを追加</h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ルール名 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newPeriodRuleName}
+                        onChange={(e) => setNewPeriodRuleName(e.target.value)}
+                        placeholder="例: OC申込案内"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        追記するメッセージ <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={newPeriodRuleMessage}
+                        onChange={(e) => setNewPeriodRuleMessage(e.target.value)}
+                        placeholder={'例:\nオープンキャンパスの申込受付中です！\n詳しくはこちら → https://example.com/apply'}
+                        rows={4}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          開始日 <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={newPeriodRuleStartDate}
+                          onChange={(e) => setNewPeriodRuleStartDate(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          終了日 <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={newPeriodRuleEndDate}
+                          onChange={(e) => setNewPeriodRuleEndDate(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={addPeriodRule}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                    >
+                      ルールを追加
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAddPeriodRuleForm(false);
+                        setNewPeriodRuleName('');
+                        setNewPeriodRuleMessage('');
+                        setNewPeriodRuleStartDate('');
+                        setNewPeriodRuleEndDate('');
+                      }}
+                      className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
+                    >
+                      キャンセル
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ルール一覧 */}
+              {periodRules.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p className="text-lg mb-2">期間限定ルールがありません</p>
+                  <p className="text-sm">「+ 新しいルールを追加」ボタンから追加してください</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {periodRules
+                    .sort((a, b) => a.order - b.order)
+                    .map((rule) => (
+                      <div
+                        key={rule.id}
+                        className={`p-5 rounded-lg border-2 shadow ${
+                          isPeriodActive(rule)
+                            ? 'bg-white border-green-200'
+                            : rule.is_active
+                            ? 'bg-white border-yellow-200'
+                            : 'bg-gray-50 border-gray-300 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => togglePeriodRuleActive(rule.id)}
+                              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                                rule.is_active
+                                  ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              }`}
+                            >
+                              {rule.is_active ? '✓ 有効' : '無効'}
+                            </button>
+                            {isPeriodActive(rule) && (
+                              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-semibold">
+                                📅 期間内
+                              </span>
+                            )}
+                            {rule.is_active && !isPeriodActive(rule) && (
+                              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-semibold">
+                                ⏳ 期間外
+                              </span>
+                            )}
+                            <h3 className="text-lg font-bold text-gray-900">{rule.name}</h3>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setEditingPeriodRule(rule)}
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                              編集
+                            </button>
+                            <button
+                              onClick={() => deletePeriodRule(rule.id)}
+                              className="text-red-600 hover:text-red-800 text-sm font-medium"
+                            >
+                              削除
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-xs text-gray-600 font-semibold mb-1">期間:</p>
+                            <p className="text-sm text-gray-800">
+                              {rule.start_date} 〜 {rule.end_date}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-gray-600 font-semibold mb-1">追記メッセージ:</p>
+                            <div className="bg-gray-50 p-3 rounded text-sm text-gray-800 whitespace-pre-wrap">
+                              {rule.message}
+                            </div>
+                          </div>
+
+                          <div className="text-xs text-gray-600">
+                            📊 表示順: {rule.order + 1}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              {/* 編集モーダル */}
+              {editingPeriodRule && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">期間限定ルールを編集</h3>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ルール名
+                        </label>
+                        <input
+                          type="text"
+                          value={editingPeriodRule.name}
+                          onChange={(e) =>
+                            setEditingPeriodRule({ ...editingPeriodRule, name: e.target.value })
+                          }
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          追記するメッセージ
+                        </label>
+                        <textarea
+                          value={editingPeriodRule.message}
+                          onChange={(e) =>
+                            setEditingPeriodRule({ ...editingPeriodRule, message: e.target.value })
+                          }
+                          rows={4}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            開始日
+                          </label>
+                          <input
+                            type="date"
+                            value={editingPeriodRule.start_date}
+                            onChange={(e) =>
+                              setEditingPeriodRule({ ...editingPeriodRule, start_date: e.target.value })
+                            }
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            終了日
+                          </label>
+                          <input
+                            type="date"
+                            value={editingPeriodRule.end_date}
+                            onChange={(e) =>
+                              setEditingPeriodRule({ ...editingPeriodRule, end_date: e.target.value })
+                            }
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-6">
+                      <button
+                        onClick={updatePeriodRule}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                      >
+                        更新
+                      </button>
+                      <button
+                        onClick={() => setEditingPeriodRule(null)}
+                        className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
+                      >
+                        キャンセル
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* プレビュータブ */}
           {activeTab === 'preview' && (
             <div className="p-6 space-y-6">
@@ -1755,6 +2246,75 @@ export default function AISettingsPage() {
                 <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                   <p className="text-sm text-gray-600">
                     ℹ️ 自動追記ルールが登録されていません。自動追記ルールタブから追加できます。
+                  </p>
+                </div>
+              )}
+
+              {/* 期間限定ルールプレビュー */}
+              {promptParts && promptParts.period_rules && promptParts.period_rules.length > 0 && (
+                <div className="mb-6 p-6 bg-orange-50 border border-orange-200 rounded-lg">
+                  <h3 className="font-bold text-gray-900 mb-4 text-lg">
+                    📅 期間限定ルールプレビュー
+                  </h3>
+                  <div className="space-y-4">
+                    {promptParts.period_rules
+                      .sort((a: PeriodRule, b: PeriodRule) => (a.order || 0) - (b.order || 0))
+                      .map((rule: PeriodRule, index: number) => {
+                        const active = isPeriodActive(rule);
+                        return (
+                          <div
+                            key={rule.id || index}
+                            className={`p-5 rounded-lg border-2 shadow-sm ${
+                              active
+                                ? 'bg-white border-green-300'
+                                : rule.is_active
+                                ? 'bg-white border-yellow-300'
+                                : 'bg-gray-50 border-gray-300 opacity-60'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-3">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                  active
+                                    ? 'bg-green-100 text-green-800'
+                                    : rule.is_active
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-gray-200 text-gray-600'
+                                }`}
+                              >
+                                {active ? '✓ 期間内・有効' : rule.is_active ? '⏳ 期間外' : '無効'}
+                              </span>
+                              <h4 className="font-bold text-gray-900 text-lg">{rule.name}</h4>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div>
+                                <p className="text-xs text-gray-600 font-semibold mb-1">期間:</p>
+                                <p className="text-sm text-gray-800">
+                                  {rule.start_date} 〜 {rule.end_date}
+                                </p>
+                              </div>
+
+                              <div>
+                                <p className="text-xs text-gray-600 font-semibold mb-1">
+                                  追記メッセージ{active ? '（プロンプトに含まれています）' : '（プロンプトに含まれていません）'}:
+                                </p>
+                                <div className="bg-gray-50 p-3 rounded text-sm text-gray-800 whitespace-pre-wrap">
+                                  {rule.message}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+
+              {promptParts && (!promptParts.period_rules || promptParts.period_rules.length === 0) && (
+                <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    ℹ️ 期間限定ルールが登録されていません。期間限定ルールタブから追加できます。
                   </p>
                 </div>
               )}

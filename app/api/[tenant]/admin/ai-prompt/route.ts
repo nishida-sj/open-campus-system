@@ -30,8 +30,10 @@ export async function GET(
       prompt_access: '',
       prompt_unable_response: '',
       prompt_closing_message: '',
+      prompt_additional_instructions: '',
       prompt_custom_items: '[]',
       prompt_auto_append_rules: '[]',
+      prompt_period_rules: '[]',
     };
 
     // 1. 固定項目を取得
@@ -45,8 +47,10 @@ export async function GET(
           'prompt_access',
           'prompt_unable_response',
           'prompt_closing_message',
+          'prompt_additional_instructions',
           'prompt_custom_items',
           'prompt_auto_append_rules',
+          'prompt_period_rules',
         ]);
 
       if (settingsError) {
@@ -248,7 +252,44 @@ export async function GET(
       console.error('[AI Prompt GET] Error parsing auto append rules:', autoAppendError);
     }
 
-    // 7. 最終的なシステムプロンプトを組み立て
+    // 7. 追加指示を取得
+    const additionalInstructions = settingsMap.prompt_additional_instructions || '';
+    const additionalInstructionsPrompt = additionalInstructions.trim()
+      ? `\n【追加指示】\n${additionalInstructions.trim()}\n`
+      : '';
+
+    // 7.5. 期間限定ルールを取得・生成
+    let periodRules: any[] = [];
+    let periodRulePrompts = '';
+    try {
+      const periodRulesStr = settingsMap.prompt_period_rules || '[]';
+      periodRules = JSON.parse(periodRulesStr);
+      if (!Array.isArray(periodRules)) {
+        periodRules = [];
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const activePeriodRules = periodRules.filter(
+        (rule: any) => rule.is_active && rule.start_date <= today && today <= rule.end_date
+      );
+
+      if (activePeriodRules.length > 0) {
+        periodRulePrompts = '\n【期間限定のお知らせ - 重要】\n';
+        periodRulePrompts += '以下の内容を、すべての回答の中で必ず案内してください：\n\n';
+
+        activePeriodRules
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+          .forEach((rule: any) => {
+            periodRulePrompts += `・${rule.name}: ${rule.message}\n`;
+          });
+
+        periodRulePrompts += '\n';
+      }
+    } catch (periodError) {
+      console.error('[AI Prompt GET] Error parsing period rules:', periodError);
+    }
+
+    // 8. 最終的なシステムプロンプトを組み立て
     const finalPrompt = `あなたは学校の公式LINEアカウントのAIアシスタントです。
 以下の情報に基づいて、正確かつ親切に回答してください。
 
@@ -260,8 +301,8 @@ ${settingsMap.prompt_access || '（未設定）'}
 ${customPrompts}
 ${eventPrompts ? '\n【開催予定のイベント】' + eventPrompts : ''}
 ${autoAppendPrompts}
-
-【回答ルール - 最重要】
+${additionalInstructionsPrompt}
+${periodRulePrompts}【回答ルール - 最重要】
 - 上記の情報に含まれている内容のみを使って回答すること
 - 上記の情報に含まれていない内容は、絶対に推測・創作・補足して回答しないこと
 - 自分の一般知識やインターネット上の情報で補完しないこと
@@ -289,8 +330,10 @@ ${settingsMap.prompt_closing_message || ''}`;
         access: settingsMap.prompt_access || '',
         unable_response: settingsMap.prompt_unable_response || '',
         closing_message: settingsMap.prompt_closing_message || '',
+        additional_instructions: settingsMap.prompt_additional_instructions || '',
         custom_items: customItems,
         auto_append_rules: autoAppendRules,
+        period_rules: periodRules,
         events: eventsWithDetails,
         event_prompts: eventPrompts,
       },
@@ -334,6 +377,7 @@ ${settingsMap.prompt_closing_message || ''}`;
           closing_message: '',
           custom_items: [],
           auto_append_rules: [],
+          period_rules: [],
           events: [],
           event_prompts: '',
         },

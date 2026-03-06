@@ -86,8 +86,10 @@ async function fetchSystemPrompt(tenantId: string): Promise<string> {
       prompt_access: '',
       prompt_unable_response: '',
       prompt_closing_message: '',
+      prompt_additional_instructions: '',
       prompt_custom_items: '[]',
       prompt_auto_append_rules: '[]',
+      prompt_period_rules: '[]',
     };
 
     const { data: settings } = await supabaseAdmin
@@ -99,8 +101,10 @@ async function fetchSystemPrompt(tenantId: string): Promise<string> {
         'prompt_access',
         'prompt_unable_response',
         'prompt_closing_message',
+        'prompt_additional_instructions',
         'prompt_custom_items',
         'prompt_auto_append_rules',
+        'prompt_period_rules',
       ]);
 
     if (settings && settings.length > 0) {
@@ -207,7 +211,36 @@ async function fetchSystemPrompt(tenantId: string): Promise<string> {
       }
     } catch { /* ignore parse errors */ }
 
-    // 5. 最終プロンプトを組み立て
+    // 5. 追加指示
+    const additionalInstructions = settingsMap.prompt_additional_instructions || '';
+    const additionalInstructionsPrompt = additionalInstructions.trim()
+      ? `\n【追加指示】\n${additionalInstructions.trim()}\n`
+      : '';
+
+    // 5.5. 期間限定ルール
+    let periodRulePrompts = '';
+    try {
+      const periodRules = JSON.parse(settingsMap.prompt_period_rules || '[]');
+      if (Array.isArray(periodRules)) {
+        const today = new Date().toISOString().split('T')[0];
+        const activePeriodRules = periodRules.filter(
+          (rule: { is_active: boolean; start_date: string; end_date: string }) =>
+            rule.is_active && rule.start_date <= today && today <= rule.end_date
+        );
+        if (activePeriodRules.length > 0) {
+          periodRulePrompts = '\n【期間限定のお知らせ - 重要】\n';
+          periodRulePrompts += '以下の内容を、すべての回答の中で必ず案内してください：\n\n';
+          activePeriodRules
+            .sort((a: { order: number }, b: { order: number }) => (a.order || 0) - (b.order || 0))
+            .forEach((rule: { name: string; message: string }) => {
+              periodRulePrompts += `・${rule.name}: ${rule.message}\n`;
+            });
+          periodRulePrompts += '\n';
+        }
+      }
+    } catch { /* ignore parse errors */ }
+
+    // 6. 最終プロンプトを組み立て
     const finalPrompt = `あなたは学校の公式LINEアカウントのAIアシスタントです。
 以下の情報に基づいて、正確かつ親切に回答してください。
 
@@ -219,8 +252,8 @@ ${settingsMap.prompt_access || '（未設定）'}
 ${customPrompts}
 ${eventPrompts ? '\n【開催予定のイベント】' + eventPrompts : ''}
 ${autoAppendPrompts}
-
-【回答ルール - 最重要】
+${additionalInstructionsPrompt}
+${periodRulePrompts}【回答ルール - 最重要】
 - 上記の情報に含まれている内容のみを使って回答すること
 - 上記の情報に含まれていない内容は、絶対に推測・創作・補足して回答しないこと
 - 自分の一般知識やインターネット上の情報で補完しないこと
