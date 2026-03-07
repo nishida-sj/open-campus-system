@@ -1456,6 +1456,9 @@ export default function AISettingsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   回答が出来なかった際に記述する内容
                 </label>
+                <p className="text-sm text-gray-500 mb-2">
+                  AIが回答できない質問の場合、この内容のみをそのまま返します。「最後に記述する内容」は付きません。
+                </p>
                 <textarea
                   value={unableResponse}
                   onChange={(e) => setUnableResponse(e.target.value)}
@@ -1477,12 +1480,15 @@ export default function AISettingsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   必ず最後に記述する内容
                 </label>
+                <p className="text-sm text-gray-500 mb-2">
+                  AIが正常に回答できた場合のみ、回答の最後にこの内容を追加します。回答できなかった場合には追加されません。
+                </p>
                 <textarea
                   value={closingMessage}
                   onChange={(e) => setClosingMessage(e.target.value)}
                   rows={4}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="すべての回答の最後に追加されるメッセージ"
+                  placeholder="回答できた場合のみ、回答の最後に追加されるメッセージ"
                 />
                 <button
                   onClick={() => saveFixedItem('prompt_closing_message', closingMessage)}
