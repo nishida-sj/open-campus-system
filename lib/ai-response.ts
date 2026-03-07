@@ -102,11 +102,15 @@ async function fetchSystemPrompt(tenantId: string): Promise<string> {
         'prompt_department_sections',
       ]);
 
+    console.log('[fetchSystemPrompt] DB query returned settings count:', settings?.length || 0);
+
     if (settings && settings.length > 0) {
       settings.forEach((item) => {
         settingsMap[item.setting_key] = item.setting_value || '';
       });
     }
+
+    console.log('[fetchSystemPrompt] unable_response value:', settingsMap.prompt_unable_response?.substring(0, 80));
 
     // 2. 有効なイベント情報を取得
     let eventPrompts = '';
@@ -338,7 +342,10 @@ export async function generateAIResponse(
     }
 
     // 2. システムプロンプトを動的に取得
+    console.log('[generateAIResponse] Fetching system prompt for tenant:', tenant.id);
     const systemPrompt = await fetchSystemPrompt(tenant.id);
+    console.log('[generateAIResponse] System prompt length:', systemPrompt.length);
+    console.log('[generateAIResponse] Prompt contains "AI自動回答では":', systemPrompt.includes('AI自動回答では'));
 
     // 3. メッセージ構築
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
@@ -376,6 +383,8 @@ export async function generateAIResponse(
     if (!response || !usage) {
       throw new Error('Invalid API response');
     }
+
+    console.log('[generateAIResponse] AI response preview:', response?.substring(0, 100));
 
     // 6. 使用量をログ記録
     await logUsage(tenant.id, lineUserId, usage.prompt_tokens, usage.completion_tokens, usage.total_tokens, true);
