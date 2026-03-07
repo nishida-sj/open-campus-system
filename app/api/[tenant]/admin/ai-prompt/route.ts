@@ -314,13 +314,14 @@ export async function GET(
       );
 
       if (activePeriodRules.length > 0) {
-        periodRulePrompts = '\n【期間限定のお知らせ - 重要】\n';
-        periodRulePrompts += '以下の内容を、すべての回答の中で必ず案内してください：\n\n';
+        periodRulePrompts = '\n【期間限定の案内 - 最重要・必須】\n';
+        periodRulePrompts += '以下の案内は、どのような質問に対する回答であっても、回答の最後に必ず追記してください。\n';
+        periodRulePrompts += 'この案内を省略することは絶対に禁止です。回答できなかった場合のみ例外とします。\n\n';
 
         activePeriodRules
           .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
           .forEach((rule: any) => {
-            periodRulePrompts += `・${rule.name}: ${rule.message}\n`;
+            periodRulePrompts += `${rule.message}\n`;
           });
 
         periodRulePrompts += '\n';
@@ -350,6 +351,7 @@ ${periodRulePrompts}【回答ルール - 最重要】
 - 常に丁寧で親しみやすい口調で話す
 - 絵文字を適度に使用（1-2個/メッセージ）
 - 長文は避け、簡潔に（200文字以内推奨）
+- 「期間限定の案内」がある場合、回答できた場合は必ず回答の最後にその案内を追記すること（省略厳禁）
 
 【重要】回答できない場合の対応
 上記の情報に含まれていない質問や、確実に回答できない内容については、以下のメッセージを一字一句そのまま正確に返してください。
