@@ -9,9 +9,8 @@ import { checkUsageLimit, logUsage, getAISetting } from './usage-monitor';
 import { supabaseAdmin } from './supabase';
 import type { Tenant } from './tenant';
 
-// プロンプトキャッシュ（テナントごと・5分間有効）
-const promptCache = new Map<string, { prompt: string; cachedAt: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5分
+// OpenAIクライアントキャッシュのみ保持（プロンプトキャッシュはサーバーレス環境で
+// インスタンス間共有不可のため廃止。設定変更が即座に反映されるようにする）
 
 // OpenAIクライアントキャッシュ（テナントごと）
 const openaiClients = new Map<string, OpenAI>();
@@ -74,12 +73,6 @@ export async function getEmergencyContact(tenantId: string): Promise<{
  */
 async function fetchSystemPrompt(tenantId: string): Promise<string> {
   try {
-    const now = Date.now();
-    const cached = promptCache.get(tenantId);
-    if (cached && now - cached.cachedAt < CACHE_DURATION) {
-      return cached.prompt;
-    }
-
     // 1. プロンプトパーツを取得
     const settingsMap: Record<string, string> = {
       prompt_school_info: '',
@@ -309,7 +302,6 @@ ${settingsMap.prompt_unable_response || '申し訳ございませんが、その
 
 ${settingsMap.prompt_closing_message || ''}`;
 
-    promptCache.set(tenantId, { prompt: finalPrompt, cachedAt: now });
     return finalPrompt;
   } catch (error) {
     console.error('Error building system prompt:', error);
@@ -413,15 +405,10 @@ export async function generateAIResponse(
 }
 
 /**
- * プロンプトキャッシュをクリア
+ * プロンプトキャッシュをクリア（互換性のため残す・現在はno-op）
  */
-export function clearPromptCache(tenantId?: string): void {
-  if (tenantId) {
-    promptCache.delete(tenantId);
-  } else {
-    promptCache.clear();
-  }
-  console.log('Prompt cache cleared');
+export function clearPromptCache(_tenantId?: string): void {
+  // キャッシュ廃止済み（サーバーレス環境ではインスタンス間で共有不可のため）
 }
 
 /**
