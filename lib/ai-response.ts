@@ -90,6 +90,7 @@ async function fetchSystemPrompt(tenantId: string): Promise<string> {
       prompt_custom_items: '[]',
       prompt_auto_append_rules: '[]',
       prompt_period_rules: '[]',
+      prompt_department_sections: '[]',
     };
 
     const { data: settings } = await supabaseAdmin
@@ -105,6 +106,7 @@ async function fetchSystemPrompt(tenantId: string): Promise<string> {
         'prompt_custom_items',
         'prompt_auto_append_rules',
         'prompt_period_rules',
+        'prompt_department_sections',
       ]);
 
     if (settings && settings.length > 0) {
@@ -189,6 +191,31 @@ async function fetchSystemPrompt(tenantId: string): Promise<string> {
       }
     } catch { /* ignore parse errors */ }
 
+    // 3.5. 学科別情報
+    let departmentPrompts = '';
+    try {
+      const departmentSections = JSON.parse(settingsMap.prompt_department_sections || '[]');
+      if (Array.isArray(departmentSections) && departmentSections.length > 0) {
+        const deptNames = departmentSections.map((d: { name: string }) => d.name).join('と');
+        departmentPrompts = '\n【学科別情報 - 重要】\n';
+        departmentPrompts += 'この学校には以下の学科があります。質問内容に応じて、該当する学科の情報を使って回答してください。\n\n';
+        departmentPrompts += '重要なルール：\n';
+        departmentPrompts += `- 質問内容からどの学科について聞いているか明確でない場合は、必ず「${deptNames}がございますが、どちらの学科についてのお問い合わせでしょうか？😊」と確認してから回答してください\n`;
+        departmentPrompts += '- 学科を特定できる質問には、その学科の情報のみを使って回答してください\n';
+        departmentPrompts += '- 両学科に共通する質問（アクセス、学校全体の情報など）はそのまま回答してください\n\n';
+
+        departmentSections
+          .sort((a: { order: number }, b: { order: number }) => (a.order || 0) - (b.order || 0))
+          .forEach((dept: { name: string; keywords: string[]; content: string }) => {
+            departmentPrompts += `＜${dept.name}＞\n`;
+            if (Array.isArray(dept.keywords) && dept.keywords.length > 0) {
+              departmentPrompts += `キーワード: ${dept.keywords.join('、')}\n`;
+            }
+            departmentPrompts += `${dept.content}\n\n`;
+          });
+      }
+    } catch { /* ignore parse errors */ }
+
     // 4. 自動追記ルール
     let autoAppendPrompts = '';
     try {
@@ -250,7 +277,7 @@ ${settingsMap.prompt_school_info || '（未設定）'}
 【アクセス】
 ${settingsMap.prompt_access || '（未設定）'}
 ${customPrompts}
-${eventPrompts ? '\n【開催予定のイベント】' + eventPrompts : ''}
+${departmentPrompts}${eventPrompts ? '\n【開催予定のイベント】' + eventPrompts : ''}
 ${autoAppendPrompts}
 ${additionalInstructionsPrompt}
 ${periodRulePrompts}【回答ルール - 最重要】

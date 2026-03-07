@@ -34,6 +34,7 @@ export async function GET(
       prompt_custom_items: '[]',
       prompt_auto_append_rules: '[]',
       prompt_period_rules: '[]',
+      prompt_department_sections: '[]',
     };
 
     // 1. 固定項目を取得
@@ -51,6 +52,7 @@ export async function GET(
           'prompt_custom_items',
           'prompt_auto_append_rules',
           'prompt_period_rules',
+          'prompt_department_sections',
         ]);
 
       if (settingsError) {
@@ -216,6 +218,39 @@ export async function GET(
       console.error('[AI Prompt GET] Error generating custom prompts:', customError);
     }
 
+    // 5.5. 学科別情報を取得・生成
+    let departmentSections: any[] = [];
+    let departmentPrompts = '';
+    try {
+      const departmentSectionsStr = settingsMap.prompt_department_sections || '[]';
+      departmentSections = JSON.parse(departmentSectionsStr);
+      if (!Array.isArray(departmentSections)) {
+        departmentSections = [];
+      }
+
+      if (departmentSections.length > 0) {
+        const deptNames = departmentSections.map((d: any) => d.name).join('と');
+        departmentPrompts = '\n【学科別情報 - 重要】\n';
+        departmentPrompts += 'この学校には以下の学科があります。質問内容に応じて、該当する学科の情報を使って回答してください。\n\n';
+        departmentPrompts += '重要なルール：\n';
+        departmentPrompts += `- 質問内容からどの学科について聞いているか明確でない場合は、必ず「${deptNames}がございますが、どちらの学科についてのお問い合わせでしょうか？😊」と確認してから回答してください\n`;
+        departmentPrompts += '- 学科を特定できる質問には、その学科の情報のみを使って回答してください\n';
+        departmentPrompts += '- 両学科に共通する質問（アクセス、学校全体の情報など）はそのまま回答してください\n\n';
+
+        departmentSections
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+          .forEach((dept: any) => {
+            departmentPrompts += `＜${dept.name}＞\n`;
+            if (Array.isArray(dept.keywords) && dept.keywords.length > 0) {
+              departmentPrompts += `キーワード: ${dept.keywords.join('、')}\n`;
+            }
+            departmentPrompts += `${dept.content}\n\n`;
+          });
+      }
+    } catch (deptError) {
+      console.error('[AI Prompt GET] Error parsing department sections:', deptError);
+    }
+
     // 6. 自動追記ルールを取得・生成
     let autoAppendRules: any[] = [];
     let autoAppendPrompts = '';
@@ -299,7 +334,7 @@ ${settingsMap.prompt_school_info || '（未設定）'}
 【アクセス】
 ${settingsMap.prompt_access || '（未設定）'}
 ${customPrompts}
-${eventPrompts ? '\n【開催予定のイベント】' + eventPrompts : ''}
+${departmentPrompts}${eventPrompts ? '\n【開催予定のイベント】' + eventPrompts : ''}
 ${autoAppendPrompts}
 ${additionalInstructionsPrompt}
 ${periodRulePrompts}【回答ルール - 最重要】
@@ -332,6 +367,7 @@ ${settingsMap.prompt_closing_message || ''}`;
         closing_message: settingsMap.prompt_closing_message || '',
         additional_instructions: settingsMap.prompt_additional_instructions || '',
         custom_items: customItems,
+        department_sections: departmentSections,
         auto_append_rules: autoAppendRules,
         period_rules: periodRules,
         events: eventsWithDetails,
@@ -376,6 +412,7 @@ ${settingsMap.prompt_closing_message || ''}`;
           unable_response: '',
           closing_message: '',
           custom_items: [],
+          department_sections: [],
           auto_append_rules: [],
           period_rules: [],
           events: [],

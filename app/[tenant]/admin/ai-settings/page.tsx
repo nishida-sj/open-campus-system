@@ -30,6 +30,14 @@ interface PeriodRule {
   order: number;
 }
 
+interface DepartmentSection {
+  id: string;
+  name: string;
+  keywords: string[];
+  content: string;
+  order: number;
+}
+
 interface PromptParts {
   school_info: string;
   access: string;
@@ -39,6 +47,7 @@ interface PromptParts {
   custom_items: CustomItem[];
   auto_append_rules: AutoAppendRule[];
   period_rules: PeriodRule[];
+  department_sections: DepartmentSection[];
   events: any[];
   event_prompts: string;
 }
@@ -99,6 +108,14 @@ export default function AISettingsPage() {
   const [newRuleMessage, setNewRuleMessage] = useState('');
   const [newRulePosition, setNewRulePosition] = useState<'end' | 'start'>('end');
 
+  // 学科別情報
+  const [departmentSections, setDepartmentSections] = useState<DepartmentSection[]>([]);
+  const [editingDepartment, setEditingDepartment] = useState<DepartmentSection | null>(null);
+  const [showAddDepartmentForm, setShowAddDepartmentForm] = useState(false);
+  const [newDepartmentName, setNewDepartmentName] = useState('');
+  const [newDepartmentKeywords, setNewDepartmentKeywords] = useState('');
+  const [newDepartmentContent, setNewDepartmentContent] = useState('');
+
   // 期間限定ルール
   const [periodRules, setPeriodRules] = useState<PeriodRule[]>([]);
   const [editingPeriodRule, setEditingPeriodRule] = useState<PeriodRule | null>(null);
@@ -113,7 +130,7 @@ export default function AISettingsPage() {
   const [promptParts, setPromptParts] = useState<PromptParts | null>(null);
 
   // タブ管理
-  const [activeTab, setActiveTab] = useState<'basic' | 'fixed' | 'custom' | 'rules' | 'period' | 'preview'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'fixed' | 'custom' | 'departments' | 'rules' | 'period' | 'preview'>('basic');
 
   // 状態管理
   const [loading, setLoading] = useState(true);
@@ -228,6 +245,7 @@ export default function AISettingsPage() {
         setAdditionalInstructions(data.parts.additional_instructions || '');
         setCustomItems(data.parts.custom_items || []);
         setAutoAppendRules(data.parts.auto_append_rules || []);
+        setDepartmentSections(data.parts.department_sections || []);
         setPeriodRules(data.parts.period_rules || []);
       }
     } catch (error) {
@@ -376,6 +394,123 @@ export default function AISettingsPage() {
   const deleteCustomItem = (id: string) => {
     if (!confirm('この項目を削除しますか？')) return;
     setCustomItems(customItems.filter((item) => item.id !== id));
+  };
+
+  // 学科別情報を追加
+  const addDepartment = async () => {
+    if (!newDepartmentName.trim() || !newDepartmentContent.trim()) {
+      alert('学科名と情報テキストを入力してください');
+      return;
+    }
+
+    const newDept: DepartmentSection = {
+      id: Date.now().toString(),
+      name: newDepartmentName.trim(),
+      keywords: newDepartmentKeywords.split(',').map(k => k.trim()).filter(k => k),
+      content: newDepartmentContent.trim(),
+      order: departmentSections.length,
+    };
+
+    const updated = [...departmentSections, newDept];
+    setDepartmentSections(updated);
+    setNewDepartmentName('');
+    setNewDepartmentKeywords('');
+    setNewDepartmentContent('');
+    setShowAddDepartmentForm(false);
+
+    setSaving(true);
+    setMessage('');
+    try {
+      const res = await fetch(`/api/${tenant}/admin/ai-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setting_key: 'prompt_department_sections',
+          setting_value: JSON.stringify(updated),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage('学科情報を追加して保存しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+        fetchPromptPreview();
+      } else {
+        setMessage(`保存に失敗しました: ${data.error || '不明なエラー'} ❌`);
+      }
+    } catch (error) {
+      setMessage('保存中にエラーが発生しました ❌');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 学科別情報を更新
+  const updateDepartment = async () => {
+    if (!editingDepartment) return;
+
+    const updated = departmentSections.map((dept) =>
+      dept.id === editingDepartment.id ? editingDepartment : dept
+    );
+    setDepartmentSections(updated);
+    setEditingDepartment(null);
+
+    setSaving(true);
+    setMessage('');
+    try {
+      const res = await fetch(`/api/${tenant}/admin/ai-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setting_key: 'prompt_department_sections',
+          setting_value: JSON.stringify(updated),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage('学科情報を更新して保存しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+        fetchPromptPreview();
+      } else {
+        setMessage(`保存に失敗しました: ${data.error || '不明なエラー'} ❌`);
+      }
+    } catch (error) {
+      setMessage('保存中にエラーが発生しました ❌');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 学科別情報を削除
+  const deleteDepartment = async (id: string) => {
+    if (!confirm('この学科情報を削除しますか？')) return;
+
+    const updated = departmentSections.filter((dept) => dept.id !== id);
+    setDepartmentSections(updated);
+
+    setSaving(true);
+    setMessage('');
+    try {
+      const res = await fetch(`/api/${tenant}/admin/ai-prompt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setting_key: 'prompt_department_sections',
+          setting_value: JSON.stringify(updated),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage('学科情報を削除して保存しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+        fetchPromptPreview();
+      } else {
+        setMessage(`保存に失敗しました: ${data.error || '不明なエラー'} ❌`);
+      }
+    } catch (error) {
+      setMessage('保存中にエラーが発生しました ❌');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // 自動追記ルールを追加
@@ -855,6 +990,16 @@ export default function AISettingsPage() {
                 }`}
               >
                 ✨ カスタム項目
+              </button>
+              <button
+                onClick={() => setActiveTab('departments')}
+                className={`px-6 py-4 text-sm font-medium border-b-2 ${
+                  activeTab === 'departments'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+              >
+                🏫 学科別情報
               </button>
               <button
                 onClick={() => setActiveTab('rules')}
@@ -1491,6 +1636,239 @@ export default function AISettingsPage() {
                 >
                   {saving ? '保存中...' : 'カスタム項目を保存'}
                 </button>
+              )}
+            </div>
+          )}
+
+          {/* 学科別情報タブ */}
+          {activeTab === 'departments' && (
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">学科別情報の管理</h2>
+                <button
+                  onClick={() => setShowAddDepartmentForm(true)}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  + 新しい学科を追加
+                </button>
+              </div>
+
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h3 className="font-semibold text-gray-900 mb-2">💡 学科別情報とは？</h3>
+                <p className="text-sm text-gray-700">
+                  学科（コース）ごとに個別の情報を登録できます。AIは質問内容からどの学科について聞いているかを判断し、該当学科の情報を使って回答します。
+                </p>
+                <p className="text-sm text-gray-700 mt-2">
+                  どの学科か判別できない場合、AIは自動的にどの学科についてのお問い合わせかを確認します。
+                </p>
+              </div>
+
+              {/* 新規追加フォーム */}
+              {showAddDepartmentForm && (
+                <div className="mb-6 p-6 bg-white border-2 border-green-500 rounded-lg shadow-lg">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">新しい学科を追加</h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        学科名 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newDepartmentName}
+                        onChange={(e) => setNewDepartmentName(e.target.value)}
+                        placeholder="例: 看護学科"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        判定キーワード（カンマ区切り）
+                      </label>
+                      <input
+                        type="text"
+                        value={newDepartmentKeywords}
+                        onChange={(e) => setNewDepartmentKeywords(e.target.value)}
+                        placeholder="例: 看護, ナース, 看護師"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        AIがどの学科についての質問かを判断するためのキーワードです
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        学科の情報テキスト <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={newDepartmentContent}
+                        onChange={(e) => setNewDepartmentContent(e.target.value)}
+                        placeholder={'例:\n修業年限: 3年\nカリキュラム: 基礎看護学、成人看護学、小児看護学...\n取得資格: 看護師国家試験受験資格\n学費: 入学金〇〇万円、年間授業料〇〇万円'}
+                        rows={8}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={addDepartment}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                    >
+                      学科を追加
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAddDepartmentForm(false);
+                        setNewDepartmentName('');
+                        setNewDepartmentKeywords('');
+                        setNewDepartmentContent('');
+                      }}
+                      className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
+                    >
+                      キャンセル
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 学科一覧 */}
+              {departmentSections.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p className="text-lg mb-2">学科情報がありません</p>
+                  <p className="text-sm">「+ 新しい学科を追加」ボタンから追加してください</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {departmentSections
+                    .sort((a, b) => a.order - b.order)
+                    .map((dept) => (
+                      <div
+                        key={dept.id}
+                        className="p-5 rounded-lg border-2 bg-white border-indigo-200 shadow"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="text-lg font-bold text-gray-900">{dept.name}</h3>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setEditingDepartment(dept)}
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                              編集
+                            </button>
+                            <button
+                              onClick={() => deleteDepartment(dept.id)}
+                              className="text-red-600 hover:text-red-800 text-sm font-medium"
+                            >
+                              削除
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          {dept.keywords.length > 0 && (
+                            <div>
+                              <p className="text-xs text-gray-600 font-semibold mb-1">判定キーワード:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {dept.keywords.map((keyword, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full"
+                                  >
+                                    {keyword}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div>
+                            <p className="text-xs text-gray-600 font-semibold mb-1">情報テキスト:</p>
+                            <div className="bg-gray-50 p-3 rounded text-sm text-gray-800 whitespace-pre-wrap">
+                              {dept.content}
+                            </div>
+                          </div>
+
+                          <div className="text-xs text-gray-600">
+                            📊 表示順: {dept.order + 1}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              {/* 編集モーダル */}
+              {editingDepartment && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">学科情報を編集</h3>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          学科名
+                        </label>
+                        <input
+                          type="text"
+                          value={editingDepartment.name}
+                          onChange={(e) =>
+                            setEditingDepartment({ ...editingDepartment, name: e.target.value })
+                          }
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          判定キーワード（カンマ区切り）
+                        </label>
+                        <input
+                          type="text"
+                          value={editingDepartment.keywords.join(', ')}
+                          onChange={(e) =>
+                            setEditingDepartment({
+                              ...editingDepartment,
+                              keywords: e.target.value.split(',').map(k => k.trim()).filter(k => k),
+                            })
+                          }
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          学科の情報テキスト
+                        </label>
+                        <textarea
+                          value={editingDepartment.content}
+                          onChange={(e) =>
+                            setEditingDepartment({ ...editingDepartment, content: e.target.value })
+                          }
+                          rows={8}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-6">
+                      <button
+                        onClick={updateDepartment}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                      >
+                        更新
+                      </button>
+                      <button
+                        onClick={() => setEditingDepartment(null)}
+                        className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
+                      >
+                        キャンセル
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -2167,6 +2545,50 @@ export default function AISettingsPage() {
                 <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                   <p className="text-sm text-gray-600">
                     ℹ️ カスタム項目が登録されていません。カスタム項目タブから追加できます。
+                  </p>
+                </div>
+              )}
+
+              {/* 学科別情報プレビュー */}
+              {promptParts && promptParts.department_sections && promptParts.department_sections.length > 0 && (
+                <div className="mb-6 p-6 bg-indigo-50 border border-indigo-200 rounded-lg">
+                  <h3 className="font-bold text-gray-900 mb-4 text-lg">
+                    🏫 学科別情報プレビュー（プロンプトに含まれる内容）
+                  </h3>
+                  <div className="space-y-4">
+                    {promptParts.department_sections
+                      .sort((a: DepartmentSection, b: DepartmentSection) => (a.order || 0) - (b.order || 0))
+                      .map((dept: DepartmentSection, index: number) => (
+                        <div key={dept.id || index} className="bg-white p-5 rounded-lg border border-indigo-200 shadow-sm">
+                          <h4 className="font-bold text-gray-900 text-lg mb-2">{dept.name}</h4>
+                          {dept.keywords.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs text-gray-600 font-semibold mb-1">判定キーワード:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {dept.keywords.map((keyword: string, idx: number) => (
+                                  <span key={idx} className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full">
+                                    {keyword}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-xs text-gray-600 font-semibold mb-1">情報テキスト:</p>
+                            <div className="bg-gray-50 p-3 rounded text-sm text-gray-800 whitespace-pre-wrap">
+                              {dept.content}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {promptParts && (!promptParts.department_sections || promptParts.department_sections.length === 0) && (
+                <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    ℹ️ 学科別情報が登録されていません。学科別情報タブから追加できます。
                   </p>
                 </div>
               )}
