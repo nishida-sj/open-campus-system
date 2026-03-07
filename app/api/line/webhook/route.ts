@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import crypto from 'crypto';
 import { generateAIResponse, isApplicationRelated, isUrgentQuestion, getEmergencyContact } from '@/lib/ai-response';
 import { saveMessage, getConversationHistory, clearConversationHistory } from '@/lib/conversation-history';
-import { canUseAIInMaintenanceMode, verifyAndAddTester } from '@/lib/usage-monitor';
+import { canUseAIInMaintenanceMode, verifyAndAddTester, getAISetting } from '@/lib/usage-monitor';
 import { getAllActiveTenants, type Tenant } from '@/lib/tenant';
 
 export const runtime = 'nodejs';
@@ -356,6 +356,21 @@ async function handleAIResponse(
 
     await saveMessage(tenant.id, userId, 'user', userMessage);
     await saveMessage(tenant.id, userId, 'assistant', result.response!);
+
+    // 未回答検出・ログ（非同期、エラーでも握りつぶす）
+    (async () => {
+      try {
+        const unableResponse = await getAISetting(tenant.id, 'prompt_unable_response');
+        if (unableResponse && result.response!.includes(unableResponse)) {
+          await supabaseAdmin.from('unanswered_questions').insert({
+            tenant_id: tenant.id,
+            line_user_id: userId,
+            user_message: userMessage,
+            ai_response: result.response,
+          });
+        }
+      } catch {}
+    })();
   } catch (error) {
     console.error('Error in handleAIResponse:', error);
     await client.replyMessage(event.replyToken, {

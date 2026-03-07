@@ -39,6 +39,14 @@ interface DepartmentSection {
   order: number;
 }
 
+interface UnansweredQuestion {
+  id: string;
+  line_user_id: string;
+  user_message: string;
+  ai_response: string | null;
+  created_at: string;
+}
+
 interface PromptParts {
   school_info: string;
   access: string;
@@ -127,12 +135,16 @@ export default function AISettingsPage() {
   const [newPeriodRuleStartDate, setNewPeriodRuleStartDate] = useState('');
   const [newPeriodRuleEndDate, setNewPeriodRuleEndDate] = useState('');
 
+  // 未回答ログ
+  const [unansweredQuestions, setUnansweredQuestions] = useState<UnansweredQuestion[]>([]);
+  const [unansweredLoading, setUnansweredLoading] = useState(false);
+
   // プレビュー
   const [finalPrompt, setFinalPrompt] = useState('');
   const [promptParts, setPromptParts] = useState<PromptParts | null>(null);
 
   // タブ管理
-  const [activeTab, setActiveTab] = useState<'basic' | 'fixed' | 'custom' | 'departments' | 'rules' | 'period' | 'preview'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'fixed' | 'custom' | 'departments' | 'rules' | 'period' | 'unanswered' | 'preview'>('basic');
 
   // 状態管理
   const [loading, setLoading] = useState(true);
@@ -269,6 +281,60 @@ export default function AISettingsPage() {
       }
     } catch (error) {
       console.error('Failed to fetch prompt preview:', error);
+    }
+  };
+
+  // 未回答ログを取得
+  const fetchUnansweredQuestions = async () => {
+    setUnansweredLoading(true);
+    try {
+      const res = await fetch(`/api/${tenant}/admin/unanswered-questions`);
+      const data = await res.json();
+      if (data.success) {
+        setUnansweredQuestions(data.questions || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch unanswered questions:', error);
+    } finally {
+      setUnansweredLoading(false);
+    }
+  };
+
+  // 未回答ログCSV出力
+  const downloadUnansweredCSV = async () => {
+    try {
+      const res = await fetch(`/api/${tenant}/admin/unanswered-questions?format=csv`);
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `unanswered_questions_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download CSV:', error);
+      setMessage('CSVダウンロードに失敗しました ❌');
+    }
+  };
+
+  // 未回答ログ削除
+  const deleteUnansweredQuestion = async (id: string) => {
+    try {
+      const res = await fetch(`/api/${tenant}/admin/unanswered-questions?id=${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUnansweredQuestions(prev => prev.filter(q => q.id !== id));
+        setMessage('削除しました ✅');
+        setTimeout(() => setMessage(''), 3000);
+      } else {
+        setMessage('削除に失敗しました ❌');
+      }
+    } catch (error) {
+      setMessage('エラーが発生しました ❌');
     }
   };
 
@@ -1039,6 +1105,19 @@ export default function AISettingsPage() {
                 }`}
               >
                 📅 期間限定ルール
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('unanswered');
+                  fetchUnansweredQuestions();
+                }}
+                className={`px-6 py-4 text-sm font-medium border-b-2 ${
+                  activeTab === 'unanswered'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                }`}
+              >
+                📋 未回答ログ
               </button>
               <button
                 onClick={() => {
@@ -2487,6 +2566,98 @@ export default function AISettingsPage() {
                       </button>
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 未回答ログタブ */}
+          {activeTab === 'unanswered' && (
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">未回答質問ログ</h2>
+
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  回答できなかった質問の一覧です。頻出する質問はプロンプトに情報を追加することで回答精度を改善できます。
+                </p>
+              </div>
+
+              <div className="flex gap-3 mb-4">
+                <button
+                  onClick={fetchUnansweredQuestions}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                >
+                  🔄 再読み込み
+                </button>
+                {unansweredQuestions.length > 0 && (
+                  <button
+                    onClick={downloadUnansweredCSV}
+                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                  >
+                    📥 CSV出力
+                  </button>
+                )}
+              </div>
+
+              {unansweredLoading ? (
+                <div className="text-center py-8 text-gray-500">読み込み中...</div>
+              ) : unansweredQuestions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  未回答の質問はありません
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          日時
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          ユーザーID
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          質問内容
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          AI応答
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          操作
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {unansweredQuestions.map((q) => (
+                        <tr key={q.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                            {new Date(q.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 font-mono">
+                            {q.line_user_id.slice(0, 8)}...
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900 max-w-xs">
+                            <div className="truncate" title={q.user_message}>
+                              {q.user_message}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600 max-w-xs">
+                            <div className="truncate" title={q.ai_response || ''}>
+                              {q.ai_response || '-'}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">
+                            <button
+                              onClick={() => deleteUnansweredQuestion(q.id)}
+                              className="text-red-600 hover:text-red-800 font-medium"
+                            >
+                              削除
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
