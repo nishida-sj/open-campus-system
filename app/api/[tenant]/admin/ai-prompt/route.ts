@@ -3,6 +3,9 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { clearPromptCache } from '@/lib/ai-response';
 import { getTenantBySlug } from '@/lib/tenant';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * プロンプト生成API（テナント対応版）
  * GET /api/[tenant]/admin/ai-prompt
