@@ -73,7 +73,7 @@ export async function GET(
     // 2. 有効なイベント情報を取得（display_end_date >= 今日）
     let eventsWithDetails: any[] = [];
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const { data: events, error: eventsError } = await supabaseAdmin
         .from('open_campus_events')
@@ -307,9 +307,10 @@ export async function GET(
         periodRules = [];
       }
 
-      const today = new Date().toISOString().split('T')[0];
+      // 日本時間で判定（Vercelサーバーはデフォルト UTC のため）
+      const todayJST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
       const activePeriodRules = periodRules.filter(
-        (rule: any) => rule.is_active && rule.start_date <= today && today <= rule.end_date
+        (rule: any) => rule.is_active && rule.start_date <= todayJST && todayJST <= rule.end_date
       );
 
       if (activePeriodRules.length > 0) {

@@ -118,7 +118,7 @@ async function fetchSystemPrompt(tenantId: string): Promise<string> {
     // 2. 有効なイベント情報を取得
     let eventPrompts = '';
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
       const { data: events } = await supabaseAdmin
         .from('open_campus_events')
         .select('id, name, description, overview, is_active, display_end_date')
@@ -253,10 +253,11 @@ async function fetchSystemPrompt(tenantId: string): Promise<string> {
     try {
       const periodRules = JSON.parse(settingsMap.prompt_period_rules || '[]');
       if (Array.isArray(periodRules)) {
-        const today = new Date().toISOString().split('T')[0];
+        // 日本時間で判定（Vercelサーバーはデフォルト UTC のため）
+        const todayJST = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().split('T')[0];
         const activePeriodRules = periodRules.filter(
           (rule: { is_active: boolean; start_date: string; end_date: string }) =>
-            rule.is_active && rule.start_date <= today && today <= rule.end_date
+            rule.is_active && rule.start_date <= todayJST && todayJST <= rule.end_date
         );
         if (activePeriodRules.length > 0) {
           periodRulePrompts = '\n【期間限定のお知らせ - 重要】\n';
