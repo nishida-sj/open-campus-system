@@ -329,39 +329,37 @@ export default function AISettingsPage() {
     }
   };
 
-  // カスタム項目を保存
-  const saveCustomItems = async () => {
+  // カスタム項目を自動保存（共通）
+  const saveCustomItemsToServer = async (items: CustomItem[]) => {
     setSaving(true);
     setMessage('');
-
     try {
       const res = await fetch(`/api/${tenant}/admin/ai-prompt`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           setting_key: 'prompt_custom_items',
-          setting_value: JSON.stringify(customItems),
+          setting_value: JSON.stringify(items),
         }),
       });
-
       const data = await res.json();
-
       if (data.success) {
-        setMessage('カスタム項目を保存しました ✅');
-        setTimeout(() => setMessage(''), 3000);
         fetchPromptPreview();
+        return true;
       } else {
-        setMessage('保存に失敗しました ❌');
+        setMessage(`保存に失敗しました: ${data.error || '不明なエラー'} ❌`);
+        return false;
       }
     } catch (error) {
-      setMessage('エラーが発生しました ❌');
+      setMessage('保存中にエラーが発生しました ❌');
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
   // カスタム項目を追加
-  const addCustomItem = () => {
+  const addCustomItem = async () => {
     if (!newItemName.trim() || !newItemContent.trim()) {
       alert('項目名とコンテンツを入力してください');
       return;
@@ -374,28 +372,45 @@ export default function AISettingsPage() {
       order: customItems.length,
     };
 
-    setCustomItems([...customItems, newItem]);
+    const updated = [...customItems, newItem];
+    setCustomItems(updated);
     setNewItemName('');
     setNewItemContent('');
     setShowAddForm(false);
+
+    if (await saveCustomItemsToServer(updated)) {
+      setMessage('カスタム項目を追加して保存しました ✅');
+      setTimeout(() => setMessage(''), 3000);
+    }
   };
 
   // カスタム項目を編集
-  const updateCustomItem = () => {
+  const updateCustomItem = async () => {
     if (!editingItem) return;
 
-    setCustomItems(
-      customItems.map((item) =>
-        item.id === editingItem.id ? editingItem : item
-      )
+    const updated = customItems.map((item) =>
+      item.id === editingItem.id ? editingItem : item
     );
+    setCustomItems(updated);
     setEditingItem(null);
+
+    if (await saveCustomItemsToServer(updated)) {
+      setMessage('カスタム項目を更新して保存しました ✅');
+      setTimeout(() => setMessage(''), 3000);
+    }
   };
 
   // カスタム項目を削除
-  const deleteCustomItem = (id: string) => {
+  const deleteCustomItem = async (id: string) => {
     if (!confirm('この項目を削除しますか？')) return;
-    setCustomItems(customItems.filter((item) => item.id !== id));
+
+    const updated = customItems.filter((item) => item.id !== id);
+    setCustomItems(updated);
+
+    if (await saveCustomItemsToServer(updated)) {
+      setMessage('カスタム項目を削除して保存しました ✅');
+      setTimeout(() => setMessage(''), 3000);
+    }
   };
 
   // 学科別情報を追加
@@ -1631,16 +1646,6 @@ export default function AISettingsPage() {
                 </div>
               )}
 
-              {/* 保存ボタン */}
-              {customItems.length > 0 && (
-                <button
-                  onClick={saveCustomItems}
-                  disabled={saving}
-                  className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400"
-                >
-                  {saving ? '保存中...' : 'カスタム項目を保存'}
-                </button>
-              )}
             </div>
           )}
 
