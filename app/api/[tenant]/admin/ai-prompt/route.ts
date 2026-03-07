@@ -244,7 +244,11 @@ export async function GET(
             if (Array.isArray(dept.keywords) && dept.keywords.length > 0) {
               departmentPrompts += `キーワード: ${dept.keywords.join('、')}\n`;
             }
-            departmentPrompts += `${dept.content}\n\n`;
+            departmentPrompts += `${dept.content}\n`;
+            if (dept.additional_instructions) {
+              departmentPrompts += `追加指示: ${dept.additional_instructions}\n`;
+            }
+            departmentPrompts += '\n';
           });
       }
     } catch (deptError) {

@@ -206,12 +206,16 @@ async function fetchSystemPrompt(tenantId: string): Promise<string> {
 
         departmentSections
           .sort((a: { order: number }, b: { order: number }) => (a.order || 0) - (b.order || 0))
-          .forEach((dept: { name: string; keywords: string[]; content: string }) => {
+          .forEach((dept: { name: string; keywords: string[]; content: string; additional_instructions?: string }) => {
             departmentPrompts += `＜${dept.name}＞\n`;
             if (Array.isArray(dept.keywords) && dept.keywords.length > 0) {
               departmentPrompts += `キーワード: ${dept.keywords.join('、')}\n`;
             }
-            departmentPrompts += `${dept.content}\n\n`;
+            departmentPrompts += `${dept.content}\n`;
+            if (dept.additional_instructions) {
+              departmentPrompts += `追加指示: ${dept.additional_instructions}\n`;
+            }
+            departmentPrompts += '\n';
           });
       }
     } catch { /* ignore parse errors */ }

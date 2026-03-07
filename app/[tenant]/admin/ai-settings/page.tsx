@@ -35,6 +35,7 @@ interface DepartmentSection {
   name: string;
   keywords: string[];
   content: string;
+  additional_instructions: string;
   order: number;
 }
 
@@ -115,6 +116,7 @@ export default function AISettingsPage() {
   const [newDepartmentName, setNewDepartmentName] = useState('');
   const [newDepartmentKeywords, setNewDepartmentKeywords] = useState('');
   const [newDepartmentContent, setNewDepartmentContent] = useState('');
+  const [newDepartmentInstructions, setNewDepartmentInstructions] = useState('');
 
   // 期間限定ルール
   const [periodRules, setPeriodRules] = useState<PeriodRule[]>([]);
@@ -408,6 +410,7 @@ export default function AISettingsPage() {
       name: newDepartmentName.trim(),
       keywords: newDepartmentKeywords.split(',').map(k => k.trim()).filter(k => k),
       content: newDepartmentContent.trim(),
+      additional_instructions: newDepartmentInstructions.trim(),
       order: departmentSections.length,
     };
 
@@ -416,6 +419,7 @@ export default function AISettingsPage() {
     setNewDepartmentName('');
     setNewDepartmentKeywords('');
     setNewDepartmentContent('');
+    setNewDepartmentInstructions('');
     setShowAddDepartmentForm(false);
 
     setSaving(true);
@@ -1710,6 +1714,22 @@ export default function AISettingsPage() {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        この学科への追加指示（自由記述）
+                      </label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        この学科についての質問に回答する際にAIに従ってほしい追加指示を記述できます
+                      </p>
+                      <textarea
+                        value={newDepartmentInstructions}
+                        onChange={(e) => setNewDepartmentInstructions(e.target.value)}
+                        placeholder={'例:\n・学費について聞かれたら奨学金制度も紹介してください\n・実習先の病院名は回答しないでください'}
+                        rows={4}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex gap-3 mt-6">
@@ -1725,6 +1745,7 @@ export default function AISettingsPage() {
                         setNewDepartmentName('');
                         setNewDepartmentKeywords('');
                         setNewDepartmentContent('');
+                        setNewDepartmentInstructions('');
                       }}
                       className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors"
                     >
@@ -1791,6 +1812,15 @@ export default function AISettingsPage() {
                             </div>
                           </div>
 
+                          {dept.additional_instructions && (
+                            <div>
+                              <p className="text-xs text-gray-600 font-semibold mb-1">追加指示:</p>
+                              <div className="bg-yellow-50 p-3 rounded text-sm text-gray-800 whitespace-pre-wrap border border-yellow-200">
+                                {dept.additional_instructions}
+                              </div>
+                            </div>
+                          )}
+
                           <div className="text-xs text-gray-600">
                             📊 表示順: {dept.order + 1}
                           </div>
@@ -1849,6 +1879,24 @@ export default function AISettingsPage() {
                           }
                           rows={8}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          この学科への追加指示（自由記述）
+                        </label>
+                        <p className="text-xs text-gray-500 mb-2">
+                          この学科についての質問に回答する際にAIに従ってほしい追加指示を記述できます
+                        </p>
+                        <textarea
+                          value={editingDepartment.additional_instructions || ''}
+                          onChange={(e) =>
+                            setEditingDepartment({ ...editingDepartment, additional_instructions: e.target.value })
+                          }
+                          rows={4}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          placeholder={'例:\n・学費について聞かれたら奨学金制度も紹介してください\n・実習先の病院名は回答しないでください'}
                         />
                       </div>
                     </div>
