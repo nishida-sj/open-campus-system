@@ -391,13 +391,32 @@ export async function generateAIResponse(
     // 6. 使用量をログ記録
     await logUsage(tenant.id, lineUserId, usage.prompt_tokens, usage.completion_tokens, usage.total_tokens, true);
 
-    // 7. [UNABLE_TO_ANSWER] マーカー検出 → 実際のテキストに置換
+    // 7. 未回答検出
     let unanswered = false;
+
+    // 7a. [UNABLE_TO_ANSWER] マーカー → 設定テキストに置換
     if (response.includes('[UNABLE_TO_ANSWER]')) {
       const unableResponse = await getAISetting(tenant.id, 'prompt_unable_response');
       response = unableResponse || '申し訳ございませんが、その質問にはお答えできません。';
       unanswered = true;
-      console.log('[generateAIResponse] Unanswered question detected, replaced with unable_response');
+      console.log('[generateAIResponse] Unanswered: marker detected, replaced');
+    }
+
+    // 7b. AIがマーカーを使わず自然言語で拒否した場合も検出（ログ用、応答はそのまま）
+    if (!unanswered) {
+      const refusalPatterns = [
+        '参照情報に', '参照情報には',
+        'お答えすることができません', 'お答えできかねます',
+        '情報は含まれていません', '情報が含まれていません',
+        '具体的な情報は.*ありません',
+      ];
+      const isRefusal = refusalPatterns.some(pattern =>
+        new RegExp(pattern).test(response!)
+      );
+      if (isRefusal) {
+        unanswered = true;
+        console.log('[generateAIResponse] Unanswered: refusal pattern detected');
+      }
     }
 
     return { success: true, response, unanswered };
