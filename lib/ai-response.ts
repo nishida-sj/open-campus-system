@@ -294,16 +294,8 @@ ${periodRulePrompts}【回答ルール - 最重要】
 - 「期間限定の案内」がある場合、回答できた場合は必ず回答の最後にその案内を追記すること（省略厳禁）
 
 【最重要・厳守】回答できない場合の対応
-上記の情報に含まれていない質問や、確実に回答できない内容については、以下の===で囲まれたメッセージをコピー＆ペーストしたかのように、一字一句変えずにそのまま返してください。
-絶対に守るべきルール：
-- 1文字たりとも変更・省略・追加しないこと
-- 言い換え、要約、装飾、絵文字追加は厳禁
-- 単語の削除や順序変更も厳禁
-- この場合は以下のメッセージのみを返し、「回答の最後に追加する内容」は付けないこと
-
-===
-${settingsMap.prompt_unable_response || '申し訳ございませんが、その質問にはお答えできません。'}
-===
+上記の情報に含まれていない質問や、確実に回答できない内容については、以下の文字列だけを返してください。他の文字は一切付けないでください：
+[UNABLE_TO_ANSWER]
 
 【回答できた場合のみ、回答の最後に必ず追加する内容】
 以下の内容は、上記の情報を使って正常に回答できた場合のみ、回答の最後に追加してください。
@@ -323,6 +315,7 @@ export interface AIResponseResult {
   response?: string;
   error?: string;
   usageLimited?: boolean;
+  unanswered?: boolean;
 }
 
 /**
@@ -382,19 +375,28 @@ export async function generateAIResponse(
       max_tokens: maxTokens,
     });
 
-    const response = completion.choices[0].message.content;
+    let response = completion.choices[0].message.content;
     const usage = completion.usage;
 
     if (!response || !usage) {
       throw new Error('Invalid API response');
     }
 
-    console.log('[generateAIResponse] AI response preview:', response?.substring(0, 100));
+    console.log('[generateAIResponse] AI raw response:', response?.substring(0, 120));
 
     // 6. 使用量をログ記録
     await logUsage(tenant.id, lineUserId, usage.prompt_tokens, usage.completion_tokens, usage.total_tokens, true);
 
-    return { success: true, response };
+    // 7. [UNABLE_TO_ANSWER] マーカー検出 → 実際のテキストに置換
+    let unanswered = false;
+    if (response.includes('[UNABLE_TO_ANSWER]')) {
+      const unableResponse = await getAISetting(tenant.id, 'prompt_unable_response');
+      response = unableResponse || '申し訳ございませんが、その質問にはお答えできません。';
+      unanswered = true;
+      console.log('[generateAIResponse] Unanswered question detected, replaced with unable_response');
+    }
+
+    return { success: true, response, unanswered };
   } catch (error) {
     console.error('OpenAI API error:', error);
 
