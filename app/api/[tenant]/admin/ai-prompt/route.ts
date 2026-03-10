@@ -233,12 +233,10 @@ export async function GET(
 
       if (departmentSections.length > 0) {
         const deptNames = departmentSections.map((d: any) => d.name).join('と');
-        departmentPrompts = '\n【学科別情報 - 重要】\n';
-        departmentPrompts += 'この学校には以下の学科があります。質問内容に応じて、該当する学科の情報を使って回答してください。\n\n';
-        departmentPrompts += '重要なルール：\n';
-        departmentPrompts += `- 質問内容からどの学科について聞いているか明確でない場合は、必ず「${deptNames}がございますが、どちらの学科についてのお問い合わせでしょうか？😊」と確認してから回答してください\n`;
-        departmentPrompts += '- 学科を特定できる質問には、その学科の情報のみを使って回答してください\n';
-        departmentPrompts += '- 両学科に共通する質問（アクセス、学校全体の情報など）はそのまま回答してください\n\n';
+        departmentPrompts = '\n【学科別情報】\n';
+        departmentPrompts += `この学校には${deptNames}があります。\n`;
+        departmentPrompts += `学科が不明な質問には「${deptNames}がございますが、どちらの学科についてのお問い合わせでしょうか？😊」と確認してください。\n`;
+        departmentPrompts += '注意: 学科を特定できても、以下に書かれていない内容は回答できません。[UNABLE_TO_ANSWER]を返してください。\n\n';
 
         departmentSections
           .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
