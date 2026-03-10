@@ -347,18 +347,17 @@ export async function generateAIResponse(
     }
 
     // 2. システムプロンプトを動的に取得
-    console.log('[generateAIResponse] Fetching system prompt for tenant:', tenant.id);
     const systemPrompt = await fetchSystemPrompt(tenant.id);
     console.log('[generateAIResponse] System prompt length:', systemPrompt.length);
-    console.log('[generateAIResponse] Prompt contains "AI自動回答では":', systemPrompt.includes('AI自動回答では'));
 
-    // 3. メッセージ構築
+    // 3. メッセージ構築（会話履歴は直近5件に制限、古いパターン引きずり防止）
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
     ];
 
     if (conversationHistory && conversationHistory.length > 0) {
-      const recentHistory = conversationHistory.slice(-10);
+      const recentHistory = conversationHistory.slice(-5);
+      console.log('[generateAIResponse] Conversation history count:', recentHistory.length);
       messages.push(
         ...recentHistory.map((msg) => ({
           role: msg.role,
@@ -370,7 +369,7 @@ export async function generateAIResponse(
     messages.push({ role: 'user', content: userMessage });
 
     // 4. パラメータ取得
-    const temperature = parseFloat((await getAISetting(tenant.id, 'temperature')) || '0.7');
+    const temperature = parseFloat((await getAISetting(tenant.id, 'temperature')) || '0.3');
     const maxTokens = parseInt((await getAISetting(tenant.id, 'max_tokens')) || '500');
 
     // 5. OpenAI API呼び出し

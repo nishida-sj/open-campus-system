@@ -354,10 +354,13 @@ async function handleAIResponse(
 
     await client.replyMessage(event.replyToken, { type: 'text', text: result.response! });
 
+    // 会話履歴保存（未回答時は保存しない：古い応答パターンをAIが学習するのを防止）
     await saveMessage(tenant.id, userId, 'user', userMessage);
-    await saveMessage(tenant.id, userId, 'assistant', result.response!);
+    if (!result.unanswered) {
+      await saveMessage(tenant.id, userId, 'assistant', result.response!);
+    }
 
-    // 未回答検出・ログ（非同期、エラーでも握りつぶす）
+    // 未回答ログ記録（非同期、エラーでも握りつぶす）
     if (result.unanswered) {
       (async () => {
         try {
